@@ -22,6 +22,7 @@ export default function CheckoutContent() {
     const router = useRouter();
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
+    const [creating, setCreating] = useState(false);
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -44,6 +45,30 @@ export default function CheckoutContent() {
 
         fetchCart();
     }, [router]);
+
+    const createOrder = async () => {
+        try {
+            setCreating(true);
+            const response = await fetch("/api/orders/create", {
+                method: "POST",
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Failed to create order");
+            }
+
+            const data = await response.json();
+
+            // Redirect to orders page
+            router.push(`/orders/${data.orderId}`);
+        } catch (error: any) {
+            console.error("Error creating order:", error);
+            alert(error.message || "Failed to create order");
+        } finally {
+            setCreating(false);
+        }
+    };
 
     if (loading) {
         return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
@@ -113,16 +138,16 @@ export default function CheckoutContent() {
             {/* Checkout Info */}
             <div
                 style={{
-                    backgroundColor: "#fff3cd",
+                    backgroundColor: "#e3f2fd",
                     padding: "20px",
                     borderRadius: "8px",
                     marginBottom: "24px",
-                    border: "1px solid #ffc107",
+                    border: "1px solid #2196f3",
                 }}
             >
                 <p style={{ margin: 0, fontSize: "14px" }}>
-                    ℹ️ <strong>Note:</strong> This is a checkout preview. Order creation and payment
-                    integration will be implemented in Step 11.
+                    ℹ️ <strong>Ready to place order:</strong> Click "Place Order" to confirm your purchase.
+                    Payment integration will be added in Step 12.
                 </p>
             </div>
 
@@ -130,6 +155,7 @@ export default function CheckoutContent() {
             <div style={{ display: "flex", gap: "12px" }}>
                 <button
                     onClick={() => router.push("/cart")}
+                    disabled={creating}
                     style={{
                         flex: 1,
                         padding: "14px",
@@ -137,28 +163,30 @@ export default function CheckoutContent() {
                         color: "#333",
                         border: "1px solid #ccc",
                         borderRadius: "6px",
-                        cursor: "pointer",
+                        cursor: creating ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
+                        opacity: creating ? 0.5 : 1,
                     }}
                 >
                     ← Back to Cart
                 </button>
                 <button
-                    onClick={() => alert("Order creation will be implemented in Step 11")}
+                    onClick={createOrder}
+                    disabled={creating}
                     style={{
                         flex: 1,
                         padding: "14px",
-                        backgroundColor: "#10b981",
+                        backgroundColor: creating ? "#ccc" : "#10b981",
                         color: "white",
                         border: "none",
                         borderRadius: "6px",
-                        cursor: "pointer",
+                        cursor: creating ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
                     }}
                 >
-                    Confirm and Continue
+                    {creating ? "Creating Order..." : "Place Order"}
                 </button>
             </div>
         </div>

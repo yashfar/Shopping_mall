@@ -35,14 +35,16 @@ export default function ProductList() {
             }
 
             if (!response.ok) {
-                throw new Error("Failed to add to cart");
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || `Server error: ${response.status}`;
+                throw new Error(errorMessage);
             }
 
             // Show success message
             alert("Product added to cart!");
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error adding to cart:", err);
-            alert("Failed to add to cart");
+            alert(err.message || "Failed to add to cart");
         } finally {
             setAddingToCart(null);
         }
