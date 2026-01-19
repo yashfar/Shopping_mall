@@ -19,9 +19,7 @@ model User {
   password  String
   role      Role     @default(USER)
   createdAt DateTime @default(now())
-
-  accounts  Account[]
-  sessions  Session[]
+  carts     Cart[]
 }
 
 enum Role {
@@ -29,43 +27,86 @@ enum Role {
   ADMIN
 }
 
+model Product {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  price       Int
+  stock       Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  cartItems   CartItem[]
+}
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId])
+}
 
-  @@unique([provider, providerAccountId])
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([cartId, productId])
 }
 
 
+// ============================================================================
+// NOTE: The following models are NOT used with pure JWT session strategy
+// ============================================================================
+// 
+// These models are only needed when using:
+// - OAuth providers (Google, GitHub, etc.) with PrismaAdapter
+// - Database session strategy (strategy: "database")
+//
+// Since we're using Credentials provider with JWT sessions, these are unused.
+// They are commented out to keep the schema clean and avoid confusion.
+// ============================================================================
 
+// model Account {
+//   id                String  @id @default(cuid())
+//   userId            String
+//   type              String
+//   provider          String
+//   providerAccountId String
+//   refresh_token     String?
+//   access_token      String?
+//   expires_at        Int?
+//   token_type        String?
+//   scope             String?
+//   id_token          String?
+//   session_state     String?
+//
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+//
+//   @@unique([provider, providerAccountId])
+// }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+// model Session {
+//   id           String   @id @default(cuid())
+//   sessionToken String   @unique
+//   userId       String
+//   expires      DateTime
+//
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
+// model VerificationToken {
+//   identifier String
+//   token      String   @unique
+//   expires    DateTime
+//
+//   @@unique([identifier, token])
+// }

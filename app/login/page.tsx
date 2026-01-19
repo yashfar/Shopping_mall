@@ -24,16 +24,16 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl,
       });
 
-      if (result?.error) {
-        setError("An error occurred while logging in");
+      if (result?.error || !result?.ok) {
+        setError("Invalid email or password");
       } else if (result?.ok) {
         router.push(callbackUrl);
       }
     } catch (err: unknown) {
-      console.log("error message", (err as Error).message);
-      setError("an error occurred while logging in");
+      setError("Invalid email or password");
     } finally {
       setLoading(false);
     }

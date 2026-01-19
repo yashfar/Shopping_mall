@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (existingUser) {
       return NextResponse.json(
         {
-          error: "User with this email already exists",
+          error: "This email is already registered",
         },
         { status: 409 }
       );
@@ -60,8 +60,8 @@ export async function POST(req: Request) {
     // Return success response
     return NextResponse.json(
       {
-        message: "User registered successfully",
-        user,
+        message: "Registration successful",
+        userId: user.id,
       },
       { status: 201 }
     );
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     console.error("Registration error:", error);
     return NextResponse.json(
       {
-        error: "Internal server error",
+        error: "An unexpected error occurred during registration",
       },
       { status: 500 }
     );

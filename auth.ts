@@ -2,23 +2,23 @@ import NextAuth from "next-auth";
 import type { User, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-import { randomUUID } from "crypto";
 
 /**
- * NextAuth v4 configuration with hybrid session strategy
+ * NextAuth v4 configuration with pure JWT session strategy
  * 
  * IMPORTANT: Credentials provider in NextAuth v4 does NOT support database sessions.
- * This is a known limitation. We use a hybrid approach:
- * - JWT for session management (required for Credentials provider)
- * - Manual session records in database for tracking and management
+ * This is a known limitation and design choice.
  * 
- * The session callback creates/updates database session records manually.
+ * - JWT tokens are stored in HTTP-only cookies
+ * - Sessions are stateless and contain user id, email, and role
+ * - No session records are created in the database
+ * - PrismaAdapter is NOT used (only needed for OAuth with database sessions)
  */
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
+  // No adapter needed for pure JWT sessions
+  // PrismaAdapter is only for OAuth providers with database sessions
 
   // Credentials provider requires JWT strategy
   session: {
@@ -65,39 +65,11 @@ export const authOptions = {
       return token;
     },
 
-    // Add token data to session and create/update database session record
+    // Add token data to session
     async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-
-        // Manually create/update session record in database for tracking
-        try {
-          const sessionToken = `jwt-${token.id}-${Date.now()}`;
-          const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-          // Find existing session or create new one
-          const existingSession = await prisma.session.findFirst({
-            where: { userId: token.id as string },
-          });
-
-          if (existingSession) {
-            await prisma.session.update({
-              where: { id: existingSession.id },
-              data: { expires },
-            });
-          } else {
-            await prisma.session.create({
-              data: {
-                sessionToken,
-                userId: token.id as string,
-                expires,
-              },
-            });
-          }
-        } catch (error) {
-          console.error("Failed to create/update session record:", error);
-        }
       }
       return session;
     },
