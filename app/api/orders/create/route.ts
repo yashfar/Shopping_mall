@@ -33,6 +33,25 @@ export async function POST() {
             );
         }
 
+        // Validate stock availability for all items
+        for (const item of cart.items) {
+            if (!item.product.isActive) {
+                return NextResponse.json(
+                    { error: `Product "${item.product.title}" is no longer available` },
+                    { status: 400 }
+                );
+            }
+
+            if (item.product.stock < item.quantity) {
+                return NextResponse.json(
+                    {
+                        error: `Insufficient stock for "${item.product.title}". Available: ${item.product.stock}, Requested: ${item.quantity}`
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
         // Calculate total
         const total = cart.items.reduce(
             (sum, item) => sum + item.product.price * item.quantity,

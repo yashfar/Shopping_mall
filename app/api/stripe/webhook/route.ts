@@ -54,13 +54,36 @@ export async function POST(req: Request) {
         }
 
         try {
-            // Update order status to PAID
-            await prisma.order.update({
-                where: { id: orderId },
-                data: { status: "PAID" },
+            // Update order status and reduce stock in a transaction
+            await prisma.$transaction(async (tx) => {
+                // Update order status to PAID
+                await tx.order.update({
+                    where: { id: orderId },
+                    data: { status: "PAID" },
+                });
+
+                // Fetch order items to reduce stock
+                const orderItems = await tx.orderItem.findMany({
+                    where: { orderId },
+                    include: { product: true },
+                });
+
+                // Reduce stock for each product
+                for (const item of orderItems) {
+                    const newStock = item.product.stock - item.quantity;
+
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            stock: newStock,
+                            // Auto-deactivate if stock reaches 0
+                            isActive: newStock > 0 ? item.product.isActive : false,
+                        },
+                    });
+                }
             });
 
-            console.log(`Order ${orderId} marked as PAID`);
+            console.log(`Order ${orderId} marked as PAID and stock reduced`);
         } catch (error) {
             console.error("Error updating order:", error);
             return NextResponse.json(

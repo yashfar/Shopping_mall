@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  */
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await auth();
 
@@ -16,7 +16,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     try {
         const { title, description, price, stock, isActive } = await req.json();
@@ -25,8 +25,19 @@ export async function PATCH(
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (price !== undefined) updateData.price = Math.round(price);
-        if (stock !== undefined) updateData.stock = stock;
-        if (isActive !== undefined) updateData.isActive = isActive;
+
+        // Handle stock updates with auto-toggle of isActive
+        if (stock !== undefined) {
+            updateData.stock = stock;
+            // Always auto-toggle isActive based on stock level
+            if (stock <= 0) {
+                updateData.isActive = false;
+            } else {
+                updateData.isActive = true;
+            }
+        } else if (isActive !== undefined) {
+            updateData.isActive = isActive;
+        }
 
         const product = await prisma.product.update({
             where: { id },
