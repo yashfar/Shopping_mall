@@ -5,7 +5,7 @@ import AdminOrderDetails from "./AdminOrderDetails";
 export default async function AdminOrderDetailPage({
     params,
 }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
     const session = await auth();
 
@@ -16,6 +16,8 @@ export default async function AdminOrderDetailPage({
     if (session.user.role !== "ADMIN") {
         redirect("/");
     }
+
+    const { id } = await params;
 
     return (
         <div style={{ maxWidth: "1000px", margin: "50px auto", padding: "20px" }}>
@@ -32,7 +34,7 @@ export default async function AdminOrderDetailPage({
                 </a>
             </div>
             <h1 style={{ marginBottom: "30px" }}>Order Details (Admin)</h1>
-            <AdminOrderDetails orderId={params.id} />
+            <AdminOrderDetails orderId={id} />
         </div>
     );
 }

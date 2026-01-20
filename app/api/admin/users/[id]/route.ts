@@ -3,12 +3,53 @@ import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 
 /**
+ * GET /api/admin/users/[id]
+ * Retrieves a user by ID (admin only)
+ */
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const session = await auth();
+
+    if (!session || session.user.role !== "ADMIN") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                createdAt: true,
+            },
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ user });
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch user" },
+            { status: 500 }
+        );
+    }
+}
+
+/**
  * DELETE /api/admin/users/[id]
  * Deletes a user (admin only)
  */
 export async function DELETE(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await auth();
 
@@ -22,7 +63,7 @@ export async function DELETE(
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Prevent admin from deleting themselves
     if (id === session.user.id) {

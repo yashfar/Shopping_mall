@@ -246,7 +246,7 @@ export default function CartContent() {
                         Continue Shopping
                     </a>
                     <button
-                        onClick={() => router.push("/checkout")}
+                        onClick={() => router.push("/cart/checkout")}
                         style={{
                             flex: 1,
                             padding: "14px",

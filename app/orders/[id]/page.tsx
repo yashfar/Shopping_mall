@@ -5,13 +5,15 @@ import OrderDetails from "./OrderDetails";
 export default async function OrderDetailPage({
     params,
 }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
     const session = await auth();
 
     if (!session) {
         redirect("/login?callbackUrl=/orders");
     }
+
+    const { id } = await params;
 
     return (
         <div style={{ maxWidth: "800px", margin: "50px auto", padding: "20px" }}>
@@ -28,7 +30,7 @@ export default async function OrderDetailPage({
                 </a>
             </div>
             <h1 style={{ marginBottom: "30px" }}>Order Details</h1>
-            <OrderDetails orderId={params.id} />
+            <OrderDetails orderId={id} />
         </div>
     );
 }

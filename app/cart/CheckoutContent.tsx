@@ -32,7 +32,7 @@ export default function CheckoutContent() {
                 const data = await response.json();
                 setCart(data.cart);
 
-                // Redirect to cart if empty
+                // Redirect to cart if empty (only on initial load)
                 if (!data.cart || data.cart.items.length === 0) {
                     router.push("/cart");
                 }
@@ -44,7 +44,8 @@ export default function CheckoutContent() {
         };
 
         fetchCart();
-    }, [router]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
     const createOrder = async () => {
         try {
@@ -65,9 +66,9 @@ export default function CheckoutContent() {
         } catch (error: any) {
             console.error("Error creating order:", error);
             alert(error.message || "Failed to create order");
-        } finally {
-            setCreating(false);
+            setCreating(false); // Only reset on error
         }
+        // Don't reset creating on success - let the redirect happen
     };
 
 
@@ -136,7 +137,6 @@ export default function CheckoutContent() {
                 </div>
             </div>
 
-            {/* Checkout Info */}
             <div
                 style={{
                     backgroundColor: "#e3f2fd",
@@ -148,7 +148,7 @@ export default function CheckoutContent() {
             >
                 <p style={{ margin: 0, fontSize: "14px" }}>
                     ℹ️ <strong>Ready to place order:</strong> Click "Place Order" to confirm your purchase.
-                    Payment integration will be added in Step 12.
+                    You will be redirected to payment in the next step.
                 </p>
             </div>
 
