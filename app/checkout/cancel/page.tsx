@@ -1,4 +1,4 @@
-import { auth } from "../../lib/auth-helper";
+import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 

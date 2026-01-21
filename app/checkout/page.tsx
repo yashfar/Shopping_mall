@@ -1,4 +1,4 @@
-import { auth } from "../../lib/auth-helper";
+import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import PaymentCheckout from "./PaymentCheckout";
 

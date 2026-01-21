@@ -2,31 +2,41 @@ import NextAuth from "next-auth";
 import type { User, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 
 /**
- * NextAuth v4 configuration with pure JWT session strategy
+ * NextAuth v4 configuration with hybrid approach:
+ * - Credentials login: JWT sessions
+ * - Google OAuth: Account linking + JWT sessions
  * 
- * IMPORTANT: Credentials provider in NextAuth v4 does NOT support database sessions.
- * This is a known limitation and design choice.
- * 
- * - JWT tokens are stored in HTTP-only cookies
- * - Sessions are stateless and contain user id, email, and role
- * - No session records are created in the database
- * - PrismaAdapter is NOT used (only needed for OAuth with database sessions)
+ * Features:
+ * - Both credentials and Google sign-in supported
+ * - Account linking by email for existing users
+ * - JWT sessions for both auth methods
+ * - PrismaAdapter for OAuth account management
  */
 export const authOptions = {
-  // No adapter needed for pure JWT sessions
-  // PrismaAdapter is only for OAuth providers with database sessions
+  // Use Prisma adapter for OAuth account linking
+  adapter: PrismaAdapter(prisma),
 
-  // Credentials provider requires JWT strategy
+  // JWT strategy for sessions
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
   providers: [
+    // Google OAuth Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      allowDangerousEmailAccountLinking: true, // Enable account linking by email
+    }),
+
+    // Credentials Provider (existing login)
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
@@ -38,18 +48,25 @@ export const authOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
         });
 
+        // User must exist and have a password (not OAuth-only account)
         if (!user?.password) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
         if (!isValid) return null;
 
         return {
           id: user.id,
           email: user.email,
           role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatar: user.avatar,
         };
       },
     }),
@@ -57,11 +74,34 @@ export const authOptions = {
 
   callbacks: {
     // Add user data to JWT token
-    async jwt({ token, user }: { token: JWT; user: User }) {
+    async jwt({ token, user, account, trigger }: any) {
+      // Initial sign in or when user object is available
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
       }
+
+      // Always fetch fresh user data from database to get latest avatar
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: {
+            role: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            image: true,
+          },
+        });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
+          // Use avatar if available, otherwise fall back to Google image
+          token.avatar = dbUser.avatar || dbUser.image;
+        }
+      }
+
       return token;
     },
 
@@ -70,8 +110,44 @@ export const authOptions = {
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
+        session.user.avatar = token.avatar as string | null;
       }
       return session;
+    },
+
+
+    // Handle account linking and profile sync
+    async signIn({ user, account, profile }: any) {
+      // For OAuth sign-ins, sync profile data
+      if (account?.provider === "google" && profile) {
+        try {
+          // Check if user already has an avatar
+          const existingUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { avatar: true },
+          });
+
+          // Update user with Google profile data
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              name: profile.name,
+              image: profile.picture,
+              emailVerified: profile.email_verified ? new Date() : null,
+              // Optionally sync to our custom fields
+              firstName: profile.given_name || null,
+              lastName: profile.family_name || null,
+              // Only set avatar from Google if user doesn't have one already
+              avatar: existingUser?.avatar || profile.picture || null,
+            },
+          });
+        } catch (error) {
+          console.error("Error syncing Google profile:", error);
+        }
+      }
+      return true;
     },
   },
 

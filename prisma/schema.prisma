@@ -14,13 +14,20 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  carts     Cart[]
-  orders    Order[]
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String?
+  firstName     String?
+  lastName      String?
+  avatar        String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  carts         Cart[]
+  orders        Order[]
+  accounts      Account[]
 }
 
 enum Role {
@@ -94,49 +101,30 @@ enum OrderStatus {
 
 
 // ============================================================================
-// NOTE: The following models are NOT used with pure JWT session strategy
+// OAuth Support Models
 // ============================================================================
 // 
-// These models are only needed when using:
-// - OAuth providers (Google, GitHub, etc.) with PrismaAdapter
-// - Database session strategy (strategy: "database")
-//
-// Since we're using Credentials provider with JWT sessions, these are unused.
-// They are commented out to keep the schema clean and avoid confusion.
+// These models are needed for OAuth providers (Google, GitHub, etc.)
+// We're using a hybrid approach:
+// - Credentials login: JWT sessions (no Session model needed)
+// - OAuth login: Account model for linking + JWT sessions
 // ============================================================================
 
-// model Account {
-//   id                String  @id @default(cuid())
-//   userId            String
-//   type              String
-//   provider          String
-//   providerAccountId String
-//   refresh_token     String?
-//   access_token      String?
-//   expires_at        Int?
-//   token_type        String?
-//   scope             String?
-//   id_token          String?
-//   session_state     String?
-//
-//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-//
-//   @@unique([provider, providerAccountId])
-// }
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
-// model Session {
-//   id           String   @id @default(cuid())
-//   sessionToken String   @unique
-//   userId       String
-//   expires      DateTime
-//
-//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-// }
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-// model VerificationToken {
-//   identifier String
-//   token      String   @unique
-//   expires    DateTime
-//
-//   @@unique([identifier, token])
-// }
+  @@unique([provider, providerAccountId])
+}
