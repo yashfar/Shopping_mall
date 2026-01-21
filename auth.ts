@@ -123,26 +123,27 @@ export const authOptions = {
       // For OAuth sign-ins, sync profile data
       if (account?.provider === "google" && profile) {
         try {
-          // Check if user already has an avatar
+          // Check if user exists and has an avatar
           const existingUser = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { avatar: true },
+            select: { id: true, avatar: true },
           });
 
-          // Update user with Google profile data
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              name: profile.name,
-              image: profile.picture,
-              emailVerified: profile.email_verified ? new Date() : null,
-              // Optionally sync to our custom fields
-              firstName: profile.given_name || null,
-              lastName: profile.family_name || null,
-              // Only set avatar from Google if user doesn't have one already
-              avatar: existingUser?.avatar || profile.picture || null,
-            },
-          });
+          // Only update if user exists (PrismaAdapter creates user first)
+          if (existingUser) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                name: profile.name,
+                image: profile.picture,
+                emailVerified: profile.email_verified ? new Date() : null,
+                firstName: profile.given_name || null,
+                lastName: profile.family_name || null,
+                // Only set avatar from Google if user doesn't have one already
+                avatar: existingUser.avatar || profile.picture || null,
+              },
+            });
+          }
         } catch (error) {
           console.error("Error syncing Google profile:", error);
         }

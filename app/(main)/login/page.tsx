@@ -32,7 +32,12 @@ export default function LoginPage() {
       if (result?.error || !result?.ok) {
         setError("Invalid email or password");
       } else if (result?.ok) {
-        router.push(callbackUrl);
+        // Refresh to get the new session
+        router.refresh();
+        // Small delay to ensure session is updated
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Redirect to callback URL
+        window.location.href = callbackUrl;
       }
     } catch (err: unknown) {
       setError("Invalid email or password");
@@ -91,6 +96,11 @@ export default function LoginPage() {
               className="form-input"
               placeholder="••••••••"
             />
+            <div style={{ marginTop: '8px', textAlign: 'right' }}>
+              <a href="/forgot-password" style={{ color: '#3b82f6', fontSize: '0.875rem', textDecoration: 'none' }}>
+                Forgot password?
+              </a>
+            </div>
           </div>
 
           <button

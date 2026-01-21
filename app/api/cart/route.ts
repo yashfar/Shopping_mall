@@ -14,6 +14,20 @@ export async function GET() {
     }
 
     try {
+        // First verify user exists in database
+        const userExists = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { id: true },
+        });
+
+        if (!userExists) {
+            console.error(`User ${session.user.id} not found in database`);
+            return NextResponse.json(
+                { error: "User not found in database. Please try logging out and logging in again." },
+                { status: 404 }
+            );
+        }
+
         // Find or create cart for user
         let cart = await prisma.cart.findUnique({
             where: { userId: session.user.id },

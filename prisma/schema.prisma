@@ -128,3 +128,21 @@ model Account {
 
   @@unique([provider, providerAccountId])
 }
+
+// ============================================================================
+// Verification Token Model
+// ============================================================================
+// Used for:
+// - Password reset tokens
+// - Email verification tokens
+// - One-time use tokens with expiration
+// ============================================================================
+
+model VerificationToken {
+  identifier String   // Email or user identifier
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

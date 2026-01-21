@@ -94,7 +94,7 @@ export async function DELETE(
  */
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await auth();
 
@@ -108,7 +108,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { role } = await req.json();
 
     // Validate role
