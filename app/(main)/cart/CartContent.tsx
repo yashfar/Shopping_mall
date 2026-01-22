@@ -24,6 +24,8 @@ export default function CartContent() {
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
+    const [hasAddresses, setHasAddresses] = useState(true);
+    const [checkingAddresses, setCheckingAddresses] = useState(true);
 
     const fetchCart = async () => {
         try {
@@ -36,6 +38,21 @@ export default function CartContent() {
             console.error("Error fetching cart:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkAddresses = async () => {
+        try {
+            setCheckingAddresses(true);
+            const response = await fetch("/api/address/list");
+            if (response.ok) {
+                const data = await response.json();
+                setHasAddresses(data.addresses && data.addresses.length > 0);
+            }
+        } catch (error) {
+            console.error("Error checking addresses:", error);
+        } finally {
+            setCheckingAddresses(false);
         }
     };
 
@@ -83,6 +100,7 @@ export default function CartContent() {
 
     useEffect(() => {
         fetchCart();
+        checkAddresses();
     }, []);
 
     if (loading) {
@@ -245,22 +263,57 @@ export default function CartContent() {
                     >
                         Continue Shopping
                     </a>
-                    <button
-                        onClick={() => router.push("/cart/checkout")}
-                        style={{
-                            flex: 1,
-                            padding: "14px",
-                            backgroundColor: "#10b981",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                            fontSize: "16px",
-                        }}
-                    >
-                        Proceed to Checkout
-                    </button>
+                    {!hasAddresses ? (
+                        <div style={{ flex: 1 }}>
+                            <div
+                                style={{
+                                    padding: "12px",
+                                    backgroundColor: "#fef2f2",
+                                    border: "1px solid #fca5a5",
+                                    borderRadius: "6px",
+                                    marginBottom: "8px",
+                                    textAlign: "center",
+                                }}
+                            >
+                                <p style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#991b1b", fontWeight: "600" }}>
+                                    ⚠️ You need to add at least one address before checkout.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => router.push("/profile/addresses")}
+                                style={{
+                                    width: "100%",
+                                    padding: "14px",
+                                    backgroundColor: "#3b82f6",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: "600",
+                                    fontSize: "16px",
+                                }}
+                            >
+                                Add Address
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => router.push("/cart/checkout")}
+                            style={{
+                                flex: 1,
+                                padding: "14px",
+                                backgroundColor: "#10b981",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "600",
+                                fontSize: "16px",
+                            }}
+                        >
+                            Proceed to Checkout
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

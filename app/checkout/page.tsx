@@ -1,6 +1,6 @@
 import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
-import PaymentCheckout from "./PaymentCheckout";
+import PaymentCheckoutWithAddress from "./PaymentCheckoutWithAddress";
 
 export default async function CheckoutPage({
     searchParams,
@@ -22,9 +22,11 @@ export default async function CheckoutPage({
     }
 
     return (
-        <div style={{ maxWidth: "800px", margin: "50px auto", padding: "20px" }}>
-            <h1 style={{ marginBottom: "30px" }}>Payment</h1>
-            <PaymentCheckout orderId={orderId} />
+        <div style={{ maxWidth: "1000px", margin: "50px auto", padding: "20px" }}>
+            <h1 style={{ marginBottom: "30px", textAlign: "center", fontSize: "2rem", fontWeight: "700" }}>
+                Checkout
+            </h1>
+            <PaymentCheckoutWithAddress orderId={orderId} />
         </div>
     );
 }

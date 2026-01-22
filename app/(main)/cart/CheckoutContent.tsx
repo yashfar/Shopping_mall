@@ -23,6 +23,7 @@ export default function CheckoutContent() {
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
+    const [hasAddresses, setHasAddresses] = useState(true);
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -43,7 +44,26 @@ export default function CheckoutContent() {
             }
         };
 
+        const checkAddresses = async () => {
+            try {
+                const response = await fetch("/api/address/list");
+                if (response.ok) {
+                    const data = await response.json();
+                    const addressesExist = data.addresses && data.addresses.length > 0;
+                    setHasAddresses(addressesExist);
+
+                    // Redirect to cart if no addresses
+                    if (!addressesExist) {
+                        router.push("/cart");
+                    }
+                }
+            } catch (error) {
+                console.error("Error checking addresses:", error);
+            }
+        };
+
         fetchCart();
+        checkAddresses();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run once on mount
 

@@ -23,16 +23,35 @@ model User {
   firstName     String?
   lastName      String?
   avatar        String?
+  phone         String?
+  birthdate     DateTime?
   role          Role      @default(USER)
   createdAt     DateTime  @default(now())
   carts         Cart[]
   orders        Order[]
   accounts      Account[]
+  addresses     Address[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  title        String
+  firstName    String
+  lastName     String
+  phone        String
+  city         String
+  district     String
+  neighborhood String
+  fullAddress  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Product {

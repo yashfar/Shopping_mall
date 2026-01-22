@@ -12,6 +12,8 @@ interface User {
     lastName: string | null;
     avatar: string | null;
     image: string | null;
+    phone: string | null;
+    birthdate: string | null;
     role: string;
 }
 
@@ -19,6 +21,8 @@ export default function ProfileContent() {
     const [user, setUser] = useState<User | null>(null);
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [birthdate, setBirthdate] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{
@@ -39,6 +43,8 @@ export default function ProfileContent() {
                 setUser(data.user);
                 setFirstName(data.user.firstName || "");
                 setLastName(data.user.lastName || "");
+                setPhone(data.user.phone || "");
+                setBirthdate(data.user.birthdate ? data.user.birthdate.split('T')[0] : "");
             } else {
                 setMessage({ type: "error", text: "Failed to load profile" });
             }
@@ -64,6 +70,8 @@ export default function ProfileContent() {
                 body: JSON.stringify({
                     firstName,
                     lastName,
+                    phone,
+                    birthdate: birthdate || null,
                 }),
             });
 
@@ -198,6 +206,37 @@ export default function ProfileContent() {
                                 maxLength={50}
                                 className="form-input"
                                 placeholder="Enter your last name"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label htmlFor="phone" className="form-label">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                id="phone"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                maxLength={20}
+                                className="form-input"
+                                placeholder="e.g., +90 555 123 4567"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="birthdate" className="form-label">
+                                Birthdate
+                            </label>
+                            <input
+                                type="date"
+                                id="birthdate"
+                                value={birthdate}
+                                onChange={(e) => setBirthdate(e.target.value)}
+                                className="form-input"
+                                max={new Date().toISOString().split('T')[0]}
                             />
                         </div>
                     </div>

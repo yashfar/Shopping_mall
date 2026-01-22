@@ -6,6 +6,8 @@ import { z } from "zod";
 const UpdateProfileSchema = z.object({
     firstName: z.string().min(1, "First name is required").max(50),
     lastName: z.string().min(1, "Last name is required").max(50),
+    phone: z.string().max(20).optional().nullable(),
+    birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
     avatar: z.string().url().optional().nullable(),
 });
 
@@ -30,6 +32,8 @@ export async function GET() {
                 lastName: true,
                 avatar: true,
                 image: true,
+                phone: true,
+                birthdate: true,
                 role: true,
             },
         });
@@ -65,18 +69,20 @@ export async function PATCH(request: Request) {
 
         if (!validation.success) {
             return NextResponse.json(
-                { error: "Invalid input", details: validation.error.errors },
+                { error: "Invalid input", details: validation.error.issues },
                 { status: 400 }
             );
         }
 
-        const { firstName, lastName, avatar } = validation.data;
+        const { firstName, lastName, phone, birthdate, avatar } = validation.data;
 
         const updatedUser = await prisma.user.update({
             where: { id: session.user.id },
             data: {
                 firstName,
                 lastName,
+                phone: phone || null,
+                birthdate: birthdate ? new Date(birthdate) : null,
                 avatar: avatar || null,
             },
             select: {
@@ -84,6 +90,8 @@ export async function PATCH(request: Request) {
                 email: true,
                 firstName: true,
                 lastName: true,
+                phone: true,
+                birthdate: true,
                 avatar: true,
                 role: true,
             },
