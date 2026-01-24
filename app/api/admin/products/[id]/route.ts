@@ -23,6 +23,7 @@ export async function GET(
             where: { id },
             include: {
                 images: true,
+                category: true,
             },
         });
 
@@ -63,7 +64,14 @@ export async function PATCH(
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (price !== undefined) updateData.price = Math.round(price);
-        if (category !== undefined) updateData.category = category;
+        if (category !== undefined) {
+            updateData.category = {
+                connectOrCreate: {
+                    where: { name: category },
+                    create: { name: category },
+                },
+            };
+        }
         if (thumbnail !== undefined) updateData.thumbnail = thumbnail;
 
         // Handle stock updates with auto-toggle of isActive

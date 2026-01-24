@@ -55,6 +55,12 @@ model Address {
   updatedAt    DateTime @updatedAt
 }
 
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
 model Product {
   id          String         @id @default(cuid())
   title       String
@@ -62,7 +68,8 @@ model Product {
   price       Int            // Keep as Int for cents (backward compatibility)
   stock       Int            @default(0)
   isActive    Boolean        @default(true)
-  category    String?
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
   thumbnail   String?        // selected main image
   images      ProductImage[]
   reviews     Review[]

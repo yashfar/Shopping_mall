@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -19,9 +19,25 @@ export default function NewProductPage() {
     const [category, setCategory] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [thumbnail, setThumbnail] = useState<string>("");
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch("/api/categories");
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories", error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -328,13 +344,20 @@ export default function NewProductPage() {
                         <input
                             type="text"
                             id="category"
+                            list="category-suggestions"
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             className="form-input"
-                            placeholder="e.g., Electronics, Clothing, Books"
+                            placeholder="Select or type a category..."
                             required
                             disabled={submitting}
+                            autoComplete="off"
                         />
+                        <datalist id="category-suggestions">
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.name} />
+                            ))}
+                        </datalist>
                     </div>
                 </div>
 

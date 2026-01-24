@@ -19,6 +19,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     createdAt: "asc",
                 },
             },
+            category: true,
             reviews: {
                 include: {
                     user: {
@@ -52,9 +53,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     const session = await auth();
 
     // Check if current user has reviewed this product
-    const userReview = session
+    const userReview = (session
         ? product.reviews.find((review) => review.userId === session.user.id)
-        : null;
+        : null) || null;
 
     return (
         <ProductDetailClient

@@ -37,7 +37,12 @@ export default async function Home({ searchParams }: HomeProps) {
 
   // Category filter
   if (category) {
-    whereClause.category = category;
+    whereClause.category = {
+      name: {
+        equals: category,
+        mode: "insensitive"
+      }
+    };
   }
 
   // Price filter
@@ -76,20 +81,13 @@ export default async function Home({ searchParams }: HomeProps) {
   // Apply sorting
   filteredProducts = sortProducts(filteredProducts, sort);
 
-  // Fetch unique categories for the sidebar
-  const allCategories = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      category: { not: null },
-    },
-    select: { category: true },
-    distinct: ["category"],
+  // Fetch all categories for the sidebar
+  const allCategories = await prisma.category.findMany({
+    select: { name: true },
+    orderBy: { name: "asc" },
   });
 
-  const categories = allCategories
-    .map((p) => p.category)
-    .filter((c): c is string => c !== null)
-    .sort();
+  const categories = allCategories.map((c) => c.name);
 
   return (
     <ProductCatalog

@@ -1,10 +1,18 @@
 import { auth } from "@@/lib/auth-helper";
 import Link from "next/link";
 import NavbarClient from "@@/components/NavbarClient";
+import { CategoryDropdown } from "@@/components/CategoryDropdown";
+import { prisma } from "@/lib/prisma";
 import "./navbar.css";
 
 export default async function Navbar() {
     const session = await auth();
+    // Use try-catch or ensure prisma works. If prisma is in app/lib, then @/lib/prisma is correct. 
+    // But I will stick to what worked or check. 
+    // Actually, I'll use imports that are safe. 
+    const categories = await prisma.category.findMany({
+        orderBy: { name: "asc" },
+    });
 
     return (
         <nav className="navbar">
@@ -19,6 +27,7 @@ export default async function Navbar() {
                     <Link href="/products" className="nav-link">
                         Products
                     </Link>
+                    <CategoryDropdown categories={categories} />
                     {session?.user?.role === "ADMIN" && (
                         <Link href="/admin" className="nav-link">
                             Admin

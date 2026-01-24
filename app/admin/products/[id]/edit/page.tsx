@@ -21,6 +21,7 @@ export default function EditProductPage() {
     const [category, setCategory] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [thumbnail, setThumbnail] = useState<string>("");
 
     // Loading states
@@ -46,7 +47,7 @@ export default function EditProductPage() {
                 setTitle(product.title);
                 setDescription(product.description || "");
                 setPrice((product.price / 100).toFixed(2));
-                setCategory(product.category || "");
+                setCategory(product.category?.name || product.category || ""); // Handle object or legacy string if any
                 setStock(product.stock.toString());
                 setThumbnail(product.thumbnail || "");
 
@@ -67,6 +68,22 @@ export default function EditProductPage() {
 
         fetchProduct();
     }, [id]);
+
+    // Fetch categories
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch("/api/categories");
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories", error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -398,13 +415,20 @@ export default function EditProductPage() {
                         <input
                             type="text"
                             id="category"
+                            list="category-suggestions"
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             className="form-input"
-                            placeholder="e.g., Electronics, Clothing, Books"
+                            placeholder="Select or type a category..."
                             required
                             disabled={submitting}
+                            autoComplete="off"
                         />
+                        <datalist id="category-suggestions">
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.name} />
+                            ))}
+                        </datalist>
                     </div>
                 </div>
 

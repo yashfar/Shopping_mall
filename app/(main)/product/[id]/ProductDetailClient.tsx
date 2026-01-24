@@ -32,7 +32,7 @@ interface Product {
     title: string;
     description: string | null;
     price: number;
-    category: string | null;
+    category: { name: string } | null;
     stock: number;
     thumbnail: string | null;
     images: ProductImage[];
@@ -254,7 +254,7 @@ export default function ProductDetailClient({
                 <div className="info-section">
                     <div className="product-header">
                         {product.category && (
-                            <span className="category-badge">{product.category}</span>
+                            <span className="category-badge">{product.category.name}</span>
                         )}
                         <h1 className="product-title">{product.title}</h1>
 
