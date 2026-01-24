@@ -37,6 +37,7 @@ export default function AvatarUpload({
         type: "success" | "error";
         text: string;
     } | null>(null);
+    const [imageError, setImageError] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
@@ -128,6 +129,7 @@ export default function AvatarUpload({
             setSelectedImage(reader.result as string);
             setShowCropModal(true);
             setMessage(null);
+            setImageError(false);
         };
         reader.readAsDataURL(file);
     };
@@ -138,6 +140,7 @@ export default function AvatarUpload({
         try {
             const croppedImage = await getCroppedImg(selectedImage, croppedAreaPixels);
             setPreview(croppedImage);
+            setImageError(false);
             setShowCropModal(false);
             setSelectedImage(null);
             setCrop({ x: 0, y: 0 });
@@ -265,11 +268,12 @@ export default function AvatarUpload({
 
                 <div className="avatar-upload-content">
                     <div className="upload-preview-section">
-                        {preview ? (
+                        {preview && !imageError ? (
                             <img
                                 src={preview}
                                 alt="Avatar"
                                 className="upload-preview-image"
+                                onError={() => setImageError(true)}
                             />
                         ) : (
                             <div className="upload-preview-placeholder">

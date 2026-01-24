@@ -1,55 +1,110 @@
-import Link from "next/link";
-import "./home.css";
+import { prisma } from "@/lib/prisma";
+import ProductCatalog from "@@/components/ProductCatalog";
+import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 
-export default function Home() {
+interface HomeProps {
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    min?: string;
+    max?: string;
+    rating?: string;
+    sort?: string;
+  }>;
+}
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+  const query = params.q || "";
+  const category = params.category || "";
+  const minPrice = params.min ? parseFloat(params.min) * 100 : undefined; // Convert to cents
+  const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined; // Convert to cents
+  const minRating = params.rating ? parseInt(params.rating) : undefined;
+  const sort = params.sort;
+
+  // Build Prisma where clause
+  const whereClause: any = {
+    isActive: true,
+  };
+
+  // Search query (optional for home, but good to have)
+  if (query) {
+    whereClause.OR = [
+      { title: { contains: query, mode: "insensitive" } },
+      { description: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
+  // Category filter
+  if (category) {
+    whereClause.category = category;
+  }
+
+  // Price filter
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    whereClause.price = {};
+    if (minPrice !== undefined) whereClause.price.gte = minPrice;
+    if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+  }
+
+  // Fetch initial page of products (12 items)
+  const products = await prisma.product.findMany({
+    where: whereClause,
+    include: {
+      reviews: {
+        select: {
+          id: true,
+          rating: true,
+        },
+      },
+    },
+    orderBy: getSortOrder(sort),
+    take: 12,
+  });
+
+  // Filter by rating (client-side)
+  let filteredProducts = minRating
+    ? products.filter((product) => {
+      if (product.reviews.length === 0) return false;
+      const avgRating =
+        product.reviews.reduce((sum, r) => sum + r.rating, 0) /
+        product.reviews.length;
+      return avgRating >= minRating;
+    })
+    : products;
+
+  // Apply sorting
+  filteredProducts = sortProducts(filteredProducts, sort);
+
+  // Fetch unique categories for the sidebar
+  const allCategories = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      category: { not: null },
+    },
+    select: { category: true },
+    distinct: ["category"],
+  });
+
+  const categories = allCategories
+    .map((p) => p.category)
+    .filter((c): c is string => c !== null)
+    .sort();
+
   return (
-    <div className="home-container">
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1 className="hero-title">Welcome to My Store</h1>
-          <p className="hero-description">
-            Discover amazing products at great prices. Shop now and enjoy fast
-            delivery!
-          </p>
-          <div className="hero-actions">
-            <Link href="/products" className="btn-primary-large">
-              Browse Products
-            </Link>
-            <Link href="/register" className="btn-secondary-large">
-              Create Account
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="features-section">
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🚀</div>
-            <h3 className="feature-title">Fast Delivery</h3>
-            <p className="feature-description">
-              Get your orders delivered quickly and safely to your doorstep.
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">💳</div>
-            <h3 className="feature-title">Secure Payment</h3>
-            <p className="feature-description">
-              Shop with confidence using our secure payment system powered by
-              Stripe.
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">⭐</div>
-            <h3 className="feature-title">Quality Products</h3>
-            <p className="feature-description">
-              We offer only the best products from trusted brands and sellers.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+    <ProductCatalog
+      initialProducts={filteredProducts}
+      categories={categories}
+      queryParams={{
+        q: query,
+        category,
+        min: params.min,
+        max: params.max,
+        rating: params.rating,
+        sort,
+      }}
+      title={query ? `Results for "${query}"` : "Our Products"}
+      description="Brief description or welcome message can go here."
+    />
   );
 }

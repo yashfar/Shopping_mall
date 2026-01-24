@@ -1,16 +1,110 @@
-import ProductList from "./ProductList";
+import { prisma } from "@/lib/prisma";
+import ProductCatalog from "@@/components/ProductCatalog";
+import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 
-export default function ProductsPage() {
+interface ProductsPageProps {
+    searchParams: Promise<{
+        q?: string;
+        category?: string;
+        min?: string;
+        max?: string;
+        rating?: string;
+        sort?: string;
+    }>;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+    const params = await searchParams;
+    const query = params.q || "";
+    const category = params.category || "";
+    const minPrice = params.min ? parseFloat(params.min) * 100 : undefined; // Convert to cents
+    const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined; // Convert to cents
+    const minRating = params.rating ? parseInt(params.rating) : undefined;
+    const sort = params.sort;
+
+    // Build Prisma where clause
+    const whereClause: any = {
+        isActive: true,
+    };
+
+    // Search query
+    if (query) {
+        whereClause.OR = [
+            { title: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+        ];
+    }
+
+    // Category filter
+    if (category) {
+        whereClause.category = category;
+    }
+
+    // Price filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+        whereClause.price = {};
+        if (minPrice !== undefined) whereClause.price.gte = minPrice;
+        if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+    }
+
+    // Fetch initial page of products (12 items)
+    const products = await prisma.product.findMany({
+        where: whereClause,
+        include: {
+            reviews: {
+                select: {
+                    id: true,
+                    rating: true,
+                },
+            },
+        },
+        orderBy: getSortOrder(sort),
+        take: 12,
+    });
+
+    // Filter by rating (client-side)
+    let filteredProducts = minRating
+        ? products.filter((product) => {
+            if (product.reviews.length === 0) return false;
+            const avgRating =
+                product.reviews.reduce((sum, r) => sum + r.rating, 0) /
+                product.reviews.length;
+            return avgRating >= minRating;
+        })
+        : products;
+
+    // Apply sorting
+    filteredProducts = sortProducts(filteredProducts, sort);
+
+    // Fetch unique categories for the sidebar
+    const allCategories = await prisma.product.findMany({
+        where: {
+            isActive: true,
+            category: { not: null },
+        },
+        select: { category: true },
+        distinct: ["category"],
+    });
+
+    const categories = allCategories
+        .map((p) => p.category)
+        .filter((c): c is string => c !== null)
+        .sort();
+
     return (
-        <div style={{ maxWidth: "1200px", margin: "50px auto", padding: "20px" }}>
-            <div style={{ marginBottom: "40px" }}>
-                <h1 style={{ marginBottom: "10px" }}>Our Products</h1>
-                <p style={{ color: "#666", fontSize: "16px" }}>
-                    Browse our collection of products
-                </p>
-            </div>
-
-            <ProductList />
-        </div>
+        <ProductCatalog
+            initialProducts={filteredProducts}
+            categories={categories}
+            queryParams={{
+                q: query,
+                category,
+                min: params.min,
+                max: params.max,
+                rating: params.rating,
+                sort,
+            }}
+            title="All Products"
+            description="Explore our complete catalog of quality items"
+        />
     );
 }

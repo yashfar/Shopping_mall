@@ -78,6 +78,7 @@ export const authOptions = {
       // Initial sign in or when user object is available
       if (user) {
         token.id = user.id;
+        token.picture = user.image; // Preserve original provider image
       }
 
       // Always fetch fresh user data from database to get latest avatar
@@ -97,8 +98,8 @@ export const authOptions = {
           token.role = dbUser.role;
           token.firstName = dbUser.firstName;
           token.lastName = dbUser.lastName;
-          // Use avatar if available, otherwise fall back to Google image
-          token.avatar = dbUser.avatar || dbUser.image;
+          // Use avatar if available, otherwise fall back to Google image, then token picture
+          token.avatar = dbUser.avatar || dbUser.image || token.picture;
         }
       }
 
@@ -123,16 +124,21 @@ export const authOptions = {
       // For OAuth sign-ins, sync profile data
       if (account?.provider === "google" && profile) {
         try {
-          // Check if user exists and has an avatar
-          const existingUser = await prisma.user.findUnique({
-            where: { id: user.id },
+          // Check if user exists (by ID or Email)
+          const existingUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { id: user.id },
+                { email: user.email }
+              ]
+            },
             select: { id: true, avatar: true },
           });
 
-          // Only update if user exists (PrismaAdapter creates user first)
+          // Only update if user exists
           if (existingUser) {
             await prisma.user.update({
-              where: { id: user.id },
+              where: { id: existingUser.id },
               data: {
                 name: profile.name,
                 image: profile.picture,

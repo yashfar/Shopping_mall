@@ -216,3 +216,29 @@
         right: -1rem;
     }
 }
+
+@keyframes cart-bounce {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    25% {
+        transform: scale(1.2);
+    }
+
+    50% {
+        transform: scale(0.95);
+    }
+
+    75% {
+        transform: scale(1.1);
+    }
+}
+
+.animate-cart-bounce {
+    animation: cart-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: #3b82f6;
+    /* Blue flash */
+}

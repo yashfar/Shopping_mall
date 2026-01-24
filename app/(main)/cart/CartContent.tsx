@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCart } from "@@/context/CartContext";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@@/components/ConfirmDialog";
 
 type CartItem = {
     id: string;
@@ -21,11 +24,18 @@ type Cart = {
 
 export default function CartContent() {
     const router = useRouter();
+    const { refreshCart } = useCart();
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
     const [hasAddresses, setHasAddresses] = useState(true);
     const [checkingAddresses, setCheckingAddresses] = useState(true);
+
+    // Confirmation state
+    const [confirmRemove, setConfirmRemove] = useState<{ open: boolean; productId: string }>({
+        open: false,
+        productId: "",
+    });
 
     const fetchCart = async () => {
         try {
@@ -36,6 +46,7 @@ export default function CartContent() {
             setCart(data.cart);
         } catch (error) {
             console.error("Error fetching cart:", error);
+            // toast.error("Failed to load cart"); // Optional on load
         } finally {
             setLoading(false);
         }
@@ -68,16 +79,19 @@ export default function CartContent() {
             if (!response.ok) throw new Error("Failed to update cart");
             const data = await response.json();
             setCart(data.cart);
+            await refreshCart(); // Sync navbar
+            toast.success("Cart updated");
         } catch (error) {
             console.error("Error updating cart:", error);
-            alert("Failed to update cart");
+            toast.error("Failed to update cart");
         } finally {
             setUpdating(null);
         }
     };
 
-    const removeItem = async (productId: string) => {
-        if (!confirm("Remove this item from cart?")) return;
+    const handleRemoveItem = async () => {
+        const productId = confirmRemove.productId;
+        if (!productId) return;
 
         try {
             setUpdating(productId);
@@ -90,12 +104,19 @@ export default function CartContent() {
             if (!response.ok) throw new Error("Failed to remove item");
             const data = await response.json();
             setCart(data.cart);
+            await refreshCart();
+            toast.success("Item removed from cart");
         } catch (error) {
             console.error("Error removing item:", error);
-            alert("Failed to remove item");
+            toast.error("Failed to remove item");
         } finally {
             setUpdating(null);
+            setConfirmRemove({ open: false, productId: "" });
         }
+    };
+
+    const openRemoveConfirm = (productId: string) => {
+        setConfirmRemove({ open: true, productId });
     };
 
     useEffect(() => {
@@ -136,6 +157,16 @@ export default function CartContent() {
 
     return (
         <div>
+            <ConfirmDialog
+                open={confirmRemove.open}
+                onOpenChange={(open) => setConfirmRemove(prev => ({ ...prev, open }))}
+                title="Remove Item"
+                description="Are you sure you want to remove this item from your cart?"
+                onConfirm={handleRemoveItem}
+                variant="destructive"
+                confirmText="Remove"
+            />
+
             <div style={{ backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -209,7 +240,7 @@ export default function CartContent() {
                                 </td>
                                 <td style={{ padding: "16px", textAlign: "center" }}>
                                     <button
-                                        onClick={() => removeItem(item.product.id)}
+                                        onClick={() => openRemoveConfirm(item.product.id)}
                                         disabled={updating === item.product.id}
                                         style={{
                                             padding: "8px 16px",

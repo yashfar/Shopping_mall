@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@@/components/ConfirmDialog";
+import { toast } from "sonner";
 
 type Product = {
     id: string;
@@ -14,14 +17,17 @@ type Product = {
 };
 
 export default function ProductManagement() {
+    const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
-    // Form state
+    const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "", title: "" });
+
+    // Form state (only used for editing now)
     const [formData, setFormData] = useState({
         title: "",
         description: "",
@@ -51,35 +57,6 @@ export default function ProductManagement() {
         }
     };
 
-    // Create product
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        try {
-            const response = await fetch("/api/admin/products", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title: formData.title,
-                    description: formData.description || null,
-                    price: Math.round(parseFloat(formData.price) * 100), // Convert to cents
-                    stock: parseInt(formData.stock),
-                    isActive: formData.isActive,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to create product");
-            }
-
-            setFormData({ title: "", description: "", price: "", stock: "0", isActive: true });
-            setShowCreateForm(false);
-            await fetchProducts();
-        } catch (err: any) {
-            alert(err.message || "Failed to create product");
-        }
-    };
-
     // Update product
     const handleUpdate = async (id: string) => {
         try {
@@ -102,20 +79,18 @@ export default function ProductManagement() {
 
             setEditingId(null);
             setFormData({ title: "", description: "", price: "", stock: "0", isActive: true });
+            toast.success("Product updated successfully");
             await fetchProducts();
         } catch (err: any) {
-            alert(err.message || "Failed to update product");
+            toast.error(err.message || "Failed to update product");
         } finally {
             setUpdatingId(null);
         }
     };
 
-    // Delete product
-    const handleDelete = async (id: string, title: string) => {
-        if (!confirm(`Are you sure you want to delete: ${title}?`)) {
-            return;
-        }
-
+    // Delete product logic (API call)
+    const confirmDelete = async () => {
+        const { id } = deleteDialog;
         try {
             setUpdatingId(id);
             const response = await fetch(`/api/admin/products/${id}`, {
@@ -126,11 +101,13 @@ export default function ProductManagement() {
                 throw new Error("Failed to delete product");
             }
 
+            toast.success("Product deleted successfully");
             await fetchProducts();
         } catch (err: any) {
-            alert(err.message || "Failed to delete product");
+            toast.error(err.message || "Failed to delete product");
         } finally {
             setUpdatingId(null);
+            setDeleteDialog(prev => ({ ...prev, open: false }));
         }
     };
 
@@ -148,9 +125,10 @@ export default function ProductManagement() {
                 throw new Error("Failed to update status");
             }
 
+            toast.success(`Product ${!currentStatus ? "activated" : "deactivated"}`);
             await fetchProducts();
         } catch (err: any) {
-            alert(err.message || "Failed to update status");
+            toast.error(err.message || "Failed to update status");
         } finally {
             setUpdatingId(null);
         }
@@ -172,6 +150,12 @@ export default function ProductManagement() {
         fetchProducts();
     }, []);
 
+    // Filter products
+    const filteredProducts = products.filter(product =>
+        product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
     if (loading) {
         return <div style={{ textAlign: "center", padding: "40px" }}>Loading products...</div>;
     }
@@ -189,136 +173,25 @@ export default function ProductManagement() {
 
     return (
         <div>
-            {/* Create Button */}
-            <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
-                <button
-                    onClick={() => setShowCreateForm(!showCreateForm)}
-                    style={{
-                        padding: "10px 20px",
-                        backgroundColor: "#10b981",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontWeight: "600",
-                    }}
-                >
-                    {showCreateForm ? "Cancel" : "+ Create Product"}
-                </button>
-                <button
-                    onClick={fetchProducts}
-                    style={{
-                        padding: "10px 20px",
-                        backgroundColor: "#f5f5f5",
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                    }}
-                >
-                    🔄 Refresh
-                </button>
-            </div>
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                open={deleteDialog.open}
+                onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
+                title="Delete Product"
+                description={`Are you sure you want to delete "${deleteDialog.title}"? This action cannot be undone.`}
+                onConfirm={confirmDelete}
+                variant="destructive"
+                confirmText="Delete"
+            />
 
-            {/* Create Form */}
-            {showCreateForm && (
-                <form
-                    onSubmit={handleCreate}
-                    style={{
-                        backgroundColor: "#f9fafb",
-                        padding: "20px",
-                        borderRadius: "8px",
-                        marginBottom: "30px",
-                        border: "1px solid #e5e7eb",
-                    }}
-                >
-                    <h3 style={{ marginTop: 0 }}>Create New Product</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-                        <div>
-                            <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
-                                Title *
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                required
-                                style={{
-                                    width: "100%",
-                                    padding: "8px",
-                                    border: "1px solid #ccc",
-                                    borderRadius: "4px",
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
-                                Price (USD) *
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                required
-                                style={{
-                                    width: "100%",
-                                    padding: "8px",
-                                    border: "1px solid #ccc",
-                                    borderRadius: "4px",
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
-                                Stock
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.stock}
-                                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                                style={{
-                                    width: "100%",
-                                    padding: "8px",
-                                    border: "1px solid #ccc",
-                                    borderRadius: "4px",
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
-                                Active
-                            </label>
-                            <input
-                                type="checkbox"
-                                checked={formData.isActive}
-                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                                style={{ width: "20px", height: "20px", marginTop: "8px" }}
-                            />
-                        </div>
-                    </div>
-                    <div style={{ marginTop: "15px" }}>
-                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
-                            Description
-                        </label>
-                        <textarea
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            rows={3}
-                            style={{
-                                width: "100%",
-                                padding: "8px",
-                                border: "1px solid #ccc",
-                                borderRadius: "4px",
-                                fontFamily: "inherit",
-                            }}
-                        />
-                    </div>
+            {/* Action Buttons and Search */}
+            <div style={{ marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", gap: "10px" }}>
                     <button
-                        type="submit"
+                        onClick={() => router.push("/admin/products/new")}
                         style={{
-                            marginTop: "15px",
                             padding: "10px 20px",
-                            backgroundColor: "#0070f3",
+                            backgroundColor: "#10b981",
                             color: "white",
                             border: "none",
                             borderRadius: "4px",
@@ -326,10 +199,38 @@ export default function ProductManagement() {
                             fontWeight: "600",
                         }}
                     >
-                        Create Product
+                        + Create Product
                     </button>
-                </form>
-            )}
+                    <button
+                        onClick={fetchProducts}
+                        style={{
+                            padding: "10px 20px",
+                            backgroundColor: "#f5f5f5",
+                            border: "1px solid #ccc",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                        }}
+                    >
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div style={{ flex: 1, maxWidth: "400px" }}>
+                    <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px",
+                            border: "1px solid #ccc",
+                            borderRadius: "4px",
+                            fontSize: "14px",
+                        }}
+                    />
+                </div>
+            </div>
 
             {/* Products Table */}
             <div style={{ overflowX: "auto" }}>
@@ -364,7 +265,7 @@ export default function ProductManagement() {
                         </tr>
                     </thead>
                     <tbody>
-                        {products.map((product) => (
+                        {filteredProducts.map((product) => (
                             <tr
                                 key={product.id}
                                 style={{
@@ -443,9 +344,26 @@ export default function ProductManagement() {
                                                     border: "none",
                                                     borderRadius: "4px",
                                                     cursor: "pointer",
+                                                    marginRight: "5px",
                                                 }}
                                             >
                                                 Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => router.push(`/admin/products/${product.id}/edit`)}
+                                                style={{
+                                                    padding: "6px 12px",
+                                                    backgroundColor: "#8b5cf6",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "4px",
+                                                    cursor: "pointer",
+                                                    marginTop: "5px",
+                                                    display: "block",
+                                                    width: "100%",
+                                                }}
+                                            >
+                                                Edit Photos / Details
                                             </button>
                                         </td>
                                     </>
@@ -493,7 +411,7 @@ export default function ProductManagement() {
                                                 Edit
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(product.id, product.title)}
+                                                onClick={() => setDeleteDialog({ open: true, id: product.id, title: product.title })}
                                                 disabled={updatingId === product.id}
                                                 style={{
                                                     padding: "6px 12px",
@@ -515,7 +433,7 @@ export default function ProductManagement() {
                 </table>
             </div>
 
-            {products.length === 0 && (
+            {filteredProducts.length === 0 && (
                 <div
                     style={{
                         textAlign: "center",
@@ -525,7 +443,9 @@ export default function ProductManagement() {
                         marginTop: "20px",
                     }}
                 >
-                    <p style={{ color: "#666" }}>No products found. Create your first product!</p>
+                    <p style={{ color: "#666" }}>
+                        {searchTerm ? "No products found matching your search." : "No products found. Create your first product!"}
+                    </p>
                 </div>
             )}
         </div>

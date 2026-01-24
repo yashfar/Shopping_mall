@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useCart } from "@@/context/CartContext";
+import SearchBar from "./SearchBar";
 import "./navbar-client.css";
 
 interface NavbarClientProps {
@@ -17,36 +19,12 @@ interface NavbarClientProps {
 }
 
 export default function NavbarClient({ user }: NavbarClientProps) {
+    const { cartCount, isAnimating } = useCart();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [cartItemCount, setCartItemCount] = useState(0);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [imageError, setImageError] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
-
-    // Fetch cart item count
-    useEffect(() => {
-        const fetchCartCount = async () => {
-            try {
-                const response = await fetch("/api/cart");
-                if (response.ok) {
-                    const data = await response.json();
-                    const totalItems = data.cart?.items?.reduce(
-                        (sum: number, item: any) => sum + item.quantity,
-                        0
-                    ) || 0;
-                    setCartItemCount(totalItems);
-                }
-            } catch (error) {
-                console.error("Error fetching cart count:", error);
-            }
-        };
-
-        fetchCartCount();
-
-        // Refresh cart count every 30 seconds
-        const interval = setInterval(fetchCartCount, 30000);
-        return () => clearInterval(interval);
-    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -99,6 +77,11 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
     return (
         <div className="navbar-client">
+            {/* Search Bar */}
+            <div className="flex-1 max-w-xl mx-4">
+                <SearchBar />
+            </div>
+
             {/* Cart Icon */}
             <Link href="/cart" className="cart-button">
                 <svg
@@ -107,7 +90,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
                     stroke="currentColor"
-                    className="cart-icon"
+                    className={`cart-icon ${isAnimating ? "animate-cart-bounce" : ""}`}
                 >
                     <path
                         strokeLinecap="round"
@@ -115,8 +98,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                         d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"
                     />
                 </svg>
-                {cartItemCount > 0 && (
-                    <span className="cart-badge">{cartItemCount}</span>
+                {cartCount > 0 && (
+                    <span className="cart-badge">{cartCount}</span>
                 )}
             </Link>
 
@@ -128,11 +111,12 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                     aria-label="User menu"
                 >
                     <div className="avatar">
-                        {user.avatar ? (
+                        {user.avatar && !imageError ? (
                             <img
                                 src={user.avatar}
                                 alt="User avatar"
                                 className="avatar-image"
+                                onError={() => setImageError(true)}
                             />
                         ) : (
                             <span className="avatar-text">{getInitials(user.email)}</span>

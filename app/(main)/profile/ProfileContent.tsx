@@ -25,6 +25,7 @@ export default function ProfileContent() {
     const [birthdate, setBirthdate] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [imageError, setImageError] = useState(false);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
@@ -126,8 +127,13 @@ export default function ProfileContent() {
         <div className="profile-content">
             <div className="profile-header">
                 <div className="avatar-section">
-                    {(user.avatar || user.image) ? (
-                        <img src={user.avatar || user.image || ""} alt="Avatar" className="profile-avatar-image" />
+                    {(user.avatar || user.image) && !imageError ? (
+                        <img
+                            src={user.avatar || user.image || ""}
+                            alt="Avatar"
+                            className="profile-avatar-image"
+                            onError={() => setImageError(true)}
+                        />
                     ) : (
                         <div className="profile-avatar-placeholder">
                             <span className="profile-avatar-initials">{getInitials()}</span>

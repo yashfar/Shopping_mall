@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import AddressModal, { Address } from "@@/components/AddressModal";
+import { ConfirmDialog } from "@@/components/ConfirmDialog";
+import { toast } from "sonner";
 import "./addresses.css";
 
 export default function AddressesPage() {
@@ -11,6 +13,7 @@ export default function AddressesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<"add" | "edit">("add");
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchAddresses();
@@ -57,24 +60,32 @@ export default function AddressesPage() {
     };
 
     const handleModalSuccess = () => {
+        toast.success(modalMode === "add" ? "Address added successfully" : "Address updated successfully");
         fetchAddresses();
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this address?")) return;
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const confirmDeleteAction = async () => {
+        if (!deleteId) return;
 
         try {
-            const response = await fetch(`/api/address/${id}`, {
+            const response = await fetch(`/api/address/${deleteId}`, {
                 method: "DELETE",
             });
 
             if (response.ok) {
+                toast.success("Address deleted successfully");
                 await fetchAddresses();
             } else {
-                alert("Failed to delete address");
+                toast.error("Failed to delete address");
             }
         } catch (err) {
-            alert("An error occurred while deleting the address");
+            toast.error("An error occurred while deleting the address");
+        } finally {
+            setDeleteId(null);
         }
     };
 
@@ -93,6 +104,16 @@ export default function AddressesPage() {
 
     return (
         <div className="addresses-page">
+            <ConfirmDialog
+                open={!!deleteId}
+                onOpenChange={(v) => !v && setDeleteId(null)}
+                title="Delete Address"
+                description="Are you sure you want to delete this address? This action cannot be undone."
+                onConfirm={confirmDeleteAction}
+                variant="destructive"
+                confirmText="Delete"
+            />
+
             <div className="addresses-container">
                 <div className="addresses-header">
                     <h1>Your Addresses</h1>
@@ -190,7 +211,7 @@ export default function AddressesPage() {
                                     </button>
                                     <button
                                         className="btn-delete"
-                                        onClick={() => handleDelete(address.id)}
+                                        onClick={() => handleDeleteClick(address.id)}
                                     >
                                         Delete
                                     </button>
