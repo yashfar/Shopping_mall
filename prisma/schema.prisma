@@ -11,6 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -195,4 +196,26 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ============================================================================
+// Banner Management System
+// ============================================================================
+model Banner {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  title     String?
+  subtitle  String?
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model BannerSettings {
+  id            String   @id @default(cuid())
+  animationSpeed Int     @default(500)
+  slideDelay     Int     @default(3000)
+  animationType  String  @default("slide")
+  loop           Boolean @default(true)
+  createdAt      DateTime @default(now())
 }

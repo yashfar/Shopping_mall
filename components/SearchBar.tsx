@@ -21,8 +21,8 @@ export default function SearchBar() {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Discover products..."
-                    className="w-full px-5 py-2.5 pl-11 pr-5 text-[#1A1A1A] bg-[#FAFAFA] border border-[#A9A9A9] rounded-xl transition-all duration-300 focus:outline-none focus:bg-white focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5 font-medium placeholder:text-[#A9A9A9]"
+                    placeholder="Search..."
+                    className="w-full px-4 py-2 pl-10 pr-4 text-[#1A1A1A] bg-[#FAFAFA] border border-[#A9A9A9]/20 rounded-lg transition-all duration-300 focus:outline-none focus:bg-white focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5 font-medium placeholder:text-[#A9A9A9]/60 text-sm"
                 />
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

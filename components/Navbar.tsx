@@ -24,8 +24,9 @@ export default async function Navbar() {
                     <Image
                         src={FilishopLogoLight}
                         alt="My Store Logo"
-                        width={150}
-                        height={150}
+                        width={120}
+                        height={40}
+                        className="object-contain"
                     />
                     {/* <span className="brand-text">My Store</span> */}
                 </Link>

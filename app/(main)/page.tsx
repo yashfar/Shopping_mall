@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
+import BannerCarousel from "@@/components/BannerCarousel";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -90,19 +91,24 @@ export default async function Home({ searchParams }: HomeProps) {
   const categories = allCategories.map((c) => c.name);
 
   return (
-    <ProductCatalog
-      initialProducts={filteredProducts}
-      categories={categories}
-      queryParams={{
-        q: query,
-        category,
-        min: params.min,
-        max: params.max,
-        rating: params.rating,
-        sort,
-      }}
-      title={query ? `Results for "${query}"` : "Our Products"}
-      description="Brief description or welcome message can go here."
-    />
+    <>
+      {!(query || category || minPrice || maxPrice || minRating) && (
+        <BannerCarousel />
+      )}
+      <ProductCatalog
+        initialProducts={filteredProducts}
+        categories={categories}
+        queryParams={{
+          q: query,
+          category,
+          min: params.min,
+          max: params.max,
+          rating: params.rating,
+          sort,
+        }}
+        title={query ? `Results for "${query}"` : "Our Products"}
+        description="Brief description or welcome message can go here."
+      />
+    </>
   );
 }

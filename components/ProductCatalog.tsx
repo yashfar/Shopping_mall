@@ -55,7 +55,7 @@ export default function ProductCatalog({
     return (
         <div className="min-h-screen bg-[#FAFAFA] pb-12">
             {/* Header Section */}
-            <div className="bg-white border-b border-[#A9A9A9] sticky top-0 z-30 shadow-sm">
+            <div className="bg-white border-b border-[#A9A9A9]">
                 <div className="max-w-7xl mx-auto px-6 py-5">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
