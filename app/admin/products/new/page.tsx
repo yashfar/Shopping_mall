@@ -225,7 +225,7 @@ export default function NewProductPage() {
                                             alt={`Product ${index + 1}`}
                                             width={200}
                                             height={200}
-                                            className="product-image"
+                                            className="product-image w-full h-full object-cover"
                                         />
                                         {thumbnail === image.url && (
                                             <div className="thumbnail-badge">

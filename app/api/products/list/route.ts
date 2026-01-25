@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
         // Category filter
         if (category) {
-            whereClause.category = category;
+            whereClause.category = { name: category };
         }
 
         // Price filter

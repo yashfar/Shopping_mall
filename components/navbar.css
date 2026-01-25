@@ -1,10 +1,10 @@
 .navbar {
   background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #A9A9A9;
   position: sticky;
   top: 0;
   z-index: 1000;
+  transition: all 0.3s ease;
 }
 
 .navbar-container {
@@ -19,102 +19,109 @@
 
 .navbar-brand {
   text-decoration: none;
-  color: #111827;
+  color: #1A1A1A;
   font-weight: 700;
   font-size: 1.5rem;
-  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s;
 }
 
 .navbar-brand:hover {
-  color: #3b82f6;
+  opacity: 0.8;
 }
 
 .brand-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #C8102E;
+  letter-spacing: -0.02em;
 }
 
 .navbar-links {
   display: flex;
-  gap: 2rem;
+  gap: 2.5rem;
   flex: 1;
-  margin-left: 2rem;
+  margin-left: 3rem;
   align-items: center;
 }
 
 .nav-link {
   text-decoration: none;
-  color: #4b5563;
-  font-weight: 500;
+  color: #1A1A1A;
+  font-weight: 600;
   font-size: 0.95rem;
-  transition: color 0.2s;
+  transition: all 0.2s;
   position: relative;
+  padding: 0.5rem 0;
 }
 
-.nav-link:hover {
-  color: #3b82f6;
+.nav-link:hover,
+.nav-link.active {
+  color: #C8102E;
 }
 
 .nav-link::after {
   content: "";
   position: absolute;
-  bottom: -4px;
+  bottom: 0;
   left: 0;
   width: 0;
   height: 2px;
-  background-color: #3b82f6;
-  transition: width 0.2s;
+  background-color: #C8102E;
+  transition: width 0.3s ease;
 }
 
-.nav-link:hover::after {
+.nav-link:hover::after,
+.nav-link.active::after {
   width: 100%;
 }
 
 .navbar-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .auth-buttons {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
   align-items: center;
 }
 
 .btn-login {
-  padding: 0.5rem 1.25rem;
+  padding: 0.6rem 1.5rem;
   text-decoration: none;
-  color: #4b5563;
-  font-weight: 500;
+  color: #1A1A1A;
+  font-weight: 600;
   font-size: 0.95rem;
   border-radius: 0.5rem;
   transition: all 0.2s;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #A9A9A9;
 }
 
 .btn-login:hover {
-  background-color: #f9fafb;
-  color: #111827;
+  background-color: rgba(200, 16, 46, 0.05);
+  border-color: #C8102E;
+  color: #C8102E;
 }
 
 .btn-register {
-  padding: 0.5rem 1.25rem;
+  padding: 0.6rem 1.5rem;
   text-decoration: none;
   color: #ffffff;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.95rem;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background-color: #C8102E;
   border-radius: 0.5rem;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  border: 1px solid #C8102E;
 }
 
 .btn-register:hover {
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  background-color: #A90D27;
+  border-color: #A90D27;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
 }
 
 @media (max-width: 768px) {

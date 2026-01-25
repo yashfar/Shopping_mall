@@ -93,7 +93,12 @@ export default function CheckoutContent() {
 
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
+                <p className="text-[#A9A9A9] font-semibold">Preparing your order...</p>
+            </div>
+        );
     }
 
     if (!cart || cart.items.length === 0) {
@@ -106,108 +111,82 @@ export default function CheckoutContent() {
     );
 
     return (
-        <div>
+        <div className="max-w-3xl mx-auto space-y-8 pb-20">
             {/* Order Summary */}
-            <div
-                style={{
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    marginBottom: "24px",
-                }}
-            >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Summary</h2>
+            <div className="bg-white rounded-2xl border border-[#A9A9A9] shadow-sm overflow-hidden p-8">
+                <h2 className="text-2xl font-black text-[#1A1A1A] mb-8 border-b border-[#A9A9A9]/20 pb-4">Order Summary</h2>
 
-                <div style={{ borderBottom: "1px solid #eee", paddingBottom: "16px", marginBottom: "16px" }}>
+                <div className="space-y-6 mb-8">
                     {cart.items.map((item) => (
                         <div
                             key={item.id}
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: "12px",
-                            }}
+                            className="flex justify-between items-start"
                         >
-                            <div>
-                                <div style={{ fontWeight: "600" }}>{item.product.title}</div>
-                                <div style={{ fontSize: "14px", color: "#666" }}>
+                            <div className="space-y-1">
+                                <div className="font-bold text-[#1A1A1A] text-lg">{item.product.title}</div>
+                                <div className="text-sm font-bold text-[#A9A9A9] bg-[#FAFAFA] px-2 py-1 rounded inline-block">
                                     Quantity: {item.quantity}
                                 </div>
                             </div>
-                            <div style={{ fontWeight: "600" }}>
-                                ${((item.product.price * item.quantity) / 100).toFixed(2)}
+                            <div className="font-black text-[#1A1A1A] text-lg">
+                                ${(item.product.price / 100).toFixed(2)}
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontSize: "20px",
-                        fontWeight: "700",
-                    }}
-                >
-                    <span>Total</span>
-                    <span style={{ color: "#0070f3" }}>${(total / 100).toFixed(2)}</span>
+                <div className="flex justify-between items-center pt-6 border-t-2 border-[#1A1A1A]">
+                    <span className="text-xl font-extrabold text-[#1A1A1A]">Grand Total</span>
+                    <span className="text-3xl font-black text-[#C8102E]">
+                        ${(total / 100).toFixed(2)}
+                    </span>
                 </div>
             </div>
 
-            <div
-                style={{
-                    backgroundColor: "#e3f2fd",
-                    padding: "20px",
-                    borderRadius: "8px",
-                    marginBottom: "24px",
-                    border: "1px solid #2196f3",
-                }}
-            >
-                <p style={{ margin: 0, fontSize: "14px" }}>
-                    ℹ️ <strong>Ready to place order:</strong> Click "Place Order" to confirm your purchase.
-                    You will be redirected to payment in the next step.
-                </p>
+            <div className="bg-red-50 border border-[#C8102E]/20 p-6 rounded-2xl flex items-start gap-4">
+                <div className="w-10 h-10 bg-[#C8102E] rounded-xl flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-white">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-[#1A1A1A] font-bold">Ready to place order</p>
+                    <p className="text-sm text-[#4A4A4A] font-medium leading-relaxed">
+                        Click "Confirm & Place Order" to complete your purchase. You'll be redirected to the secure payment page next.
+                    </p>
+                </div>
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "12px" }}>
+            <div className="flex flex-col sm:flex-row gap-4">
                 <button
                     onClick={() => router.push("/cart")}
                     disabled={creating}
-                    style={{
-                        flex: 1,
-                        padding: "14px",
-                        backgroundColor: "#f5f5f5",
-                        color: "#333",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        cursor: creating ? "not-allowed" : "pointer",
-                        fontWeight: "600",
-                        fontSize: "16px",
-                        opacity: creating ? 0.5 : 1,
-                    }}
+                    className="flex-1 py-4 px-6 border border-[#A9A9A9] rounded-xl text-[#1A1A1A] font-bold transition-all hover:bg-[#FAFAFA] hover:border-[#1A1A1A] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    ← Back to Cart
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Back to Cart
                 </button>
                 <button
                     onClick={createOrder}
                     disabled={creating}
-                    style={{
-                        flex: 1,
-                        padding: "14px",
-                        backgroundColor: creating ? "#ccc" : "#10b981",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: creating ? "not-allowed" : "pointer",
-                        fontWeight: "600",
-                        fontSize: "16px",
-                    }}
+                    className={`flex-1 py-4 px-6 rounded-xl text-white font-black text-lg transition-all shadow-lg flex items-center justify-center gap-2 ${creating ? "bg-[#A9A9A9] cursor-not-allowed" : "bg-[#C8102E] hover:bg-[#A90D27] hover:shadow-[0_8px_20px_rgba(200,16,46,0.3)] active:scale-95"}`}
                 >
-                    {creating ? "Creating Order..." : "Place Order"}
+                    {creating ? (
+                        <>
+                            <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+                            Creating...
+                        </>
+                    ) : (
+                        <>
+                            Confirm & Place Order
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </>
+                    )}
                 </button>
             </div>
         </div>

@@ -31,7 +31,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         ];
     }
 
-    if (category) whereClause.category = category;
+    if (category) {
+        whereClause.category = { name: category };
+    }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
         whereClause.price = {};
@@ -60,16 +62,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
     filteredProducts = sortProducts(filteredProducts, sort);
 
-    const allCategories = await prisma.product.findMany({
-        where: { isActive: true, category: { not: null } },
-        select: { category: true },
-        distinct: ["category"],
+    const allCategories = await prisma.category.findMany({
+        where: {
+            products: {
+                some: { isActive: true }
+            }
+        },
+        select: { name: true },
+        orderBy: { name: "asc" }
     });
 
-    const categories = allCategories
-        .map((p) => p.category)
-        .filter((c): c is string => c !== null)
-        .sort();
+    const categories = allCategories.map((c) => c.name);
 
     return (
         <ProductCatalog

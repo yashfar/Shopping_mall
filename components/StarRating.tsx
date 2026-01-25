@@ -48,7 +48,7 @@ export default function StarRating({
                             fill={isFilled ? "currentColor" : "none"}
                             stroke="currentColor"
                             strokeWidth={isFilled ? 0 : 2}
-                            className={`${sizeClasses[size]} ${isFilled ? "text-yellow-400" : "text-gray-300"
+                            className={`${sizeClasses[size]} ${isFilled ? "text-[#C8102E]" : "text-[#A9A9A9]"
                                 }`}
                         >
                             <path

@@ -76,14 +76,14 @@ export default function Filters({ categories }: FiltersProps) {
     const hasActiveFilters = currentCategory || currentRating || searchParams.get("min") || searchParams.get("max");
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-white rounded-lg border border-[#A9A9A9] p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+                <h2 className="text-xl font-extrabold text-[#1A1A1A]">Filters</h2>
                 {hasActiveFilters && (
                     <button
                         onClick={clearAllFilters}
-                        className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                        className="text-sm text-[#C8102E] hover:text-[#A90D27] font-bold"
                     >
                         Clear All
                     </button>
@@ -92,21 +92,21 @@ export default function Filters({ categories }: FiltersProps) {
 
             {/* Category Filter */}
             {categories.length > 0 && (
-                <div className="border-t border-gray-200 pt-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Category</h3>
+                <div className="border-t border-[#A9A9A9]/20 pt-4">
+                    <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Category</h3>
                     <div className="space-y-2">
                         {categories.map((category) => (
                             <label
                                 key={category}
-                                className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                className="flex items-center cursor-pointer hover:bg-red-50 p-2 rounded-lg transition-colors group"
                             >
                                 <input
                                     type="checkbox"
                                     checked={currentCategory === category}
                                     onChange={() => handleCategoryChange(category)}
-                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 text-[#C8102E] border-[#A9A9A9] rounded focus:ring-[#C8102E]"
                                 />
-                                <span className="ml-2 text-sm text-gray-700 capitalize">
+                                <span className="ml-3 text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] capitalize transition-colors">
                                     {category}
                                 </span>
                             </label>
@@ -116,36 +116,36 @@ export default function Filters({ categories }: FiltersProps) {
             )}
 
             {/* Price Filter */}
-            <div className="border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Price Range</h3>
-                <div className="space-y-3">
+            <div className="border-t border-[#A9A9A9]/20 pt-4">
+                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Price Range</h3>
+                <div className="space-y-4">
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <label className="text-xs text-gray-600 mb-1 block">Min ($)</label>
+                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">Min ($)</label>
                             <input
                                 type="number"
                                 value={minPrice}
                                 onChange={(e) => setMinPrice(e.target.value)}
                                 placeholder="0"
                                 min="0"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-[#A9A9A9] rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E] font-medium"
                             />
                         </div>
                         <div className="flex-1">
-                            <label className="text-xs text-gray-600 mb-1 block">Max ($)</label>
+                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">Max ($)</label>
                             <input
                                 type="number"
                                 value={maxPrice}
                                 onChange={(e) => setMaxPrice(e.target.value)}
                                 placeholder="Any"
                                 min="0"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-[#A9A9A9] rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E] font-medium"
                             />
                         </div>
                     </div>
                     <button
                         onClick={handlePriceFilter}
-                        className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                        className="w-full px-4 py-2.5 bg-[#C8102E] text-white rounded-lg hover:bg-[#A90D27] transition-all duration-300 text-sm font-bold shadow-md active:scale-95"
                     >
                         Apply Price Filter
                     </button>
@@ -153,19 +153,19 @@ export default function Filters({ categories }: FiltersProps) {
             </div>
 
             {/* Rating Filter */}
-            <div className="border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Customer Rating</h3>
+            <div className="border-t border-[#A9A9A9]/20 pt-4">
+                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Customer Rating</h3>
                 <div className="space-y-2">
-                    {["4", "3", "2"].map((rating) => (
+                    {["4", "3", "2", "1"].map((rating) => (
                         <button
                             key={rating}
                             onClick={() => handleRatingChange(rating)}
-                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${currentRating === rating
-                                    ? "bg-purple-50 border-2 border-purple-600"
-                                    : "border border-gray-200 hover:bg-gray-50"
+                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 ${currentRating === rating
+                                ? "bg-red-50 border-2 border-[#C8102E]"
+                                : "border border-[#A9A9A9]/20 hover:border-[#C8102E] hover:bg-red-50/5"
                                 }`}
                         >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
                                 {Array.from({ length: 5 }, (_, i) => (
                                     <svg
                                         key={i}
@@ -174,7 +174,7 @@ export default function Filters({ categories }: FiltersProps) {
                                         fill={i < parseInt(rating) ? "currentColor" : "none"}
                                         stroke="currentColor"
                                         strokeWidth={i < parseInt(rating) ? 0 : 2}
-                                        className={`w-4 h-4 ${i < parseInt(rating) ? "text-yellow-400" : "text-gray-300"
+                                        className={`w-4 h-4 ${i < parseInt(rating) ? "text-[#C8102E]" : "text-[#A9A9A9]"
                                             }`}
                                     >
                                         <path
@@ -184,7 +184,7 @@ export default function Filters({ categories }: FiltersProps) {
                                         />
                                     </svg>
                                 ))}
-                                <span className="ml-2 text-sm text-gray-700">& up</span>
+                                <span className={`ml-2 text-sm font-bold ${currentRating === rating ? "text-[#C8102E]" : "text-[#A9A9A9]"}`}>& up</span>
                             </div>
                         </button>
                     ))}

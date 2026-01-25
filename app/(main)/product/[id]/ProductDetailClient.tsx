@@ -274,7 +274,7 @@ export default function ProductDetailClient({
                         </div>
 
                         {product.stock > 0 ? (
-                            <div className="flex flex-col gap-4 mt-4">
+                            <div className="flex flex-col gap-6 mt-6">
                                 <div className="stock-badge in-stock">
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -291,20 +291,20 @@ export default function ProductDetailClient({
                                     In Stock ({product.stock} available)
                                 </div>
 
-                                <div className="flex items-center gap-4 py-2">
-                                    <span className="font-medium text-gray-700">Quantity</span>
-                                    <div className="flex items-center border border-gray-300 rounded-lg">
+                                <div className="quantity-selector">
+                                    <span className="font-bold text-[#1A1A1A] text-lg">Quantity</span>
+                                    <div className="quantity-controls">
                                         <button
                                             onClick={() => updateQuantity(-1)}
-                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-lg"
+                                            className="quantity-btn"
                                             disabled={quantity <= 1}
                                         >
                                             −
                                         </button>
-                                        <span className="w-10 text-center font-medium">{quantity}</span>
+                                        <span className="quantity-value">{quantity}</span>
                                         <button
                                             onClick={() => updateQuantity(1)}
-                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-lg"
+                                            className="quantity-btn"
                                             disabled={quantity >= 10 || quantity >= product.stock}
                                         >
                                             +
@@ -315,17 +315,17 @@ export default function ProductDetailClient({
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={isAddingToCart}
-                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    className="add-to-cart-btn"
                                 >
                                     {isAddingToCart ? (
                                         <>
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            Adding...
+                                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Adding to Cart...
                                         </>
                                     ) : (
                                         <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                                             </svg>
                                             Add to Cart
                                         </>
@@ -333,7 +333,7 @@ export default function ProductDetailClient({
                                 </button>
                             </div>
                         ) : (
-                            <div className="stock-badge out-of-stock mt-4">
+                            <div className="stock-badge out-of-stock mt-6">
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 20 20"
