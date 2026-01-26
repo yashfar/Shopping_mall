@@ -90,10 +90,40 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const categories = allCategories.map((c) => c.name);
 
+  // Fetch active banners and settings for carousel
+  const banners = await prisma.banner.findMany({
+    where: { active: true },
+    orderBy: { order: "asc" },
+    select: {
+      id: true,
+      imageUrl: true,
+      title: true,
+      subtitle: true,
+      order: true,
+      displayMode: true,
+      alignment: true,
+    },
+  });
+
+  let bannerSettings = await prisma.bannerSettings.findFirst();
+
+  // Create default settings if none exist
+  if (!bannerSettings) {
+    bannerSettings = await prisma.bannerSettings.create({
+      data: {
+        animationSpeed: 500,
+        slideDelay: 3000,
+        animationType: "slide",
+        loop: true,
+        arrowDisplay: "hover",
+      },
+    });
+  }
+
   return (
     <>
-      {!(query || category || minPrice || maxPrice || minRating) && (
-        <BannerCarousel />
+      {!(query || category || minPrice || maxPrice || minRating) && banners.length > 0 && (
+        <BannerCarousel banners={banners} settings={bannerSettings} />
       )}
       <ProductCatalog
         initialProducts={filteredProducts}

@@ -3,125 +3,247 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 
-const banners = [
-    {
-        id: 1,
-        image: "/banner/banner-1.jpg",
-        title: "Elegance in Every Frame",
-        subtitle: "Crafted with timeless precision."
-    },
-    {
-        id: 2,
-        image: "/banner/banner-2.jpg",
-        title: "Engineered for the Modern Ear",
-        subtitle: "Your Vision, Our Filament."
-    },
-    {
-        id: 3,
-        image: "/banner/banner-3.jpg",
-        title: "Unleash Your Speed",
-        subtitle: "Precision Crafted. Engineered."
-    }
-];
+interface Banner {
+    id: string;
+    imageUrl: string;
+    title: string | null;
+    subtitle: string | null;
+    order: number;
+    displayMode: string;
+    alignment: string;
+}
 
-export default function BannerCarousel() {
+interface BannerSettings {
+    id: string;
+    animationSpeed: number;
+    slideDelay: number;
+    animationType: string;
+    loop: boolean;
+    arrowDisplay: string;
+    createdAt: Date;
+}
+
+interface BannerCarouselProps {
+    banners: Banner[];
+    settings: BannerSettings;
+}
+
+export default function BannerCarousel({ banners, settings }: BannerCarouselProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     const nextSlide = useCallback(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
-    }, []);
+        if (isTransitioning) return;
+
+        setIsTransitioning(true);
+        setCurrentIndex((prevIndex) => {
+            if (settings.loop) {
+                return (prevIndex + 1) % banners.length;
+            } else {
+                return prevIndex < banners.length - 1 ? prevIndex + 1 : prevIndex;
+            }
+        });
+
+        setTimeout(() => setIsTransitioning(false), settings.animationSpeed);
+    }, [banners.length, settings.loop, settings.animationSpeed, isTransitioning]);
 
     const prevSlide = () => {
-        setCurrentIndex((prevIndex) => (prevIndex - 1 + banners.length) % banners.length);
+        if (isTransitioning) return;
+
+        setIsTransitioning(true);
+        setCurrentIndex((prevIndex) => {
+            if (settings.loop) {
+                return (prevIndex - 1 + banners.length) % banners.length;
+            } else {
+                return prevIndex > 0 ? prevIndex - 1 : prevIndex;
+            }
+        });
+
+        setTimeout(() => setIsTransitioning(false), settings.animationSpeed);
     };
 
+    const goToSlide = (index: number) => {
+        if (isTransitioning || index === currentIndex) return;
+
+        setIsTransitioning(true);
+        setCurrentIndex(index);
+        setTimeout(() => setIsTransitioning(false), settings.animationSpeed);
+    };
+
+    // Auto-advance slides
     useEffect(() => {
-        const timer = setInterval(nextSlide, 5000);
+        if (banners.length <= 1) return;
+
+        const timer = setInterval(() => {
+            nextSlide();
+        }, settings.slideDelay);
+
         return () => clearInterval(timer);
-    }, [nextSlide]);
+    }, [nextSlide, settings.slideDelay, banners.length]);
+
+    // Don't render if no banners
+    if (banners.length === 0) {
+        return null;
+    }
+
+    // Animation class based on type
+    const getAnimationClass = () => {
+        switch (settings.animationType) {
+            case "fade":
+                return "opacity-0";
+            case "zoom":
+                return "scale-95 opacity-0";
+            case "slide":
+            default:
+                return "";
+        }
+    };
+
+    const getActiveAnimationClass = () => {
+        switch (settings.animationType) {
+            case "fade":
+                return "opacity-100";
+            case "zoom":
+                return "scale-100 opacity-100";
+            case "slide":
+            default:
+                return "";
+        }
+    };
 
     return (
-        <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] aspect-video overflow-hidden mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 h-[calc(100vh-75px)]">
+        <div className="relative w-full aspect-video overflow-hidden mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]">
             {/* Slides */}
-            <div
-                className="flex transition-transform duration-700 ease-in-out h-full"
-                style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-                {banners.map((banner) => (
-                    <div key={banner.id} className="relative min-w-full h-full">
-                        <Image
-                            src={banner.image}
-                            alt={banner.title}
-                            fill
-                            className="object-cover"
-                            priority={banner.id === 1}
-                        />
-                        {/* Overlay Gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent flex flex-col justify-center px-12 md:px-24">
-                            {/* <h2 className="text-white text-5xl md:text-7xl font-black mb-4 animate-slide-up-fade">
-                                {banner.title}
-                            </h2>
-                            <p className="text-white/90 text-xl md:text-2xl font-medium max-w-lg mb-8 animate-slide-up-fade delay-100">
-                                {banner.subtitle}
-                            </p>
-                            <button className="w-fit px-8 py-4 bg-[#C8102E] text-white rounded-xl font-bold text-lg hover:bg-[#A90D27] transition-all transform hover:scale-105 active:scale-95 shadow-xl">
-                                Shop Collection
-                            </button> */}
+            {settings.animationType === "slide" ? (
+                // Slide animation (horizontal scroll)
+                <div
+                    className="flex h-full transition-transform ease-in-out"
+                    style={{
+                        transform: `translateX(-${currentIndex * 100}%)`,
+                        transitionDuration: `${settings.animationSpeed}ms`,
+                    }}
+                >
+                    {banners.map((banner) => (
+                        <div key={banner.id} className="relative min-w-full h-full">
+                            <Image
+                                src={banner.imageUrl}
+                                alt={banner.title || "Banner"}
+                                fill
+                                className="object-cover"
+                                style={{
+                                    objectFit: banner.displayMode as any,
+                                    objectPosition: banner.alignment,
+                                }}
+                                priority={banner.order === 0}
+                            />
+                            {/* Overlay Gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                // Fade/Zoom animation (stacked)
+                <div className="relative h-full">
+                    {banners.map((banner, index) => (
+                        <div
+                            key={banner.id}
+                            className={`absolute inset-0 transition-all ease-in-out ${index === currentIndex
+                                ? getActiveAnimationClass()
+                                : getAnimationClass()
+                                }`}
+                            style={{
+                                transitionDuration: `${settings.animationSpeed}ms`,
+                                zIndex: index === currentIndex ? 10 : 0,
+                            }}
+                        >
+                            <Image
+                                src={banner.imageUrl}
+                                alt={banner.title || "Banner"}
+                                fill
+                                className="object-cover"
+                                style={{
+                                    objectFit: banner.displayMode as any,
+                                    objectPosition: banner.alignment,
+                                }}
+                                priority={banner.order === 0}
+                            />
+                            {/* Overlay Gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+                        </div>
+                    ))}
+                </div>
+            )}
 
-            {/* Navigation Buttons */}
-            <button
-                onClick={prevSlide}
-                className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-white/20"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                </svg>
-            </button>
-            <button
-                onClick={nextSlide}
-                className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-white/20"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-            </button>
-
-            {/* Indicators */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
-                {banners.map((_, index) => (
+            {/* Navigation Buttons - Only show if more than 1 banner and not invisible */}
+            {banners.length > 1 && (settings.arrowDisplay || "hover") !== "invisible" && (
+                <>
                     <button
-                        key={index}
-                        onClick={() => setCurrentIndex(index)}
-                        className={`transition-all duration-300 rounded-full ${currentIndex === index
-                            ? "w-8 h-2 bg-white"
-                            : "w-2 h-2 bg-white/40 hover:bg-white/60"
+                        onClick={prevSlide}
+                        disabled={!settings.loop && currentIndex === 0}
+                        className={`absolute left-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
                             }`}
-                    />
-                ))}
-            </div>
+                        aria-label="Previous banner"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2.5}
+                            stroke="currentColor"
+                            className="w-6 h-6"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M15.75 19.5L8.25 12l7.5-7.5"
+                            />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={nextSlide}
+                        disabled={!settings.loop && currentIndex === banners.length - 1}
+                        className={`absolute right-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                            }`}
+                        aria-label="Next banner"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2.5}
+                            stroke="currentColor"
+                            className="w-6 h-6"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                            />
+                        </svg>
+                    </button>
+                </>
+            )}
 
-            <style jsx>{`
-                @keyframes slide-up-fade {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .animate-slide-up-fade {
-                    animation: slide-up-fade 0.8s ease-out forwards;
-                }
-                .delay-100 {
-                    animation-delay: 0.1s;
-                }
-            `}</style>
+            {/* Indicators - Only show if more than 1 banner */}
+            {banners.length > 1 && (
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+                    {banners.map((banner, index) => (
+                        <button
+                            key={banner.id}
+                            onClick={() => goToSlide(index)}
+                            className={`transition-all duration-300 rounded-full ${currentIndex === index
+                                ? "w-8 h-2 bg-white"
+                                : "w-2 h-2 bg-white/40 hover:bg-white/60"
+                                }`}
+                            aria-label={`Go to banner ${index + 1}`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

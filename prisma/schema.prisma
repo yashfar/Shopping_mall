@@ -201,13 +201,15 @@ model VerificationToken {
 // Banner Management System
 // ============================================================================
 model Banner {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  title     String?
-  subtitle  String?
-  active    Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  imageUrl    String
+  title       String?
+  subtitle    String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  displayMode String   @default("cover")   // object-fit: cover, contain, fill, scale-down, none
+  alignment   String   @default("center")  // object-position: center, top, bottom, left, right, etc.
+  createdAt   DateTime @default(now())
 }
 
 model BannerSettings {
@@ -216,5 +218,6 @@ model BannerSettings {
   slideDelay     Int     @default(3000)
   animationType  String  @default("slide")
   loop           Boolean @default(true)
+  arrowDisplay   String  @default("hover") // "show", "hover", "invisible"
   createdAt      DateTime @default(now())
 }
