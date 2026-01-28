@@ -6,18 +6,32 @@ import { prisma } from "@/lib/prisma";
  * GET /api/admin/products
  * Returns all products (admin only)
  */
-export async function GET() {
+export async function GET(req: Request) {
     const session = await auth();
 
     if (!session || session.user.role !== "ADMIN") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get("search");
+
     try {
+        const where: any = {};
+
+        if (query) {
+            where.OR = [
+                { title: { contains: query, mode: "insensitive" } },
+                { description: { contains: query, mode: "insensitive" } },
+            ];
+        }
+
         const products = await prisma.product.findMany({
+            where,
             orderBy: {
                 createdAt: "desc",
             },
+            take: 50, // Limit results for performance
         });
 
         return NextResponse.json({ products });

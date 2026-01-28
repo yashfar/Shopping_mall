@@ -6,9 +6,10 @@ import { toast } from "sonner";
 
 interface DeleteBannerButtonProps {
     bannerId: string;
+    onSuccess?: () => void;
 }
 
-export default function DeleteBannerButton({ bannerId }: DeleteBannerButtonProps) {
+export default function DeleteBannerButton({ bannerId, onSuccess }: DeleteBannerButtonProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const router = useRouter();
@@ -27,6 +28,7 @@ export default function DeleteBannerButton({ bannerId }: DeleteBannerButtonProps
 
             toast.success("Banner deleted successfully");
             router.refresh();
+            if (onSuccess) onSuccess();
             setShowConfirm(false);
         } catch (error) {
             console.error("Delete error:", error);

@@ -131,3 +131,35 @@ export async function POST(req: Request) {
         );
     }
 }
+
+// PUT /api/admin/banners - Reorder banners
+export async function PUT(req: Request) {
+    const session = await auth();
+    if (!session || session.user.role !== "ADMIN") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const body = await req.json();
+        const { items } = body; // Expect array of { id: string, order: number }
+
+        if (!Array.isArray(items)) {
+            return NextResponse.json({ error: "Invalid items format" }, { status: 400 });
+        }
+
+        // Transaction to update orders
+        await prisma.$transaction(
+            items.map((item: { id: string; order: number }) =>
+                prisma.banner.update({
+                    where: { id: item.id },
+                    data: { order: item.order },
+                })
+            )
+        );
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Error updating banner order:", error);
+        return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
+    }
+}
