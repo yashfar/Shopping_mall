@@ -56,7 +56,7 @@ export default function ProductCatalog({
         <div className="min-h-screen bg-[#FAFAFA] pb-12">
             {/* Header Section */}
             <div className="bg-white border-b border-[#A9A9A9]">
-                <div className="max-w-7xl mx-auto px-6 py-5">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-5">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
                             <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">{title}</h1>
@@ -94,7 +94,7 @@ export default function ProductCatalog({
 
                     {/* Drawer Panel */}
                     <div
-                        className="relative w-full max-w-sm bg-white h-full shadow-2xl overflow-y-auto animate-slide-in border-l border-[#A9A9A9]"
+                        className="relative w-[90%] max-w-sm bg-white h-full shadow-2xl overflow-y-auto animate-slide-in border-l border-[#A9A9A9]"
                         style={{ animation: "slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards" }}
                     >
                         <div className="sticky top-0 bg-white z-10 px-8 py-6 border-b border-[#A9A9A9]/20 flex items-center justify-between">
@@ -124,7 +124,7 @@ export default function ProductCatalog({
             `}</style>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-6 py-10">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
                 <main className="w-full">
                     {/* Active Filter Badges */}
                     {(queryParams.category || queryParams.min || queryParams.max || queryParams.rating) && (

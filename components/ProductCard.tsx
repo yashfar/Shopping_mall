@@ -59,7 +59,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 className="product-card group cursor-pointer bg-white rounded-xl border border-[#A9A9A9]/20 hover:border-[#C8102E] transition-all duration-300 hover:shadow-[0px_4px_12px_rgba(200,16,46,0.15)] overflow-hidden flex flex-col h-full"
             >
                 {/* Product Image */}
-                <div className="relative w-full h-[240px] bg-[#FAFAFA] overflow-hidden">
+                <div className="relative w-full aspect-[4/5] max-h-[200px] bg-[#FAFAFA] overflow-hidden">
                     {product.thumbnail ? (
                         <Image
                             src={product.thumbnail}

@@ -10,8 +10,8 @@ export default async function CartPage() {
     }
 
     return (
-        <div style={{ maxWidth: "1000px", margin: "50px auto", padding: "20px" }}>
-            <h1 style={{ marginBottom: "30px" }}>Shopping Cart</h1>
+        <div className="max-w-6xl mx-auto px-4 md:px-6 my-8 md:my-12">
+            <h1 className="text-3xl font-black text-[#1A1A1A] mb-6 md:mb-8">Shopping Cart</h1>
             <CartContent />
         </div>
     );

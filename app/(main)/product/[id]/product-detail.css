@@ -48,8 +48,8 @@
     transform: translateY(-50%);
     background: white;
     border: 1px solid #A9A9A9;
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -60,6 +60,13 @@
     color: #1A1A1A;
 }
 
+@media (min-width: 768px) {
+    .carousel-btn {
+        width: 52px;
+        height: 52px;
+    }
+}
+
 .carousel-btn:hover {
     background: #C8102E;
     color: white;
@@ -68,17 +75,42 @@
 }
 
 .carousel-btn-prev {
-    left: 1.5rem;
+    left: 1rem;
+}
+
+@media (min-width: 768px) {
+    .carousel-btn-prev {
+        left: 1.5rem;
+    }
 }
 
 .carousel-btn-next {
-    right: 1.5rem;
+    right: 1rem;
+}
+
+@media (min-width: 768px) {
+    .carousel-btn-next {
+        right: 1.5rem;
+    }
 }
 
 .thumbnail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .thumbnail-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .thumbnail-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
 }
 
 .thumbnail-btn {
