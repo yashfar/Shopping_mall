@@ -75,6 +75,7 @@ model Product {
   reviews     Review[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  carouselItems CarouselItem[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -195,4 +196,53 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ============================================================================
+// Banner Management System
+// ============================================================================
+model Banner {
+  id          String   @id @default(cuid())
+  imageUrl    String
+  title       String?
+  subtitle    String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  displayMode String   @default("cover")   // object-fit: cover, contain, fill, scale-down, none
+  alignment   String   @default("center")  // object-position: center, top, bottom, left, right, etc.
+  createdAt   DateTime @default(now())
+}
+
+model BannerSettings {
+  id            String   @id @default(cuid())
+  animationSpeed Int     @default(500)
+  slideDelay     Int     @default(3000)
+  animationType  String  @default("slide")
+
+  loop           Boolean @default(true)
+  arrowDisplay   String  @default("hover") // "show", "hover", "invisible"
+  createdAt      DateTime @default(now())
+}
+
+// ============================================================================
+// Featured Carousels (Best Sellers, New Products)
+// ============================================================================
+model FeaturedCarousel {
+  id        String         @id @default(cuid())
+  type      String         @unique // "best-seller", "new-products"
+  items     CarouselItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model CarouselItem {
+  id         String           @id @default(cuid())
+  carouselId String
+  carousel   FeaturedCarousel @relation(fields: [carouselId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order      Int              @default(0)
+  createdAt  DateTime         @default(now())
+
+  @@unique([carouselId, productId])
 }

@@ -49,150 +49,147 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     }, [orderId]);
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
+                <p className="text-[#A9A9A9] font-semibold tracking-tight">Retrieving order details...</p>
+            </div>
+        );
     }
 
     if (error) {
         return (
-            <div
-                style={{
-                    backgroundColor: "#ffe6e6",
-                    padding: "20px",
-                    borderRadius: "8px",
-                    color: "#dc2626",
-                }}
-            >
-                {error}
+            <div className="bg-red-50 border border-[#C8102E]/20 p-8 rounded-2xl text-center max-w-lg mx-auto">
+                <p className="text-[#C8102E] font-black">{error}</p>
             </div>
         );
     }
 
     if (!order) {
-        return <div>Order not found</div>;
+        return (
+            <div className="text-center py-20 text-[#A9A9A9] font-bold">Order not found</div>
+        );
     }
 
-    const getStatusColor = (status: string) => {
+    const getStatusStyles = (status: string) => {
         switch (status) {
             case "PENDING":
-                return "#fbbf24";
+                return "bg-amber-50 text-amber-600 border-amber-100";
             case "PAID":
-                return "#10b981";
+                return "bg-emerald-50 text-emerald-600 border-emerald-100";
             case "SHIPPED":
-                return "#3b82f6";
+                return "bg-sky-50 text-sky-600 border-sky-100";
             case "COMPLETED":
-                return "#059669";
+                return "bg-emerald-100 text-emerald-700 border-emerald-200";
             case "CANCELED":
-                return "#ef4444";
+                return "bg-red-50 text-[#C8102E] border-red-100";
             default:
-                return "#6b7280";
+                return "bg-gray-50 text-gray-600 border-gray-100";
         }
     };
 
     return (
-        <div>
-            {/* Order Info */}
-            <div
-                style={{
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    marginBottom: "24px",
-                }}
-            >
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                    <div>
-                        <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order ID</div>
-                        <div style={{ fontFamily: "monospace", fontSize: "14px" }}>{order.id}</div>
+        <div className="space-y-8 pb-20">
+            {/* Header / Info Section */}
+            <div className="bg-white rounded-3xl border border-[#A9A9A9] p-8 md:p-12 shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle,rgba(200,16,46,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Transaction ID</label>
+                        <p className="text-sm font-mono font-bold text-[#1A1A1A] bg-[#FAFAFA] px-2 py-1 rounded inline-block">#{order.id}</p>
                     </div>
-                    <div>
-                        <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Status</div>
-                        <span
-                            style={{
-                                padding: "4px 12px",
-                                borderRadius: "12px",
-                                fontSize: "12px",
-                                fontWeight: "600",
-                                backgroundColor: `${getStatusColor(order.status)}20`,
-                                color: getStatusColor(order.status),
-                            }}
-                        >
-                            {order.status}
-                        </span>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order Date</div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Package Status</label>
                         <div>
+                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border tracking-widest ${getStatusStyles(order.status)}`}>
+                                {order.status}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Placed On</label>
+                        <p className="text-sm font-bold text-[#1A1A1A]">
                             {new Date(order.createdAt).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
+                                day: "numeric"
                             })}
-                        </div>
+                        </p>
                     </div>
-                    <div>
-                        <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Total</div>
-                        <div style={{ fontSize: "24px", fontWeight: "700", color: "#0070f3" }}>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Grand Total</label>
+                        <p className="text-3xl font-black text-[#C8102E] leading-none">
                             ${(order.total / 100).toFixed(2)}
-                        </div>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* Order Items */}
-            <div
-                style={{
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                }}
-            >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Items</h2>
+            {/* Order Items Table */}
+            <div className="bg-white rounded-3xl border border-[#A9A9A9] shadow-sm overflow-hidden">
+                <div className="px-8 py-6 bg-[#FAFAFA] border-b border-[#A9A9A9]/20">
+                    <h2 className="text-xl font-black text-[#1A1A1A] tracking-tight">Order Contents</h2>
+                </div>
 
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                        <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
-                            <th style={{ padding: "12px", textAlign: "left" }}>Product</th>
-                            <th style={{ padding: "12px", textAlign: "center" }}>Quantity</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Price</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {order.items.map((item) => (
-                            <tr key={item.id} style={{ borderBottom: "1px solid #eee" }}>
-                                <td style={{ padding: "12px" }}>
-                                    <div style={{ fontWeight: "600" }}>{item.product.title}</div>
-                                    {item.product.description && (
-                                        <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
-                                            {item.product.description}
-                                        </div>
-                                    )}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-[#A9A9A9]/10">
+                                <th className="px-8 py-4 text-[10px] font-black text-[#A9A9A9] uppercase tracking-widest">Product Description</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-[#A9A9A9] uppercase tracking-widest text-center">Qty</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-[#A9A9A9] uppercase tracking-widest text-right">Unit Price</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-[#A9A9A9] uppercase tracking-widest text-right">Extended Price</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#A9A9A9]/10">
+                            {order.items.map((item) => (
+                                <tr key={item.id} className="hover:bg-red-50/10 transition-colors">
+                                    <td className="px-8 py-6">
+                                        <div className="font-bold text-[#1A1A1A] text-lg">{item.product.title}</div>
+                                        {item.product.description && (
+                                            <p className="text-sm text-[#A9A9A9] mt-1 font-medium line-clamp-1">{item.product.description}</p>
+                                        )}
+                                    </td>
+                                    <td className="px-8 py-6 text-center font-bold text-[#1A1A1A]">
+                                        {item.quantity}
+                                    </td>
+                                    <td className="px-8 py-6 text-right font-medium text-[#1A1A1A]">
+                                        ${(item.price / 100).toFixed(2)}
+                                    </td>
+                                    <td className="px-8 py-6 text-right font-black text-[#1A1A1A]">
+                                        ${((item.price * item.quantity) / 100).toFixed(2)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-[#FAFAFA]/50 font-black">
+                                <td colSpan={3} className="px-8 py-8 text-right text-[#1A1A1A] text-lg tracking-tight">
+                                    Total Investment
                                 </td>
-                                <td style={{ padding: "12px", textAlign: "center" }}>{item.quantity}</td>
-                                <td style={{ padding: "12px", textAlign: "right" }}>
-                                    ${(item.price / 100).toFixed(2)}
-                                </td>
-                                <td style={{ padding: "12px", textAlign: "right", fontWeight: "600" }}>
-                                    ${((item.price * item.quantity) / 100).toFixed(2)}
+                                <td className="px-8 py-8 text-right text-3xl text-[#C8102E]">
+                                    ${(order.total / 100).toFixed(2)}
                                 </td>
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr style={{ borderTop: "2px solid #ddd" }}>
-                            <td colSpan={3} style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
-                                Total:
-                            </td>
-                            <td style={{ padding: "16px", textAlign: "right", fontSize: "20px", fontWeight: "700", color: "#0070f3" }}>
-                                ${(order.total / 100).toFixed(2)}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div className="flex justify-center pt-8">
+                <a
+                    href="/orders"
+                    className="px-8 py-4 border-2 border-[#A9A9A9] text-[#1A1A1A] font-black rounded-2xl hover:border-[#1A1A1A] hover:bg-[#FAFAFA] transition-all flex items-center gap-3 active:scale-95"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Return to Orders History
+                </a>
             </div>
         </div>
     );

@@ -56,16 +56,16 @@ export default function ProductCard({ product }: ProductCardProps) {
 
             <div
                 onClick={handleClick}
-                className="product-card group cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden flex flex-col h-full"
+                className="product-card group cursor-pointer bg-white rounded-xl border border-[#A9A9A9]/20 hover:border-[#C8102E] transition-all duration-300 hover:shadow-[0px_4px_12px_rgba(200,16,46,0.15)] overflow-hidden flex flex-col h-full"
             >
                 {/* Product Image */}
-                <div className="relative w-full h-[220px] bg-gray-100 overflow-hidden">
+                <div className="relative w-full h-[240px] bg-[#FAFAFA] overflow-hidden">
                     {product.thumbnail ? (
                         <Image
                             src={product.thumbnail}
                             alt={product.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                     ) : (
@@ -74,9 +74,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
                                 viewBox="0 0 24 24"
-                                strokeWidth={1.5}
+                                strokeWidth={1}
                                 stroke="currentColor"
-                                className="w-16 h-16 text-gray-300"
+                                className="w-16 h-16 text-[#A9A9A9]"
                             >
                                 <path
                                     strokeLinecap="round"
@@ -89,10 +89,10 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4 flex flex-col gap-2 flex-grow">
+                <div className="p-5 flex flex-col gap-3 flex-grow">
                     {/* Title */}
                     <h3
-                        className="text-gray-900 font-semibold text-base line-clamp-2 min-h-[3rem]"
+                        className="text-[#1A1A1A] font-bold text-lg line-clamp-2 min-h-[3.5rem] leading-snug group-hover:text-[#C8102E] transition-colors"
                         title={product.title}
                     >
                         {product.title}
@@ -102,36 +102,36 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <div className="flex items-center gap-2">
                         <StarRating rating={averageRating} size="sm" />
                         {reviewCount > 0 ? (
-                            <div className="flex items-center gap-1 text-sm">
-                                <span className="font-semibold text-gray-700">
+                            <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                <span className="text-[#1A1A1A]">
                                     {averageRating.toFixed(1)}
                                 </span>
-                                <span className="text-gray-400">•</span>
-                                <span className="text-gray-500">
+                                <span className="text-[#A9A9A9]">•</span>
+                                <span className="text-[#A9A9A9]">
                                     {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
                                 </span>
                             </div>
                         ) : (
-                            <span className="text-sm text-gray-400">No reviews yet</span>
+                            <span className="text-sm font-medium text-[#A9A9A9]">No reviews yet</span>
                         )}
                     </div>
 
                     {/* Price and Add to Cart */}
-                    <div className="mt-auto pt-3 flex items-center justify-between">
-                        <span className="text-2xl font-bold text-purple-600">
+                    <div className="mt-auto pt-4 flex items-center justify-between">
+                        <span className="text-2xl font-extrabold text-[#C8102E]">
                             ${(product.price / 100).toFixed(2)}
                         </span>
 
                         <button
                             onClick={handleAddToCart}
                             disabled={isAdding}
-                            className="bg-purple-600 hover:bg-purple-700 text-white p-2.5 rounded-full transition-colors duration-200 shadow-md flex items-center justify-center group-active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="bg-[#C8102E] hover:bg-[#A90D27] text-white p-3 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center group-active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                             title="Add to Cart"
                         >
                             {isAdding ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                 </svg>
                             )}

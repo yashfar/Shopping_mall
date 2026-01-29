@@ -4,7 +4,9 @@ import NavbarClient from "@@/components/NavbarClient";
 import { CategoryDropdown } from "@@/components/CategoryDropdown";
 import { prisma } from "@/lib/prisma";
 import "./navbar.css";
-
+import Image from "next/image";
+import FilishopLogoLight from "@@/public/logo/Filishop-logo-light.png";
+import FilishopLogoDark from "@@/public/logo/Filishop-logo-dark.png";
 export default async function Navbar() {
     const session = await auth();
     // Use try-catch or ensure prisma works. If prisma is in app/lib, then @/lib/prisma is correct. 
@@ -19,7 +21,14 @@ export default async function Navbar() {
             <div className="navbar-container">
                 {/* Logo/Brand */}
                 <Link href="/" className="navbar-brand">
-                    <span className="brand-text">My Store</span>
+                    <Image
+                        src={FilishopLogoLight}
+                        alt="My Store Logo"
+                        width={120}
+                        height={40}
+                        className="object-contain"
+                    />
+                    {/* <span className="brand-text">My Store</span> */}
                 </Link>
 
                 {/* Navigation Links */}

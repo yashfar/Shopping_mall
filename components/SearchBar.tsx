@@ -15,22 +15,22 @@ export default function SearchBar() {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex-1 max-w-2xl">
+        <form onSubmit={handleSubmit} className="flex-1 max-w-2xl group">
             <div className="relative">
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search for products..."
-                    className="w-full px-4 py-2 pl-10 pr-4 text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Search..."
+                    className="w-full px-4 py-2 pl-10 pr-4 text-[#1A1A1A] bg-[#FAFAFA] border border-[#A9A9A9]/20 rounded-lg transition-all duration-300 focus:outline-none focus:bg-white focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5 font-medium placeholder:text-[#A9A9A9]/60 text-sm"
                 />
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
-                    strokeWidth={1.5}
+                    strokeWidth={2.5}
                     stroke="currentColor"
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#A9A9A9] group-focus-within:text-[#C8102E] transition-colors"
                 >
                     <path
                         strokeLinecap="round"
