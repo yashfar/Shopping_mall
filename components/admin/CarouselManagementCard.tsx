@@ -64,7 +64,7 @@ function SortableItem({
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl mb-3 transition-all ${isDragging ? "shadow-xl ring-2 ring-[#C8102E] opacity-90 scale-105" : "hover:shadow-md hover:border-[#C8102E]/20"
+            className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border border-gray-100 rounded-xl mb-3 transition-all ${isDragging ? "shadow-xl ring-2 ring-[#C8102E] opacity-90 scale-105" : "hover:shadow-md hover:border-[#C8102E]/20"
                 }`}
         >
             <div
@@ -75,7 +75,7 @@ function SortableItem({
                 <GripVertical className="w-5 h-5" />
             </div>
 
-            <div className="relative w-12 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0">
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0">
                 {item.product.thumbnail ? (
                     <Image
                         src={item.product.thumbnail}
@@ -94,14 +94,14 @@ function SortableItem({
                 <h4 className="font-bold text-[#1A1A1A] text-sm truncate">
                     {item.product.title}
                 </h4>
-                <div className="flex items-center gap-3 mt-1 text-xs">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs">
                     <span className="text-gray-500 font-medium">
                         ${(item.product.price / 100).toFixed(2)}
                     </span>
                     <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.product.stock > 0
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-red-100 text-red-700"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-700"
                             }`}
                     >
                         {item.product.stock > 0 ? "In Stock" : "Out of Stock"}
@@ -111,7 +111,7 @@ function SortableItem({
 
             <button
                 onClick={() => onDelete(item.id)}
-                className="p-2 text-gray-400 hover:text-[#C8102E] hover:bg-[#C8102E]/10 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-[#C8102E] hover:bg-[#C8102E]/10 rounded-lg transition-colors flex-shrink-0"
                 title="Remove from carousel"
             >
                 <Trash2 className="w-4 h-4" />
