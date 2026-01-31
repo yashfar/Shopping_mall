@@ -55,25 +55,28 @@ export default function ProductCatalog({
     return (
         <div className="min-h-screen bg-[#FAFAFA] pb-12">
             {/* Header Section */}
-            <div className="bg-white border-b border-[#A9A9A9]">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-5">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* Header Section */}
+            <div className="pt-8 pb-6">
+                <div className="max-w-7xl mx-auto px-4 md:px-6">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
-                            <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">{title}</h1>
+                            <h1 className="text-4xl md:text-5xl font-black text-[#1A1A1A] tracking-tight">{title}</h1>
                             {description && (
-                                <p className="text-sm text-[#A9A9A9] mt-1 font-medium">{description}</p>
+                                <p className="text-base text-gray-500 mt-2 font-medium max-w-lg">{description}</p>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             {showFilters && (
                                 <button
                                     onClick={() => setIsFilterOpen(true)}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#A9A9A9] rounded-xl hover:border-[#C8102E] hover:text-[#C8102E] text-[#1A1A1A] font-bold transition-all duration-300 shadow-sm active:scale-95"
+                                    className="group flex items-center gap-2.5 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-[#1A1A1A] font-bold transition-all duration-300 hover:border-[#C8102E] hover:text-[#C8102E] shadow-sm hover:shadow-md active:scale-95"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#C8102E]">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                                    </svg>
+                                    <span className="p-1.5 bg-gray-50 rounded-full group-hover:bg-red-50 text-gray-400 group-hover:text-[#C8102E] transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                                        </svg>
+                                    </span>
                                     Filters
                                 </button>
                             )}

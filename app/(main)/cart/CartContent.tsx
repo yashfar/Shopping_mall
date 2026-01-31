@@ -135,20 +135,43 @@ export default function CartContent() {
 
     if (!cart || cart.items.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 px-4 bg-white border border-[#A9A9A9] rounded-2xl shadow-sm text-center">
-                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-[#C8102E]">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                    </svg>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-20 px-4">
+                <div className="relative mb-8 group">
+                    {/* Background Blob */}
+                    <div className="absolute inset-0 bg-red-100 rounded-full blur-2xl opacity-50 scale-150 group-hover:scale-175 transition-transform duration-700" />
+
+                    {/* Floating Icon */}
+                    <div className="relative w-24 h-24 bg-gradient-to-tr from-white to-red-50 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex items-center justify-center transform group-hover:-translate-y-2 transition-transform duration-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-[#C8102E]">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+
+                        {/* Floating Zero Badge */}
+                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#C8102E] text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg border-4 border-white">
+                            0
+                        </div>
+                    </div>
                 </div>
-                <h2 className="text-2xl font-extrabold text-[#1A1A1A] mb-2">Your cart is empty</h2>
-                <p className="text-[#A9A9A9] mb-8 max-w-sm">Looks like you haven't added anything to your cart yet. Explore our products and find something you love!</p>
-                <a
-                    href="/products"
-                    className="inline-flex items-center px-8 py-3.5 bg-[#C8102E] text-white rounded-xl font-bold transition-all duration-300 hover:bg-[#A90D27] hover:shadow-lg active:scale-95"
-                >
-                    Start Shopping
-                </a>
+
+                <h2 className="text-3xl font-black text-[#1A1A1A] mb-4 tracking-tight text-center">Your cart feels a bit light</h2>
+                <p className="text-gray-500 mb-10 max-w-md text-center text-lg leading-relaxed">
+                    There's nothing in your bag yet. Explore our collection and find something that speaks to you.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <a
+                        href="/products"
+                        className="group relative px-8 py-4 bg-[#1A1A1A] text-white rounded-full font-bold text-lg overflow-hidden transition-all hover:shadow-xl hover:shadow-gray-200 hover:-translate-y-1 active:scale-95"
+                    >
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine" />
+                        <span className="relative flex items-center gap-2">
+                            Start Shopping
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 group-hover:translate-x-1 transition-transform">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                            </svg>
+                        </span>
+                    </a>
+                </div>
             </div>
         );
     }
@@ -175,7 +198,7 @@ export default function CartContent() {
                 {cart.items.map((item) => (
                     <div
                         key={item.id}
-                        className={`bg-white rounded-2xl border border-[#A9A9A9] shadow-sm p-4 transition-all duration-300 ${updating === item.product.id ? "opacity-50 pointer-events-none" : ""}`}
+                        className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 transition-all duration-300 ${updating === item.product.id ? "opacity-50 pointer-events-none" : ""}`}
                     >
                         <div className="flex flex-col gap-4">
                             {/* Product Info */}
@@ -247,11 +270,11 @@ export default function CartContent() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-2xl border border-[#A9A9A9] shadow-sm overflow-hidden">
+            <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-[#FAFAFA] border-bottom-1 border-[#A9A9A9]">
+                            <tr className="bg-[#FAFAFA] border-bottom-1 border-gray-200">
                                 <th className="px-6 py-4 text-left text-sm font-bold text-[#1A1A1A]">PRODUCT</th>
                                 <th className="px-6 py-4 text-right text-sm font-bold text-[#1A1A1A]">PRICE</th>
                                 <th className="px-6 py-4 text-center text-sm font-bold text-[#1A1A1A]">QUANTITY</th>
@@ -326,58 +349,72 @@ export default function CartContent() {
                     {/* Add more cart functionality if needed */}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#A9A9A9] shadow-sm p-8 h-fit space-y-6">
-                    <h2 className="text-xl font-extrabold text-[#1A1A1A] flex items-center gap-2">
-                        Summary
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 h-fit space-y-8 sticky top-24">
+                    <h2 className="text-2xl font-black text-[#1A1A1A]">
+                        Order Summary
                     </h2>
 
-                    <div className="space-y-4 pt-4 border-t border-[#A9A9A9]/20">
-                        <div className="flex justify-between items-center text-[#A9A9A9] font-bold">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
                             <span>Subtotal</span>
-                            <span className="text-[#1A1A1A]">${(total / 100).toFixed(2)}</span>
+                            <span className="text-[#1A1A1A] font-bold">${(total / 100).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center text-[#A9A9A9] font-bold">
-                            <span>Shipping</span>
-                            <span className="text-emerald-600">FREE</span>
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
+                            <span>Shipping estimate</span>
+                            <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">FREE</span>
                         </div>
-                        <div className="flex justify-between items-center pt-4 border-t-2 border-[#1A1A1A]">
-                            <span className="text-xl font-extrabold text-[#1A1A1A]">Total</span>
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
+                            <span>Tax estimate</span>
+                            <span className="text-[#1A1A1A] font-bold">$0.00</span>
+                        </div>
+
+                        <div className="h-px bg-gray-100 my-4" />
+
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-[#1A1A1A]">Order Total</span>
                             <span className="text-2xl font-black text-[#C8102E]">
                                 ${(total / 100).toFixed(2)}
                             </span>
                         </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-2">
                         {!hasAddresses ? (
                             <div className="space-y-3">
-                                <div className="p-3 bg-red-50 border border-[#C8102E]/20 rounded-xl text-center">
-                                    <p className="text-xs font-bold text-[#C8102E]">
-                                        ⚠️ Please add a shipping address to proceed.
-                                    </p>
+                                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 flex-shrink-0">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                    </svg>
+                                    <div className="text-sm font-bold">Please add a shipping address to proceed.</div>
                                 </div>
                                 <button
                                     onClick={() => router.push("/profile/addresses")}
-                                    className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold transition-all hover:bg-[#C8102E] active:scale-95 shadow-md"
+                                    className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold transition-all hover:bg-[#333] active:scale-95 shadow-lg group relative overflow-hidden"
                                 >
-                                    Add Shipping Address
+                                    Add Address
                                 </button>
                             </div>
                         ) : (
                             <button
                                 onClick={() => router.push("/cart/checkout")}
-                                className="w-full py-4 bg-[#C8102E] text-white rounded-xl font-black text-lg transition-all hover:bg-[#A90D27] hover:shadow-[0_8px_20px_rgba(200,16,46,0.3)] active:scale-95 flex items-center justify-center gap-2"
+                                className="w-full py-4 bg-[#C8102E] text-white rounded-full font-black text-lg transition-all hover:bg-[#A90D27] hover:shadow-[0_8px_30px_rgba(200,16,46,0.25)] active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden"
                             >
-                                Checkout
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                                </svg>
+                                <span className="relative z-10 flex items-center gap-2">
+                                    Proceed to Checkout
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 transition-transform group-hover:translate-x-1">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                    </svg>
+                                </span>
                             </button>
                         )}
+
                         <a
                             href="/products"
-                            className="block w-full text-center py-4 bg-[#FAFAFA] text-[#1A1A1A] border border-[#A9A9A9] rounded-xl font-bold transition-all hover:bg-white hover:border-[#C8102E] hover:text-[#C8102E]"
+                            className="flex items-center justify-center gap-2 w-full py-3 text-gray-500 font-bold hover:text-[#C8102E] transition-colors group"
                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                            </svg>
                             Continue Shopping
                         </a>
                     </div>

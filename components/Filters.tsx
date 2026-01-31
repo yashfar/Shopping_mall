@@ -76,7 +76,7 @@ export default function Filters({ categories }: FiltersProps) {
     const hasActiveFilters = currentCategory || currentRating || searchParams.get("min") || searchParams.get("max");
 
     return (
-        <div className="bg-white rounded-lg border border-[#A9A9A9] p-6 space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-extrabold text-[#1A1A1A]">Filters</h2>

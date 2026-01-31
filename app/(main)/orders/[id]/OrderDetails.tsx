@@ -91,26 +91,26 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     return (
         <div className="space-y-8 pb-20">
             {/* Header / Info Section */}
-            <div className="bg-white rounded-3xl border border-[#A9A9A9] p-8 md:p-12 shadow-sm overflow-hidden relative">
+            <div className="bg-white rounded-3xl border border-[#A9A9A9] p-6 md:p-12 shadow-sm overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle,rgba(200,16,46,0.03)_0%,transparent_70%)] pointer-events-none" />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Transaction ID</label>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                    <div className="space-y-1 col-span-2 md:col-span-1">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em] block">Transaction ID</label>
                         <p className="text-sm font-mono font-bold text-[#1A1A1A] bg-[#FAFAFA] px-2 py-1 rounded inline-block">#{order.id}</p>
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Package Status</label>
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em] block">Package Status</label>
                         <div>
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border tracking-widest ${getStatusStyles(order.status)}`}>
+                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border tracking-widest inline-block ${getStatusStyles(order.status)}`}>
                                 {order.status}
                             </span>
                         </div>
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Placed On</label>
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em] block">Placed On</label>
                         <p className="text-sm font-bold text-[#1A1A1A]">
                             {new Date(order.createdAt).toLocaleDateString("en-US", {
                                 year: "numeric",
@@ -121,21 +121,57 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em]">Grand Total</label>
-                        <p className="text-3xl font-black text-[#C8102E] leading-none">
+                        <label className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-[0.2em] block">Grand Total</label>
+                        <p className="text-2xl font-black text-[#C8102E] leading-none">
                             ${(order.total / 100).toFixed(2)}
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Order Items Table */}
+            {/* Order Items */}
             <div className="bg-white rounded-3xl border border-[#A9A9A9] shadow-sm overflow-hidden">
-                <div className="px-8 py-6 bg-[#FAFAFA] border-b border-[#A9A9A9]/20">
+                <div className="px-6 md:px-8 py-6 bg-[#FAFAFA] border-b border-[#A9A9A9]/20">
                     <h2 className="text-xl font-black text-[#1A1A1A] tracking-tight">Order Contents</h2>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Mobile List View */}
+                <div className="md:hidden divide-y divide-[#A9A9A9]/10">
+                    {order.items.map((item) => (
+                        <div key={item.id} className="p-6 space-y-3">
+                            <div>
+                                <h3 className="font-bold text-[#1A1A1A] text-lg leading-tight">{item.product.title}</h3>
+                                {item.product.description && (
+                                    <p className="text-xs text-[#A9A9A9] mt-1 line-clamp-1">{item.product.description}</p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500 font-medium">Quantity</span>
+                                <span className="font-bold text-[#1A1A1A]">x{item.quantity}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500 font-medium">Unit Price</span>
+                                <span className="font-bold text-[#1A1A1A]">${(item.price / 100).toFixed(2)}</span>
+                            </div>
+
+                            <div className="pt-2 flex justify-between items-center border-t border-gray-50 mt-2">
+                                <span className="font-bold text-[#1A1A1A]">Subtotal</span>
+                                <span className="font-black text-[#C8102E] text-lg">${((item.price * item.quantity) / 100).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    ))}
+                    <div className="p-6 bg-[#FAFAFA]/50 border-t border-[#A9A9A9]/20">
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-black text-[#1A1A1A]">Total</span>
+                            <span className="text-3xl font-black text-[#C8102E]">${(order.total / 100).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-[#A9A9A9]/10">
@@ -183,7 +219,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             <div className="flex justify-center pt-8">
                 <a
                     href="/orders"
-                    className="px-8 py-4 border-2 border-[#A9A9A9] text-[#1A1A1A] font-black rounded-2xl hover:border-[#1A1A1A] hover:bg-[#FAFAFA] transition-all flex items-center gap-3 active:scale-95"
+                    className="w-full md:w-auto px-8 py-4 border-2 border-[#A9A9A9] text-[#1A1A1A] font-black rounded-2xl hover:border-[#1A1A1A] hover:bg-[#FAFAFA] transition-all flex items-center justify-center gap-3 active:scale-95"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />

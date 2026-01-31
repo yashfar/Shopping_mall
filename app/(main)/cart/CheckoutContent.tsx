@@ -111,83 +111,126 @@ export default function CheckoutContent() {
     );
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8 pb-20">
-            {/* Order Summary */}
-            <div className="bg-white rounded-2xl border border-[#A9A9A9] shadow-sm overflow-hidden p-8">
-                <h2 className="text-2xl font-black text-[#1A1A1A] mb-8 border-b border-[#A9A9A9]/20 pb-4">Order Summary</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+            {/* Left Column: Order Details */}
+            <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
+                    <h2 className="text-xl font-extrabold text-[#1A1A1A] mb-6 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#C8102E]">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                        Items in your order
+                    </h2>
 
-                <div className="space-y-6 mb-8">
-                    {cart.items.map((item) => (
-                        <div
-                            key={item.id}
-                            className="flex justify-between items-start"
-                        >
-                            <div className="space-y-1">
-                                <div className="font-bold text-[#1A1A1A] text-lg">{item.product.title}</div>
-                                <div className="text-sm font-bold text-[#A9A9A9] bg-[#FAFAFA] px-2 py-1 rounded inline-block">
-                                    Quantity: {item.quantity}
+                    <div className="space-y-6">
+                        {cart.items.map((item) => (
+                            <div
+                                key={item.id}
+                                className="flex gap-4 py-4 border-b border-gray-100 last:border-0 last:pb-0"
+                            >
+                                {/* Placeholder for Image if available, or generic icon */}
+                                <div className="w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100">
+                                    <span className="text-2xl">📦</span>
+                                </div>
+
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div>
+                                            <h3 className="font-bold text-[#1A1A1A] leading-snug">{item.product.title}</h3>
+                                            <p className="text-sm text-gray-500 mt-1">Quantity: {item.quantity}</p>
+                                        </div>
+                                        <div className="font-extrabold text-[#1A1A1A]">
+                                            ${(item.product.price / 100).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
+                                        Subtotal: <span className="text-[#C8102E]">${((item.product.price * item.quantity) / 100).toFixed(2)}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="font-black text-[#1A1A1A] text-lg">
-                                ${(item.product.price / 100).toFixed(2)}
-                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex items-start gap-4">
+                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                        </svg>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[#1A1A1A] font-bold">Shipping</p>
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                            Standard shipping is free. Your items will be shipped to your default address immediately after confirmation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Column: Place Order */}
+            <div className="lg:col-span-1">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8 space-y-6 sticky top-24">
+                    <h2 className="text-xl font-extrabold text-[#1A1A1A]">Order Summary</h2>
+
+                    <div className="space-y-3 pb-6 border-b border-gray-100">
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
+                            <span>Subtotal</span>
+                            <span className="text-[#1A1A1A] font-bold">${(total / 100).toFixed(2)}</span>
                         </div>
-                    ))}
-                </div>
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
+                            <span>Shipping</span>
+                            <span className="text-emerald-600 font-bold">FREE</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-500 font-medium">
+                            <span>Tax</span>
+                            <span className="text-[#1A1A1A] font-bold">$0.00</span>
+                        </div>
+                    </div>
 
-                <div className="flex justify-between items-center pt-6 border-t-2 border-[#1A1A1A]">
-                    <span className="text-xl font-extrabold text-[#1A1A1A]">Grand Total</span>
-                    <span className="text-3xl font-black text-[#C8102E]">
-                        ${(total / 100).toFixed(2)}
-                    </span>
-                </div>
-            </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-[#1A1A1A]">Total</span>
+                        <span className="text-2xl font-black text-[#C8102E]">
+                            ${(total / 100).toFixed(2)}
+                        </span>
+                    </div>
 
-            <div className="bg-red-50 border border-[#C8102E]/20 p-6 rounded-2xl flex items-start gap-4">
-                <div className="w-10 h-10 bg-[#C8102E] rounded-xl flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-white">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-[#1A1A1A] font-bold">Ready to place order</p>
-                    <p className="text-sm text-[#4A4A4A] font-medium leading-relaxed">
-                        Click "Confirm & Place Order" to complete your purchase. You'll be redirected to the secure payment page next.
-                    </p>
-                </div>
-            </div>
+                    <div className="space-y-3 pt-4">
+                        <button
+                            onClick={createOrder}
+                            disabled={creating}
+                            className={`w-full py-4 px-4 rounded-full text-white font-black text-lg transition-all shadow-[0_4px_14px_0_rgba(200,16,46,0.39)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${creating ? "bg-gray-400" : "bg-gradient-to-r from-[#C8102E] to-[#b91c1c]"}`}
+                        >
+                            {/* Shine effect */}
+                            {!creating && (
+                                <div className="absolute top-0 -left-[120%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:left-[120%] transition-all duration-1000 ease-in-out" />
+                            )}
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                    onClick={() => router.push("/cart")}
-                    disabled={creating}
-                    className="flex-1 py-4 px-6 border border-[#A9A9A9] rounded-xl text-[#1A1A1A] font-bold transition-all hover:bg-[#FAFAFA] hover:border-[#1A1A1A] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                    </svg>
-                    Back to Cart
-                </button>
-                <button
-                    onClick={createOrder}
-                    disabled={creating}
-                    className={`flex-1 py-4 px-6 rounded-xl text-white font-black text-lg transition-all shadow-lg flex items-center justify-center gap-2 ${creating ? "bg-[#A9A9A9] cursor-not-allowed" : "bg-[#C8102E] hover:bg-[#A90D27] hover:shadow-[0_8px_20px_rgba(200,16,46,0.3)] active:scale-95"}`}
-                >
-                    {creating ? (
-                        <>
-                            <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-                            Creating...
-                        </>
-                    ) : (
-                        <>
-                            Confirm & Place Order
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                            </svg>
-                        </>
-                    )}
-                </button>
+                            <span className="relative z-10 flex items-center justify-center gap-2 text-xs md:text-sm">
+                                {creating ? "Processing..." : "Confirm Payment"}
+                                {!creating && (
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm4.28 10.28a.75.75 0 0 0 0-1.06l-3-3a.75.75 0 1 0-1.06 1.06l1.72 1.72H8.25a.75.75 0 0 0 0 1.5h5.69l-1.72 1.72a.75.75 0 1 0 1.06 1.06l3-3Z" clipRule="evenodd" />
+                                    </svg>
+                                )}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={() => router.push("/cart")}
+                            disabled={creating}
+                            className="w-full py-3 px-6 text-sm font-bold text-gray-500 hover:text-[#C8102E] transition-colors"
+                        >
+                            Back to Cart
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium pt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                        </svg>
+                        Secure Checkout
+                    </div>
+                </div>
             </div>
         </div>
     );
