@@ -52,7 +52,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         if (isAdding) return;
 
         setIsAdding(true);
-        await addToCart(product.id, 1);
+        const result = await addToCart(product.id, 1);
+
+        // If user is not authenticated, redirect to register page
+        if (result === "unauthorized") {
+            router.push("/register");
+        }
+
         setIsAdding(false);
     };
 
