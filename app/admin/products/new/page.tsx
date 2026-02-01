@@ -1,33 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { toast } from "sonner";
-import "./new-product.css";
+import Link from "next/link";
+import { Button } from "@@/components/ui/button";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
 
 interface UploadedImage {
     url: string;
-    file: File;
+    file?: File;
 }
 
 export default function NewProductPage() {
     const router = useRouter();
+
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("");
     const [category, setCategory] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [thumbnail, setThumbnail] = useState<string>("");
+
+    // Loading states
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    // Fetch categories
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch("/api/categories");
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories", error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
         setUploading(true);
+        setError("");
 
         try {
             const uploadPromises = Array.from(files).map(async (file) => {
@@ -56,12 +80,13 @@ export default function NewProductPage() {
                 setThumbnail(uploadedImages[0].url);
             }
 
-            toast.success(`${uploadedImages.length} image(s) uploaded successfully`);
+            setSuccess(`${uploadedImages.length} image(s) uploaded successfully`);
+            setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-            toast.error(err.message || "Failed to upload images");
+            setError(err.message || "Failed to upload images");
         } finally {
             setUploading(false);
-            e.target.value = ""; // Reset input
+            e.target.value = "";
         }
     };
 
@@ -79,32 +104,34 @@ export default function NewProductPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError("");
+        setSuccess("");
 
         // Frontend Validation
         if (images.length === 0) {
-            toast.error("Please upload at least one product image");
+            setError("Please upload at least one product image");
             return;
         }
 
         if (!thumbnail) {
-            toast.error("Please select a thumbnail image");
+            setError("Please select a thumbnail image");
             return;
         }
 
         if (!title.trim() || !description.trim() || !category.trim()) {
-            toast.error("Please fill in all required fields (Title, Description, Category)");
+            setError("Please fill in all required fields (Title, Description, Category)");
             return;
         }
 
         const priceInCents = Math.round(parseFloat(price) * 100);
         if (isNaN(priceInCents) || priceInCents <= 0) {
-            toast.error("Please enter a valid positive price");
+            setError("Please enter a valid positive price");
             return;
         }
 
         const stockNumber = parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
-            toast.error("Please enter a valid stock quantity");
+            setError("Please enter a valid stock quantity");
             return;
         }
 
@@ -131,237 +158,295 @@ export default function NewProductPage() {
 
             if (!response.ok) {
                 if (data.details) {
-                    // Handle validation details
                     const detailMessages = data.details.map((d: any) => `${d.field}: ${d.message}`).join(", ");
                     throw new Error(detailMessages || "Validation failed");
                 }
-                throw new Error(data.error || data.message || "Failed to create product");
+                throw new Error(data.error || "Failed to create product");
             }
 
-            toast.success("Product created successfully! Redirecting...");
+            setSuccess("Product created successfully! Redirecting...");
             setTimeout(() => {
                 router.push("/admin/products");
             }, 1500);
         } catch (err: any) {
-            toast.error(err.message || "Failed to create product");
+            setError(err.message || "Failed to create product");
             setSubmitting(false);
         }
     };
 
     return (
-        <div className="new-product-container">
-            <div className="new-product-header">
-                <button
-                    onClick={() => router.back()}
-                    className="btn-back"
-                    disabled={submitting}
-                >
-                    ← Back
-                </button>
-                <h1>Add New Product</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                    <Link href="/admin/products">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-gray-100">
+                            <ArrowLeft className="h-5 w-5 text-gray-600" />
+                        </Button>
+                    </Link>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+                        <p className="text-sm text-gray-500">Create a new product, add details and images</p>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="product-form">
-                {/* Image Upload Section */}
-                <div className="form-section">
-                    <h2 className="section-title">Product Images</h2>
-                    <p className="section-description">
-                        Upload product images. The first image will be set as the thumbnail by default.
-                    </p>
+            {/* Alerts */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+                    <X className="h-5 w-5 shrink-0" />
+                    <p className="text-sm font-medium">{error}</p>
+                </div>
+            )}
 
-                    <div className="upload-area">
-                        <input
-                            type="file"
-                            id="image-upload"
-                            accept="image/jpeg,image/jpg,image/png,image/webp"
-                            multiple
-                            onChange={handleFileSelect}
-                            disabled={uploading || submitting}
-                            className="file-input"
-                        />
-                        <label htmlFor="image-upload" className="upload-label">
-                            {uploading ? (
-                                <div className="spinner mb-2"></div>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="upload-icon">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                                </svg>
-                            )}
-                            <span className="upload-text">
-                                {uploading ? "Uploading images..." : "Click to upload images"}
-                            </span>
-                            <span className="upload-hint">
-                                JPEG, PNG, or WebP (Max 5MB each)
-                            </span>
-                        </label>
-                    </div>
+            {success && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
+                    <Check className="h-5 w-5 shrink-0" />
+                    <p className="text-sm font-medium">{success}</p>
+                </div>
+            )}
 
-                    {images.length > 0 && (
-                        <div className="images-grid">
-                            {images.map((image, index) => (
-                                <div
-                                    key={image.url}
-                                    className={`image-card ${thumbnail === image.url ? "is-thumbnail" : ""}`}
+            <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Images */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Upload product images. Select the star icon to set the thumbnail.
+                            </p>
+
+                            {/* Image Upload Area */}
+                            <div className="relative mb-6">
+                                <input
+                                    type="file"
+                                    id="image-upload"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleFileSelect}
+                                    disabled={uploading || submitting}
+                                    className="hidden"
+                                />
+                                <label
+                                    htmlFor="image-upload"
+                                    className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading
+                                        ? "border-gray-300 bg-gray-50 opacity-50 cursor-not-allowed"
+                                        : "border-gray-300 hover:border-[#C8102E] hover:bg-gray-50"
+                                        }`}
                                 >
-                                    <div className="image-wrapper">
+                                    {uploading ? (
+                                        <Loader2 className="h-8 w-8 text-[#C8102E] animate-spin mb-2" />
+                                    ) : (
+                                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                                    )}
+                                    <span className="text-sm font-medium text-gray-700">
+                                        {uploading ? "Uploading..." : "Click to upload"}
+                                    </span>
+                                    <span className="text-xs text-gray-500 mt-1">MAX 5MB per file</span>
+                                </label>
+                            </div>
+
+                            {/* Image Grid */}
+                            <div className="grid grid-cols-2 gap-4 max-h-[320px] overflow-y-auto">
+                                {images.map((img) => (
+                                    <div
+                                        key={img.url}
+                                        className={`group relative aspect-square rounded-lg overflow-hidden border transition-all ${thumbnail === img.url
+                                            ? "border-[#C8102E] ring-2 ring-[#C8102E]/20"
+                                            : "border-gray-200 hover:border-gray-300"
+                                            }`}
+                                    >
                                         <Image
-                                            src={image.url}
-                                            alt={`Product ${index + 1}`}
-                                            width={200}
-                                            height={200}
-                                            className="product-image"
+                                            src={img.url}
+                                            alt="Product"
+                                            fill
+                                            className="object-cover"
                                         />
-                                        {thumbnail === image.url && (
-                                            <div className="thumbnail-badge">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="check-icon">
-                                                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                                                </svg>
-                                                Thumbnail
+
+                                        {/* Actions */}
+                                        {thumbnail !== img.url && (
+                                            <>
+                                                {/* Desktop Overlay */}
+                                                <div className="hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="bg-white/90 hover:bg-white text-gray-900 shadow-sm backdrop-blur-[2px]"
+                                                        onClick={() => handleSetThumbnail(img.url)}
+                                                    >
+                                                        Set Thumbnail
+                                                    </Button>
+                                                </div>
+
+                                                {/* Mobile Button */}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    className="lg:hidden absolute bottom-2 right-12 h-8 px-3 rounded-full shadow-md z-20 bg-white hover:bg-yellow-50 text-yellow-600 border border-gray-200 text-xs font-medium"
+                                                    onClick={() => handleSetThumbnail(img.url)}
+                                                >
+                                                    Thumbnail
+                                                </Button>
+                                            </>
+                                        )}
+
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-white hover:bg-red-600 text-red-600 hover:text-white border border-gray-200"
+                                            onClick={() => handleRemoveImage(img.url)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+
+                                        {thumbnail === img.url && (
+                                            <div className="absolute top-2 right-2 bg-[#C8102E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
+                                                MAIN
                                             </div>
                                         )}
                                     </div>
-                                    <div className="image-actions">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSetThumbnail(image.url)}
-                                            className="btn-thumbnail"
-                                            disabled={thumbnail === image.url || submitting}
-                                        >
-                                            Set as Thumbnail
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveImage(image.url)}
-                                            className="btn-delete"
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Details */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-6">Product Information</h2>
+
+                            <div className="space-y-6">
+                                {/* Title */}
+                                <div>
+                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Product Title <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="title"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                        placeholder="E.g., Wireless Noise-Canceling Headphones"
+                                        required
+                                        disabled={submitting}
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Description <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        rows={6}
+                                        className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                        placeholder="Describe the product features, specs, etc."
+                                        required
+                                        disabled={submitting}
+                                    />
+                                </div>
+
+                                {/* Row: Price & Stock */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Price (USD) <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                            <input
+                                                type="number"
+                                                id="price"
+                                                value={price}
+                                                onChange={(e) => setPrice(e.target.value)}
+                                                step="0.01"
+                                                min="0"
+                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                placeholder="0.00"
+                                                required
+                                                disabled={submitting}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Stock Quantity <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            id="stock"
+                                            value={stock}
+                                            onChange={(e) => setStock(e.target.value)}
+                                            min="0"
+                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                            placeholder="0"
+                                            required
                                             disabled={submitting}
-                                        >
-                                            Delete
-                                        </button>
+                                        />
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
 
-                {/* Product Details Section */}
-                <div className="form-section">
-                    <h2 className="section-title">Product Details</h2>
-
-                    <div className="form-group">
-                        <label htmlFor="title" className="form-label">
-                            Product Title <span className="required">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="form-input"
-                            placeholder="Enter product title"
-                            required
-                            disabled={submitting}
-                            maxLength={200}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="description" className="form-label">
-                            Description <span className="required">*</span>
-                        </label>
-                        <textarea
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="form-textarea"
-                            placeholder="Enter product description"
-                            required
-                            disabled={submitting}
-                            rows={5}
-                        />
-                    </div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label htmlFor="price" className="form-label">
-                                Price (USD) <span className="required">*</span>
-                            </label>
-                            <div className="input-with-prefix">
-                                <span className="input-prefix">$</span>
-                                <input
-                                    type="number"
-                                    id="price"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                    className="form-input with-prefix"
-                                    placeholder="0.00"
-                                    required
-                                    disabled={submitting}
-                                    step="0.01"
-                                    min="0"
-                                />
+                                {/* Category */}
+                                <div>
+                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Category <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            id="category"
+                                            list="category-suggestions"
+                                            value={category}
+                                            onChange={(e) => setCategory(e.target.value)}
+                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                            placeholder="Select or type a category..."
+                                            required
+                                            disabled={submitting}
+                                            autoComplete="off"
+                                        />
+                                        <datalist id="category-suggestions">
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.name} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="stock" className="form-label">
-                                Stock Quantity <span className="required">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                id="stock"
-                                value={stock}
-                                onChange={(e) => setStock(e.target.value)}
-                                className="form-input"
-                                placeholder="0"
-                                required
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-end gap-3 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.back()}
                                 disabled={submitting}
-                                min="0"
-                            />
+                                className="w-full sm:w-auto"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={submitting || uploading}
+                                className="w-full sm:w-auto bg-[#C8102E] hover:bg-[#A90D27] text-white min-w-[140px]"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    "Create Product"
+                                )}
+                            </Button>
                         </div>
                     </div>
-
-                    <div className="form-group">
-                        <label htmlFor="category" className="form-label">
-                            Category <span className="required">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="category"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            className="form-input"
-                            placeholder="e.g., Electronics, Clothing, Books"
-                            required
-                            disabled={submitting}
-                        />
-                    </div>
-                </div>
-
-                {/* Form Actions */}
-                <div className="form-actions">
-                    <button
-                        type="button"
-                        onClick={() => router.back()}
-                        className="btn-cancel"
-                        disabled={submitting}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-submit"
-                        disabled={submitting || uploading}
-                    >
-                        {submitting ? (
-                            <>
-                                <div className="spinner"></div>
-                                Creating Product...
-                            </>
-                        ) : (
-                            "Create Product"
-                        )}
-                    </button>
                 </div>
             </form>
         </div>

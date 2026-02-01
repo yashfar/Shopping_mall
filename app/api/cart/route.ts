@@ -1,6 +1,9 @@
+
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { getPaymentConfig } from "@/lib/payment-config";
+import { calculateCartTotals } from "@@/lib/payment-utils";
 
 /**
  * GET /api/cart
@@ -56,7 +59,10 @@ export async function GET() {
             });
         }
 
-        return NextResponse.json({ cart });
+        const config = await getPaymentConfig();
+        const totals = calculateCartTotals(cart.items, config);
+
+        return NextResponse.json({ cart, config, totals });
     } catch (error) {
         console.error("Error fetching cart:", error);
         return NextResponse.json(

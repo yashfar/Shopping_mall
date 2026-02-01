@@ -10,8 +10,13 @@ export default async function OrdersPage() {
     }
 
     return (
-        <div style={{ maxWidth: "1000px", margin: "50px auto", padding: "20px" }}>
-            <h1 style={{ marginBottom: "30px" }}>My Orders</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">My Orders</h1>
+                    <p className="text-gray-500 mt-2 font-medium">Track and manage your recent purchases.</p>
+                </div>
+            </div>
             <OrdersList />
         </div>
     );

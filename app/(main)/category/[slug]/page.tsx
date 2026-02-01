@@ -14,22 +14,23 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     const categoryName = decodeURIComponent(slug);
 
     // Check if category exists
-    const categoryExists = await prisma.product.findFirst({
-        where: { category: categoryName },
+    const category = await prisma.category.findFirst({
+        where: { name: { equals: categoryName, mode: "insensitive" } },
     });
 
-    if (!categoryExists) {
+    if (!category) {
         notFound();
     }
 
     // Fetch products
     const products = await prisma.product.findMany({
         where: {
-            category: categoryName,
+            categoryId: category.id,
             isActive: true,
         },
         include: {
             reviews: { select: { id: true, rating: true } },
+            category: true,
         },
         orderBy: getSortOrder(sort),
         take: 12,
@@ -37,25 +38,21 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
     const sortedProducts = sortProducts(products, sort);
 
-    // Fetch unique categories
-    const allCategories = await prisma.product.findMany({
-        where: { isActive: true, category: { not: null } },
-        select: { category: true },
-        distinct: ["category"],
+    // Fetch all categories for filter
+    const allCategories = await prisma.category.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" },
     });
 
-    const categories = allCategories
-        .map((p) => p.category)
-        .filter((c): c is string => c !== null)
-        .sort();
+    const categories = allCategories.map((c) => c.name);
 
     return (
         <ProductCatalog
             initialProducts={sortedProducts}
             categories={categories}
             queryParams={{ category: categoryName, sort }}
-            title={categoryName}
-            description={`Browse all ${categoryName} products`}
+            title={category.name} // Use the actual DB name for consistent casing
+            description={`Browse all ${category.name} products`}
         />
     );
 }

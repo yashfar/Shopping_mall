@@ -91,10 +91,15 @@ export async function POST(req: Request) {
                     title,
                     description,
                     price,
-                    category,
                     stock,
                     thumbnail,
                     isActive: stock > 0, // Auto-activate if stock > 0
+                    category: {
+                        connectOrCreate: {
+                            where: { name: category },
+                            create: { name: category },
+                        },
+                    },
                 },
             });
 

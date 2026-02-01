@@ -25,7 +25,7 @@ export function getSortOrder(sort: string | undefined): any {
     }
 }
 
-interface ProductWithReviews {
+export interface ProductWithReviews {
     reviews: { rating: number }[];
     [key: string]: any;
 }

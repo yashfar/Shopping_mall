@@ -66,6 +66,21 @@ export async function PUT(
 
         // Update product with images in a transaction
         const product = await prisma.$transaction(async (tx) => {
+            // Handle category - find or create if provided
+            let categoryId: string | undefined | null = undefined;
+            if (category !== undefined) {
+                if (category === "" || category === null) {
+                    categoryId = null;
+                } else {
+                    const categoryRecord = await tx.category.upsert({
+                        where: { name: category },
+                        update: {},
+                        create: { name: category },
+                    });
+                    categoryId = categoryRecord.id;
+                }
+            }
+
             // Update the product
             const updatedProduct = await tx.product.update({
                 where: { id },
@@ -73,7 +88,7 @@ export async function PUT(
                     ...(title !== undefined && { title }),
                     ...(description !== undefined && { description }),
                     ...(price !== undefined && { price }),
-                    ...(category !== undefined && { category }),
+                    ...(categoryId !== undefined && { categoryId }),
                     ...(stock !== undefined && { stock }),
                     ...(isActive !== undefined && { isActive }),
                     ...(thumbnail !== undefined && { thumbnail }),

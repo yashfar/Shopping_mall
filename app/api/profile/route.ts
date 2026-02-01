@@ -83,7 +83,8 @@ export async function PATCH(request: Request) {
                 lastName,
                 phone: phone || null,
                 birthdate: birthdate ? new Date(birthdate) : null,
-                avatar: avatar || null,
+                // Only update avatar if it's explicitly provided
+                ...(avatar !== undefined && { avatar: avatar || null }),
             },
             select: {
                 id: true,

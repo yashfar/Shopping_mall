@@ -2,10 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface CartContextType {
     cartCount: number;
-    addToCart: (productId: string, quantity: number) => Promise<boolean>;
+    addToCart: (productId: string, quantity: number) => Promise<boolean | "unauthorized">;
     refreshCart: () => Promise<void>;
     isAnimating: boolean;
 }
@@ -26,8 +27,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const res = await fetch("/api/cart");
             if (res.ok) {
                 const data = await res.json();
-                // Assumes data.items is the array of cart items
-                const count = data.items ? data.items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 0;
+                const items = data.cart?.items || [];
+                const count = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
                 setCartCount(count);
             }
         } catch (e) {
@@ -36,11 +37,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const addToCart = async (productId: string, quantity: number) => {
-        // Optimistic update
-        setCartCount((prev) => prev + quantity);
-        setIsAnimating(true);
-        setTimeout(() => setIsAnimating(false), 500); // Animation duration
-
         try {
             const res = await fetch("/api/cart/add", {
                 method: "POST",
@@ -48,19 +44,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 body: JSON.stringify({ productId, quantity }),
             });
 
+            // Check if user is not authenticated
+            if (res.status === 401) {
+                toast.error("Please sign in to add items to cart");
+                return "unauthorized";
+            }
+
             if (!res.ok) {
-                // Revert on failure
-                setCartCount((prev) => prev - quantity);
                 const data = await res.json();
                 console.error("Failed to add:", data.error);
                 toast.error(data.error || "Failed to add to cart");
                 return false;
             }
 
+            // Optimistic update after success
+            setCartCount((prev) => prev + quantity);
+            setIsAnimating(true);
+            setTimeout(() => setIsAnimating(false), 500);
+
             toast.success("Product added to cart");
             return true;
         } catch (e) {
-            setCartCount((prev) => prev - quantity);
             toast.error("Error adding to cart");
             return false;
         }

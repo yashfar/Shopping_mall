@@ -26,6 +26,9 @@ export async function GET(
                     select: {
                         id: true,
                         email: true,
+                        firstName: true,
+                        lastName: true,
+                        phone: true,
                     },
                 },
                 items: {
@@ -35,6 +38,7 @@ export async function GET(
                                 id: true,
                                 title: true,
                                 description: true,
+                                thumbnail: true,
                             },
                         },
                     },
@@ -46,7 +50,13 @@ export async function GET(
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
 
-        return NextResponse.json({ order });
+        // Fetch user's primary address (most recent)
+        const address = order.user ? await prisma.address.findFirst({
+            where: { userId: order.user.id },
+            orderBy: { createdAt: "desc" },
+        }) : null;
+
+        return NextResponse.json({ order, address });
     } catch (error) {
         console.error("Error fetching order:", error);
         return NextResponse.json(
@@ -54,4 +64,5 @@ export async function GET(
             { status: 500 }
         );
     }
+
 }

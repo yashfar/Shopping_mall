@@ -55,6 +55,12 @@ model Address {
   updatedAt    DateTime @updatedAt
 }
 
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
 model Product {
   id          String         @id @default(cuid())
   title       String
@@ -62,12 +68,14 @@ model Product {
   price       Int            // Keep as Int for cents (backward compatibility)
   stock       Int            @default(0)
   isActive    Boolean        @default(true)
-  category    String?
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
   thumbnail   String?        // selected main image
   images      ProductImage[]
   reviews     Review[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  carouselItems CarouselItem[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -122,6 +130,7 @@ model Order {
   total     Int
   status    OrderStatus @default(PENDING)
   createdAt DateTime    @default(now())
+  orderNumber String?     @unique
 }
 
 model OrderItem {
@@ -188,4 +197,64 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ============================================================================
+// Banner Management System
+// ============================================================================
+model Banner {
+  id          String   @id @default(cuid())
+  imageUrl    String
+  title       String?
+  subtitle    String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  displayMode String   @default("cover")   // object-fit: cover, contain, fill, scale-down, none
+  alignment   String   @default("center")  // object-position: center, top, bottom, left, right, etc.
+  createdAt   DateTime @default(now())
+}
+
+model BannerSettings {
+  id            String   @id @default(cuid())
+  animationSpeed Int     @default(500)
+  slideDelay     Int     @default(3000)
+  animationType  String  @default("slide")
+
+  loop           Boolean @default(true)
+  arrowDisplay   String  @default("hover") // "show", "hover", "invisible"
+  createdAt      DateTime @default(now())
+}
+
+// ============================================================================
+// Featured Carousels (Best Sellers, New Products)
+// ============================================================================
+model FeaturedCarousel {
+  id        String         @id @default(cuid())
+  type      String         @unique // "best-seller", "new-products"
+  items     CarouselItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model CarouselItem {
+  id         String           @id @default(cuid())
+  carouselId String
+  carousel   FeaturedCarousel @relation(fields: [carouselId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order      Int              @default(0)
+  createdAt  DateTime         @default(now())
+
+  @@unique([carouselId, productId])
+}
+
+// ============================================================================
+// Payment Configuration System
+// ============================================================================
+model PaymentConfig {
+  id                    String   @id @default(cuid())
+  taxPercent            Float    @default(0)
+  shippingFee           Float    @default(0)
+  freeShippingThreshold Float    @default(0)
+  updatedAt             DateTime @updatedAt
 }

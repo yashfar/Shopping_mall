@@ -4,6 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
+import { Button } from "@@/components/ui/button";
+import {
+    Edit,
+    Trash2,
+    Plus,
+    Search,
+    RefreshCw,
+    ImageIcon,
+    Package,
+    CheckCircle2,
+    XCircle
+} from "lucide-react";
+import Link from "next/link";
 
 type Product = {
     id: string;
@@ -12,6 +25,7 @@ type Product = {
     price: number;
     stock: number;
     isActive: boolean;
+    thumbnail?: string | null; // Added potential field
     createdAt: string;
     updatedAt: string;
 };
@@ -21,20 +35,9 @@ export default function ProductManagement() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-
     const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "", title: "" });
-
-    // Form state (only used for editing now)
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        price: "",
-        stock: "0",
-        isActive: true,
-    });
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
 
     // Fetch products
     const fetchProducts = async () => {
@@ -57,38 +60,7 @@ export default function ProductManagement() {
         }
     };
 
-    // Update product
-    const handleUpdate = async (id: string) => {
-        try {
-            setUpdatingId(id);
-            const response = await fetch(`/api/admin/products/${id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title: formData.title,
-                    description: formData.description || null,
-                    price: Math.round(parseFloat(formData.price) * 100),
-                    stock: parseInt(formData.stock),
-                    isActive: formData.isActive,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to update product");
-            }
-
-            setEditingId(null);
-            setFormData({ title: "", description: "", price: "", stock: "0", isActive: true });
-            toast.success("Product updated successfully");
-            await fetchProducts();
-        } catch (err: any) {
-            toast.error(err.message || "Failed to update product");
-        } finally {
-            setUpdatingId(null);
-        }
-    };
-
-    // Delete product logic (API call)
+    // Delete product logic
     const confirmDelete = async () => {
         const { id } = deleteDialog;
         try {
@@ -126,53 +98,48 @@ export default function ProductManagement() {
             }
 
             toast.success(`Product ${!currentStatus ? "activated" : "deactivated"}`);
-            await fetchProducts();
+            // Optimistic update
+            setProducts(products.map(p =>
+                p.id === id ? { ...p, isActive: !currentStatus } : p
+            ));
         } catch (err: any) {
             toast.error(err.message || "Failed to update status");
+            await fetchProducts(); // Revert on error
         } finally {
             setUpdatingId(null);
         }
-    };
-
-    // Start editing
-    const startEdit = (product: Product) => {
-        setEditingId(product.id);
-        setFormData({
-            title: product.title,
-            description: product.description || "",
-            price: (product.price / 100).toFixed(2), // Convert from cents
-            stock: product.stock.toString(),
-            isActive: product.isActive,
-        });
     };
 
     useEffect(() => {
         fetchProducts();
     }, []);
 
-    // Filter products
     const filteredProducts = products.filter(product =>
         product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading products...</div>;
+        return (
+            <div className="flex justify-center items-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C8102E]"></div>
+            </div>
+        );
     }
 
     if (error) {
         return (
-            <div style={{ backgroundColor: "#ffe6e6", padding: "20px", borderRadius: "8px", color: "red" }}>
+            <div className="p-6 bg-red-50 rounded-lg border border-red-200 text-red-600 flex flex-col items-center gap-4">
                 <p>{error}</p>
-                <button onClick={fetchProducts} style={{ padding: "8px 16px", backgroundColor: "#0070f3", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+                <Button onClick={fetchProducts} variant="outline" className="border-red-200 hover:bg-red-100">
                     Retry
-                </button>
+                </Button>
             </div>
         );
     }
 
     return (
-        <div>
+        <div className="space-y-8">
             {/* Confirm Dialog */}
             <ConfirmDialog
                 open={deleteDialog.open}
@@ -184,268 +151,152 @@ export default function ProductManagement() {
                 confirmText="Delete"
             />
 
-            {/* Action Buttons and Search */}
-            <div style={{ marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", gap: "10px" }}>
-                    <button
-                        onClick={() => router.push("/admin/products/new")}
-                        style={{
-                            padding: "10px 20px",
-                            backgroundColor: "#10b981",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                        }}
-                    >
-                        + Create Product
-                    </button>
-                    <button
-                        onClick={fetchProducts}
-                        style={{
-                            padding: "10px 20px",
-                            backgroundColor: "#f5f5f5",
-                            border: "1px solid #ccc",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                        }}
-                    >
-                        🔄 Refresh
-                    </button>
-                </div>
-
-                <div style={{ flex: 1, maxWidth: "400px" }}>
+            {/* Header & Actions */}
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="relative flex-1 max-w-sm w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="Search products..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "10px",
-                            border: "1px solid #ccc",
-                            borderRadius: "4px",
-                            fontSize: "14px",
-                        }}
+                        className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm"
                     />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Button
+                        onClick={fetchProducts}
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        title="Refresh"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Link href="/admin/products/new" className="w-full md:w-auto">
+                        <Button className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Product
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
-            {/* Products Table */}
-            <div style={{ overflowX: "auto" }}>
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        backgroundColor: "white",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    }}
-                >
-                    <thead>
-                        <tr style={{ backgroundColor: "#f5f5f5" }}>
-                            <th style={{ padding: "12px", textAlign: "left", borderBottom: "2px solid #ddd" }}>
-                                Title
-                            </th>
-                            <th style={{ padding: "12px", textAlign: "left", borderBottom: "2px solid #ddd" }}>
-                                Description
-                            </th>
-                            <th style={{ padding: "12px", textAlign: "right", borderBottom: "2px solid #ddd" }}>
-                                Price
-                            </th>
-                            <th style={{ padding: "12px", textAlign: "center", borderBottom: "2px solid #ddd" }}>
-                                Stock
-                            </th>
-                            <th style={{ padding: "12px", textAlign: "center", borderBottom: "2px solid #ddd" }}>
-                                Active
-                            </th>
-                            <th style={{ padding: "12px", textAlign: "center", borderBottom: "2px solid #ddd" }}>
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredProducts.map((product) => (
-                            <tr
-                                key={product.id}
-                                style={{
-                                    borderBottom: "1px solid #eee",
-                                    opacity: updatingId === product.id ? 0.5 : 1,
-                                }}
+            {/* Products Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map((product) => (
+                    <div
+                        key={product.id}
+                        className={`group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full ${updatingId === product.id ? "opacity-60 pointer-events-none" : ""
+                            }`}
+                    >
+                        {/* Image / Thumbnail Area */}
+                        <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                            {product.thumbnail ? (
+                                <img
+                                    src={product.thumbnail}
+                                    alt={product.title}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                                    <ImageIcon className="w-12 h-12" />
+                                </div>
+                            )}
+
+                            {/* Status Badge */}
+                            <div className="absolute top-3 right-3">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md shadow-sm border ${product.isActive
+                                        ? "bg-emerald-500/90 text-white border-emerald-600/20"
+                                        : "bg-gray-500/90 text-white border-gray-600/20"
+                                    }`}>
+                                    {product.isActive ? "Active" : "Draft"}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 flex flex-col flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-[#C8102E] transition-colors">
+                                {product.title}
+                            </h3>
+                            <p className="text-sm text-gray-500 line-clamp-2 mb-4 h-10">
+                                {product.description || "No description provided"}
+                            </p>
+
+                            <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div className="flex flex-col">
+                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Price</span>
+                                    <span className="font-bold text-lg text-gray-900">
+                                        ${(product.price / 100).toFixed(2)}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Stock</span>
+                                    <span className={`font-medium ${product.stock > 0 ? "text-gray-700" : "text-red-500"}`}>
+                                        {product.stock}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions Overlay (Desktop) / Buttons (Mobile) */}
+                        <div className="p-3 bg-gray-50/80 border-t border-gray-100 grid grid-cols-2 gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full bg-white hover:border-[#C8102E] hover:text-[#C8102E]"
+                                onClick={() => router.push(`/admin/products/${product.id}/edit`)}
                             >
-                                {editingId === product.id ? (
-                                    <>
-                                        <td style={{ padding: "12px" }}>
-                                            <input
-                                                type="text"
-                                                value={formData.title}
-                                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                style={{ width: "100%", padding: "6px", border: "1px solid #ccc", borderRadius: "4px" }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: "12px" }}>
-                                            <input
-                                                type="text"
-                                                value={formData.description}
-                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                style={{ width: "100%", padding: "6px", border: "1px solid #ccc", borderRadius: "4px" }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: "12px" }}>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.price}
-                                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                                style={{ width: "100%", padding: "6px", border: "1px solid #ccc", borderRadius: "4px", textAlign: "right" }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: "12px" }}>
-                                            <input
-                                                type="number"
-                                                value={formData.stock}
-                                                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                                                style={{ width: "60px", padding: "6px", border: "1px solid #ccc", borderRadius: "4px", textAlign: "center" }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.isActive}
-                                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                                                style={{ width: "20px", height: "20px" }}
-                                            />
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <button
-                                                onClick={() => handleUpdate(product.id)}
-                                                disabled={updatingId === product.id}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    backgroundColor: "#10b981",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                    marginRight: "5px",
-                                                }}
-                                            >
-                                                Save
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setEditingId(null);
-                                                    setFormData({ title: "", description: "", price: "", stock: "0", isActive: true });
-                                                }}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    backgroundColor: "#6b7280",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                    marginRight: "5px",
-                                                }}
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() => router.push(`/admin/products/${product.id}/edit`)}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    backgroundColor: "#8b5cf6",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                    marginTop: "5px",
-                                                    display: "block",
-                                                    width: "100%",
-                                                }}
-                                            >
-                                                Edit Photos / Details
-                                            </button>
-                                        </td>
-                                    </>
-                                ) : (
-                                    <>
-                                        <td style={{ padding: "12px", fontWeight: "500" }}>{product.title}</td>
-                                        <td style={{ padding: "12px", color: "#666", fontSize: "14px" }}>
-                                            {product.description || "-"}
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "right", fontWeight: "600" }}>
-                                            ${(product.price / 100).toFixed(2)}
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center" }}>{product.stock}</td>
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <button
-                                                onClick={() => toggleActive(product.id, product.isActive)}
-                                                disabled={updatingId === product.id}
-                                                style={{
-                                                    padding: "4px 12px",
-                                                    backgroundColor: product.isActive ? "#10b981" : "#ef4444",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                    fontSize: "12px",
-                                                }}
-                                            >
-                                                {product.isActive ? "Active" : "Inactive"}
-                                            </button>
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <button
-                                                onClick={() => startEdit(product)}
-                                                disabled={updatingId === product.id}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    backgroundColor: "#0070f3",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                    marginRight: "5px",
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => setDeleteDialog({ open: true, id: product.id, title: product.title })}
-                                                disabled={updatingId === product.id}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    backgroundColor: "#dc2626",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "4px",
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                <Edit className="w-3.5 h-3.5 mr-2" />
+                                Edit
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full bg-white text-red-600 hover:bg-red-50 hover:border-red-200"
+                                onClick={() => setDeleteDialog({ open: true, id: product.id, title: product.title })}
+                            >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Delete
+                            </Button>
+                        </div>
+
+                        {/* Quick Action: Toggle Status */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleActive(product.id, product.isActive);
+                            }}
+                            className={`absolute top-3 left-3 p-1.5 rounded-full backdrop-blur-md border transition-all ${product.isActive
+                                    ? "bg-white/90 text-emerald-600 border-white/50 hover:bg-red-50 hover:text-red-600"
+                                    : "bg-white/90 text-gray-400 border-white/50 hover:bg-emerald-50 hover:text-emerald-600"
+                                }`}
+                            title={product.isActive ? "Deactivate" : "Activate"}
+                        >
+                            {product.isActive ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                        </button>
+                    </div>
+                ))}
             </div>
 
+            {/* Empty State */}
             {filteredProducts.length === 0 && (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "40px",
-                        backgroundColor: "#f5f5f5",
-                        borderRadius: "8px",
-                        marginTop: "20px",
-                    }}
-                >
-                    <p style={{ color: "#666" }}>
-                        {searchTerm ? "No products found matching your search." : "No products found. Create your first product!"}
+                <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <div className="bg-white p-4 rounded-full inline-flex mb-4 shadow-sm">
+                        <Package className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No products found</h3>
+                    <p className="text-gray-500 max-w-sm mx-auto mb-6">
+                        {searchTerm ? "We couldn't find any products matching your search terms." : "Get started by creating your first product in the store."}
                     </p>
+                    <Link href="/admin/products/new">
+                        <Button className="bg-[#C8102E] hover:bg-[#A90D27] text-white">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create New Product
+                        </Button>
+                    </Link>
                 </div>
             )}
         </div>

@@ -2,13 +2,14 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, FormEvent } from "react";
-import "./login.css";
+import { useState, FormEvent, Suspense } from "react";
+import Link from "next/link";
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,85 +59,113 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Welcome Back</h1>
-        <p className="login-subtitle">Sign in to your account</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 relative md:-top-20 overflow-hidden p-4">
+      {/* Decorative background gradients using theme primary color */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-primary/10 blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+      </div>
 
-        {error && <div className="error-message">{error}</div>}
+      <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8 relative z-10 backdrop-blur-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
+          <p className="text-gray-500">Sign in to your account to continue</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">
+        {error && (
+          <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg p-3 mb-6 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-gray-700 block">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading || googleLoading}
-              className="form-input"
-              placeholder="you@example.com"
-            />
+            <div className="relative group">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading || googleLoading}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
+                placeholder="you@example.com"
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading || googleLoading}
-              className="form-input"
-              placeholder="••••••••"
-            />
-            <div style={{ marginTop: '8px', textAlign: 'right' }}>
-              <a href="/forgot-password" style={{ color: '#3b82f6', fontSize: '0.875rem', textDecoration: 'none' }}>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
+              >
                 Forgot password?
-              </a>
+              </Link>
+            </div>
+            <div className="relative group">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading || googleLoading}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
+                placeholder="••••••••"
+              />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading || googleLoading}
-            className="btn-primary"
+            className="w-full bg-primary text-white hover:bg-primary/90 font-medium py-2.5 rounded-lg transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
           >
             {loading ? (
               <>
-                <span className="spinner"></span>
-                Signing in...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Signing in...</span>
               </>
             ) : (
-              "Sign in with Email"
+              "Sign in"
             )}
           </button>
         </form>
 
-        <div className="divider">
-          <span>OR</span>
+        <div className="my-6 relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-200"></span>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-gray-400">Or continue with</span>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading || googleLoading}
-          className="btn-google"
+          className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {googleLoading ? (
             <>
-              <span className="spinner"></span>
-              Connecting...
+              <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+              <span>Connecting...</span>
             </>
           ) : (
             <>
-              <svg className="google-icon" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -154,18 +183,37 @@ export default function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign in with Google
+              <span>Sign in with Google</span>
             </>
           )}
         </button>
 
-        <p className="signup-link">
+        <p className="mt-8 text-center text-sm text-gray-500">
           Don't have an account?{" "}
-          <a href="/register" className="link">
+          <Link
+            href="/register"
+            className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
+          >
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8">
+          <div className="flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
