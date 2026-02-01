@@ -130,6 +130,7 @@ model Order {
   total     Int
   status    OrderStatus @default(PENDING)
   createdAt DateTime    @default(now())
+  orderNumber String?     @unique
 }
 
 model OrderItem {

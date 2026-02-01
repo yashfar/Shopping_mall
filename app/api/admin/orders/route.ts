@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const statusFilter = searchParams.get("status");
+        const search = searchParams.get("search");
 
         // Build where clause based on filter
         let whereClause: any = {};
@@ -43,6 +44,41 @@ export async function GET(request: Request) {
             }
         }
 
+        if (search) {
+            const isNumeric = /^\d+$/.test(search);
+
+            if (isNumeric) {
+                // Search by orderNumber
+                whereClause.orderNumber = {
+                    contains: search,
+                };
+            } else {
+                // Search by user name or email
+                whereClause.OR = [
+                    {
+                        user: {
+                            name: {
+                                contains: search,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                    {
+                        user: {
+                            email: {
+                                contains: search,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                ];
+            }
+        }
+
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "15");
+        const skip = (page - 1) * limit;
+
         const orders = await prisma.order.findMany({
             where: whereClause,
             include: {
@@ -55,9 +91,14 @@ export async function GET(request: Request) {
             orderBy: {
                 createdAt: "desc",
             },
+            take: limit,
+            skip: skip,
         });
 
-        return NextResponse.json({ orders });
+        const totalOrders = await prisma.order.count({ where: whereClause });
+        const hasMore = skip + orders.length < totalOrders;
+
+        return NextResponse.json({ orders, hasMore });
     } catch (error) {
         console.error("Error fetching orders:", error);
         return NextResponse.json(
