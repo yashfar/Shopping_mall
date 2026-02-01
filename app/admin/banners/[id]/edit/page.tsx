@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@@/components/ui/select";
+import { Loader2, Upload } from "lucide-react";
 
 interface Banner {
     id: string;
@@ -35,12 +36,30 @@ interface Banner {
     createdAt: Date;
 }
 
+// Helper: Extract Supabase storage path from URL
+function getPathFromUrl(url: string) {
+    try {
+        const parts = url.split('/public/products/');
+        if (parts.length > 1) return parts[1];
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
 export default function EditBannerPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [banner, setBanner] = useState<Banner | null>(null);
     const [bannerId, setBannerId] = useState<string>("");
+
+    // Form State
     const [imageUrl, setImageUrl] = useState("");
+    const [originalImageUrl, setOriginalImageUrl] = useState(""); // Track for cleanup
+    const [imagePath, setImagePath] = useState(""); // Track new upload path
+
+    // Note: We don't have explicit "remove image" because schema requires imageUrl.
+
     const [imagePreview, setImagePreview] = useState("");
     const [title, setTitle] = useState("");
     const [subtitle, setSubtitle] = useState("");
@@ -69,6 +88,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                 const data = await response.json();
                 setBanner(data);
                 setImageUrl(data.imageUrl);
+                setOriginalImageUrl(data.imageUrl); // Store original
                 setImagePreview(data.imageUrl);
                 setTitle(data.title || "");
                 setSubtitle(data.subtitle || "");
@@ -118,7 +138,8 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch("/api/admin/upload/banner-image", {
+            // Use new Supabase upload endpoint
+            const response = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -130,13 +151,16 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
 
             const data = await response.json();
             setImageUrl(data.url);
+            setImagePath(data.path); // Store path for potential cleanup if user replaces again before saving?
+            // (Simpler: just overwrite imageUrl. Real cleanup happens on Save or explicit Delete)
+
             toast.success("Image uploaded successfully");
         } catch (err: any) {
             toast.error(err.message || "Failed to upload image");
-            // Restore original preview on error
-            setImagePreview(imageUrl);
+            setImagePreview(imageUrl); // Revert to current imageUrl preview
         } finally {
             setUploading(false);
+            e.target.value = "";
         }
     };
 
@@ -158,6 +182,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
         setSubmitting(true);
 
         try {
+            // Update Banner
             const response = await fetch(`/api/admin/banners/${bannerId}`, {
                 method: "PATCH",
                 headers: {
@@ -179,6 +204,19 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                 throw new Error(data.error || "Failed to update banner");
             }
 
+            // Cleanup old image if changed
+            if (originalImageUrl && originalImageUrl !== imageUrl) {
+                const oldPath = getPathFromUrl(originalImageUrl);
+                if (oldPath) {
+                    // Fire and forget delete
+                    fetch("/api/upload/delete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ path: oldPath }),
+                    }).catch(console.error);
+                }
+            }
+
             toast.success("Banner updated successfully! Redirecting...");
             setTimeout(() => {
                 router.push("/admin/banners");
@@ -193,6 +231,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
         setDeleting(true);
 
         try {
+            // Delete Banner from DB
             const response = await fetch(`/api/admin/banners/${bannerId}/delete`, {
                 method: "DELETE",
             });
@@ -200,6 +239,16 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.error || "Failed to delete banner");
+            }
+
+            // Cleanup storage (image)
+            const pathToDelete = getPathFromUrl(imageUrl);
+            if (pathToDelete) {
+                await fetch("/api/upload/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: pathToDelete }),
+                });
             }
 
             toast.success("Banner deleted successfully! Redirecting...");
@@ -216,7 +265,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
         return (
             <div className="max-w-4xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <div className="w-12 h-12 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin" />
+                    <Loader2 className="w-12 h-12 text-[#C8102E] animate-spin" />
                 </div>
             </div>
         );
@@ -288,7 +337,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                             </AlertDialogTitle>
                             <AlertDialogDescription className="text-[#A9A9A9] text-base">
                                 This action cannot be undone. This will permanently delete the banner
-                                from the carousel.
+                                from the carousel and remove its image from storage.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -314,7 +363,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                         Banner Image
                     </h2>
                     <p className="text-[#A9A9A9] mb-6">
-                        Current banner image. Click to replace with a new image.
+                        Current banner image. Click to replace with a new Supabase image.
                     </p>
 
                     <div className="space-y-4">
@@ -345,20 +394,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                                 htmlFor="banner-upload"
                                 className="w-full md:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200 cursor-pointer"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={2}
-                                    stroke="currentColor"
-                                    className="w-5 h-5"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                                    />
-                                </svg>
+                                <Upload className="w-5 h-5" />
                                 {uploading ? "Uploading..." : "Replace Image"}
                             </label>
                         </div>
@@ -424,26 +460,13 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                                 <SelectValue placeholder="Select resize mode" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-2 border-[#E5E5E5] rounded-xl shadow-lg">
-                                <SelectItem value="cover" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Cover (recommended)
-                                </SelectItem>
-                                <SelectItem value="contain" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Contain (fit inside)
-                                </SelectItem>
-                                <SelectItem value="fill" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Fill (stretch)
-                                </SelectItem>
-                                <SelectItem value="scale-down" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Scale Down
-                                </SelectItem>
-                                <SelectItem value="none" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    None
-                                </SelectItem>
+                                <SelectItem value="cover">Cover (recommended)</SelectItem>
+                                <SelectItem value="contain">Contain (fit inside)</SelectItem>
+                                <SelectItem value="fill">Fill (stretch)</SelectItem>
+                                <SelectItem value="scale-down">Scale Down</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                             </SelectContent>
                         </Select>
-                        <p className="text-xs text-[#A9A9A9] mt-1">
-                            How the image should fill the banner space
-                        </p>
                     </div>
 
                     {/* Image Focal Point */}
@@ -459,38 +482,17 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                                 <SelectValue placeholder="Select focal point" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-2 border-[#E5E5E5] rounded-xl shadow-lg">
-                                <SelectItem value="center" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Center
-                                </SelectItem>
-                                <SelectItem value="top" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Top
-                                </SelectItem>
-                                <SelectItem value="bottom" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Bottom
-                                </SelectItem>
-                                <SelectItem value="left" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Left
-                                </SelectItem>
-                                <SelectItem value="right" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Right
-                                </SelectItem>
-                                <SelectItem value="top left" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Top Left
-                                </SelectItem>
-                                <SelectItem value="top right" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Top Right
-                                </SelectItem>
-                                <SelectItem value="bottom left" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Bottom Left
-                                </SelectItem>
-                                <SelectItem value="bottom right" className="cursor-pointer hover:bg-[#FAFAFA] font-medium">
-                                    Bottom Right
-                                </SelectItem>
+                                <SelectItem value="center">Center</SelectItem>
+                                <SelectItem value="top">Top</SelectItem>
+                                <SelectItem value="bottom">Bottom</SelectItem>
+                                <SelectItem value="left">Left</SelectItem>
+                                <SelectItem value="right">Right</SelectItem>
+                                <SelectItem value="top left">Top Left</SelectItem>
+                                <SelectItem value="top right">Top Right</SelectItem>
+                                <SelectItem value="bottom left">Bottom Left</SelectItem>
+                                <SelectItem value="bottom right">Bottom Right</SelectItem>
                             </SelectContent>
                         </Select>
-                        <p className="text-xs text-[#A9A9A9] mt-1">
-                            Which part of the image to focus on
-                        </p>
                     </div>
 
                     {/* Order and Active Toggle Row */}
@@ -513,9 +515,6 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                                 disabled={submitting || deleting}
                                 min="0"
                             />
-                            <p className="text-xs text-[#A9A9A9] mt-1">
-                                Lower numbers appear first
-                            </p>
                         </div>
 
                         {/* Active Toggle */}
@@ -528,21 +527,14 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                                     type="button"
                                     onClick={() => setActive(!active)}
                                     disabled={submitting || deleting}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${active ? "bg-[#C8102E]" : "bg-[#A9A9A9]"
-                                        }`}
+                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${active ? "bg-[#C8102E]" : "bg-[#A9A9A9]"}`}
                                 >
-                                    <span
-                                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${active ? "translate-x-7" : "translate-x-1"
-                                            }`}
-                                    />
+                                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${active ? "translate-x-7" : "translate-x-1"}`} />
                                 </button>
                                 <span className="text-sm font-bold text-[#1A1A1A]">
                                     {active ? "Active" : "Inactive"}
                                 </span>
                             </div>
-                            <p className="text-xs text-[#A9A9A9] mt-1">
-                                {active ? "Banner will be visible" : "Banner will be hidden"}
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -564,7 +556,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                     >
                         {submitting ? (
                             <>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <Loader2 className="w-5 h-5 animate-spin" />
                                 Saving Changes...
                             </>
                         ) : (

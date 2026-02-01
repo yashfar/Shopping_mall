@@ -2,18 +2,29 @@ import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const AvatarUploadSchema = z.object({
     image: z.string().min(1, "Image data is required"),
     type: z.enum(["url", "base64"]).default("base64"),
 });
 
+// Helper to extract path from Supabase URL
+function getPathFromUrl(url: string) {
+    try {
+        const parts = url.split('/public/products/'); // Assuming 'products' is the bucket name in public URL
+        if (parts.length > 1) {
+            return parts[1];
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
 /**
  * POST /api/profile/avatar
- * Upload avatar image
+ * Upload avatar image to Supabase Storage
  */
 export async function POST(request: Request) {
     const session = await auth();
@@ -37,7 +48,6 @@ export async function POST(request: Request) {
         let avatarUrl: string;
 
         if (type === "url") {
-            // If it's a URL, validate and use it directly
             try {
                 new URL(image);
                 avatarUrl = image;
@@ -50,7 +60,6 @@ export async function POST(request: Request) {
         } else {
             // Handle base64 image upload
             try {
-                // Extract base64 data and mime type
                 const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
 
                 if (!matches || matches.length !== 3) {
@@ -63,7 +72,6 @@ export async function POST(request: Request) {
                 const mimeType = matches[1];
                 const base64Data = matches[2];
 
-                // Validate image type
                 const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
                 if (!allowedTypes.includes(mimeType)) {
                     return NextResponse.json(
@@ -72,21 +80,13 @@ export async function POST(request: Request) {
                     );
                 }
 
-                // Get file extension
                 const extension = mimeType.split("/")[1];
                 const fileName = `${session.user.id}-${Date.now()}.${extension}`;
+                const bucket = process.env.SUPABASE_BUCKET || 'products';
+                const path = `avatars/${fileName}`;
 
-                // Create uploads directory if it doesn't exist
-                const uploadsDir = join(process.cwd(), "public", "uploads", "avatars");
-                if (!existsSync(uploadsDir)) {
-                    await mkdir(uploadsDir, { recursive: true });
-                }
-
-                // Save file
-                const filePath = join(uploadsDir, fileName);
                 const buffer = Buffer.from(base64Data, "base64");
 
-                // Validate file size (max 5MB)
                 if (buffer.length > 5 * 1024 * 1024) {
                     return NextResponse.json(
                         { error: "Image too large. Maximum size is 5MB" },
@@ -94,20 +94,53 @@ export async function POST(request: Request) {
                     );
                 }
 
-                await writeFile(filePath, buffer);
+                // Upload to Supabase using Admin client
+                const { error: uploadError } = await supabaseAdmin.storage
+                    .from(bucket)
+                    .upload(path, buffer, {
+                        contentType: mimeType,
+                        upsert: true
+                    });
 
-                // Generate public URL
-                avatarUrl = `/uploads/avatars/${fileName}`;
+                if (uploadError) {
+                    console.error('Supabase upload error:', uploadError);
+                    if (uploadError.message.includes("row-level security policy")) {
+                        return NextResponse.json({ error: "Storage permission denied (RLS)." }, { status: 500 });
+                    }
+                    throw new Error(uploadError.message);
+                }
+
+                // Get Public URL
+                const { data: { publicUrl } } = supabaseAdmin.storage
+                    .from(bucket)
+                    .getPublicUrl(path);
+
+                avatarUrl = publicUrl;
+
             } catch (error) {
                 console.error("Error processing image:", error);
                 return NextResponse.json(
-                    { error: "Failed to process image" },
+                    { error: "Failed to process image upload" },
                     { status: 500 }
                 );
             }
         }
 
-        // Update user avatar in database
+        // Get old avatar to delete if it exists and is a Supabase URL
+        const currentUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { avatar: true }
+        });
+
+        if (currentUser?.avatar && currentUser.avatar.includes("supabase.co")) {
+            const bucket = process.env.SUPABASE_BUCKET || 'products';
+            // Try to clean up old avatar
+            const oldPath = getPathFromUrl(currentUser.avatar);
+            if (oldPath) {
+                await supabaseAdmin.storage.from(bucket).remove([oldPath]).catch(console.error);
+            }
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id: session.user.id },
             data: { avatar: avatarUrl },
@@ -147,6 +180,20 @@ export async function DELETE() {
     }
 
     try {
+        // Get current avatar for cleanup
+        const currentUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { avatar: true }
+        });
+
+        if (currentUser?.avatar && currentUser.avatar.includes("supabase.co")) {
+            const bucket = process.env.SUPABASE_BUCKET || 'products';
+            const oldPath = getPathFromUrl(currentUser.avatar);
+            if (oldPath) {
+                await supabaseAdmin.storage.from(bucket).remove([oldPath]).catch(console.error);
+            }
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id: session.user.id },
             data: { avatar: null },
