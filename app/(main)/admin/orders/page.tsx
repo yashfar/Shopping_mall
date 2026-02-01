@@ -2,7 +2,15 @@ import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import AdminOrdersList from "./AdminOrdersList";
 
-export default async function AdminOrdersPage() {
+type SearchParams = {
+    status?: string;
+};
+
+type PageProps = {
+    searchParams: SearchParams;
+};
+
+export default async function AdminOrdersPage({ searchParams }: PageProps) {
     const session = await auth();
 
     if (!session) {
@@ -36,7 +44,7 @@ export default async function AdminOrdersPage() {
                 </a>
             </div>
 
-            <AdminOrdersList />
+            <AdminOrdersList initialStatus={searchParams.status} />
         </div>
     );
 }
