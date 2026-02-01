@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@@/components/ui/button";
 
 type OrderItem = {
     id: string;
@@ -14,6 +15,7 @@ type OrderItem = {
 
 type Order = {
     id: string;
+    orderNumber?: string | null;
     total: number;
     status: string;
     createdAt: string;
@@ -26,6 +28,8 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
 
     useEffect(() => {
         const fetchOrder = async () => {
+            // Simulate loading for smoother UX
+            await new Promise(resolve => setTimeout(resolve, 500));
             try {
                 const response = await fetch(`/api/orders/${orderId}`);
                 if (!response.ok) throw new Error("Failed to fetch order");
@@ -42,171 +46,126 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
     }, [orderId]);
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-[#C8102E] rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-gray-400 font-medium animate-pulse">Confirming your order...</p>
+            </div>
+        );
     }
 
     if (!order) {
         return (
-            <div style={{ textAlign: "center", padding: "40px" }}>
-                <p>Order not found</p>
-                <Link href="/orders" style={{ color: "#0070f3" }}>
-                    View all orders
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="bg-red-50 p-6 rounded-full mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-[#C8102E]">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h3>
+                <p className="text-gray-500 max-w-sm mb-8">We couldn't find the order you're looking for. It might have been processed or the ID is incorrect.</p>
+                <Link href="/orders">
+                    <Button variant="outline" className="border-gray-200 text-gray-900 hover:bg-gray-50">
+                        View All Orders
+                    </Button>
                 </Link>
             </div>
         );
     }
 
     return (
-        <div>
+        <div className="space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-10">
             {/* Success Message */}
-            <div
-                style={{
-                    backgroundColor: "#d1fae5",
-                    padding: "24px",
-                    borderRadius: "8px",
-                    marginBottom: "30px",
-                    border: "1px solid #10b981",
-                    textAlign: "center",
-                }}
-            >
-                <div style={{ fontSize: "48px", marginBottom: "16px" }}>✓</div>
-                <h1 style={{ margin: "0 0 12px 0", color: "#059669" }}>Payment Successful!</h1>
-                <p style={{ margin: 0, color: "#047857" }}>
-                    Thank you for your purchase. Your order has been confirmed.
+            <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-2 animate-bounce">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-12 h-12 text-emerald-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Payment Successful!</h1>
+                    <p className="text-gray-500 mt-2 text-lg">Thank you for your purchase. Your order has been confirmed.</p>
+                </div>
+                <p className="text-sm font-bold bg-gray-50 px-4 py-2 rounded-full text-gray-600 border border-gray-100">
+                    Order #{order.orderNumber || order.id.substring(0, 8)}
                 </p>
             </div>
 
-            {/* Order Details */}
-            <div
-                style={{
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    marginBottom: "24px",
-                }}
-            >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Details</h2>
-
-                <div style={{ marginBottom: "20px" }}>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order ID</div>
-                    <div style={{ fontFamily: "monospace", fontSize: "14px" }}>{order.id}</div>
+            {/* Order Details Card */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden">
+                <div className="p-6 md:p-8 border-b border-gray-100 bg-gray-50/30">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Date</p>
+                            <p className="font-bold text-gray-900">
+                                {new Date(order.createdAt).toLocaleDateString("en-US", {
+                                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                                })}
+                            </p>
+                        </div>
+                        <div className="text-left md:text-right">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                {order.status}
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                <div style={{ marginBottom: "20px" }}>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Status</div>
-                    <span
-                        style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            backgroundColor: "#d1fae5",
-                            color: "#059669",
-                        }}
-                    >
-                        {order.status}
-                    </span>
-                </div>
+                <div className="divide-y divide-gray-100">
+                    <div className="p-6 md:p-8">
+                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Items Purchased</h3>
+                        <div className="space-y-4">
+                            {order.items.map((item) => (
+                                <div key={item.id} className="flex justify-between items-center group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-900">{item.product.title}</p>
+                                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-gray-900">${((item.price * item.quantity) / 100).toFixed(2)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-                <div style={{ marginBottom: "20px" }}>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order Date</div>
-                    <div>
-                        {new Date(order.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                        })}
+                    <div className="bg-gray-50 p-6 md:p-8">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-500 font-medium">Subtotal</span>
+                            <span className="font-bold text-gray-900">${(order.total / 100).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-gray-500 font-medium">Shipping</span>
+                            <span className="font-bold text-green-600">Free</span>
+                        </div>
+                        <div className="pt-4 border-t border-gray-200 border-dashed flex justify-between items-center">
+                            <span className="font-black text-gray-900 text-lg">Total Paid</span>
+                            <span className="font-black text-[#C8102E] text-2xl">${(order.total / 100).toFixed(2)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Order Items */}
-            <div
-                style={{
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    marginBottom: "24px",
-                }}
-            >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Items Purchased</h2>
-
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                        <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
-                            <th style={{ padding: "12px", textAlign: "left" }}>Product</th>
-                            <th style={{ padding: "12px", textAlign: "center" }}>Quantity</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Price</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {order.items.map((item) => (
-                            <tr key={item.id} style={{ borderBottom: "1px solid #eee" }}>
-                                <td style={{ padding: "12px" }}>{item.product.title}</td>
-                                <td style={{ padding: "12px", textAlign: "center" }}>{item.quantity}</td>
-                                <td style={{ padding: "12px", textAlign: "right" }}>
-                                    ${(item.price / 100).toFixed(2)}
-                                </td>
-                                <td style={{ padding: "12px", textAlign: "right", fontWeight: "600" }}>
-                                    ${((item.price * item.quantity) / 100).toFixed(2)}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr style={{ borderTop: "2px solid #ddd" }}>
-                            <td colSpan={3} style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
-                                Total Paid:
-                            </td>
-                            <td
-                                style={{
-                                    padding: "16px",
-                                    textAlign: "right",
-                                    fontSize: "20px",
-                                    fontWeight: "700",
-                                    color: "#10b981",
-                                }}
-                            >
-                                ${(order.total / 100).toFixed(2)}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
             {/* Actions */}
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                <Link
-                    href="/orders"
-                    style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#0070f3",
-                        color: "white",
-                        textDecoration: "none",
-                        borderRadius: "6px",
-                        fontWeight: "600",
-                    }}
-                >
-                    View All Orders
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Link href="/orders" className="w-full sm:w-auto">
+                    <Button className="w-full h-12 px-8 bg-[#1A1A1A] hover:bg-black text-white font-bold rounded-xl shadow-lg shadow-black/20 transition-all hover:scale-105 active:scale-95">
+                        View Order History
+                    </Button>
                 </Link>
-                <Link
-                    href="/products"
-                    style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#f5f5f5",
-                        color: "#333",
-                        textDecoration: "none",
-                        borderRadius: "6px",
-                        fontWeight: "600",
-                        border: "1px solid #ccc",
-                    }}
-                >
-                    Continue Shopping
+                <Link href="/products" className="w-full sm:w-auto">
+                    <Button variant="outline" className="w-full h-12 px-8 bg-white border-gray-200 text-gray-900 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95">
+                        Continue Shopping
+                    </Button>
                 </Link>
             </div>
         </div>

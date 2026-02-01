@@ -4,6 +4,7 @@ import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/payment-config";
 import { calculateCartTotals } from "@@/lib/payment-utils";
+import { generateOrderNumber } from "@@/lib/order-utils";
 
 /**
  * POST /api/orders/create
@@ -66,6 +67,7 @@ export async function POST() {
             const newOrder = await tx.order.create({
                 data: {
                     userId: session.user.id,
+                    orderNumber: await generateOrderNumber(tx),
                     total, // Using the dynamically calculated total
                     status: "PENDING",
                 },
