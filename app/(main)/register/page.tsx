@@ -2,6 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
+import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { Loader2, Mail, Lock, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -9,6 +12,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -44,74 +48,98 @@ export default function RegisterPage() {
         }
     }
 
+    async function handleGoogleSignIn() {
+        setError("");
+        setGoogleLoading(true);
+        try {
+            await signIn("google", { callbackUrl: "/dashboard" });
+        } catch (err) {
+            setError("Failed to sign in with Google");
+            setGoogleLoading(false);
+        }
+    }
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-[#FAFAFA] p-6 relative overflow-hidden">
-            {/* Background Accent */}
-            <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-[radial-gradient(circle,rgba(200,16,46,0.03)_0%,transparent_70%)] z-0" />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50/50 relative md:-top-20 overflow-hidden p-4">
+            {/* Decorative background gradients using theme primary color */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]" />
+                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-primary/10 blur-[100px]" />
+                <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+            </div>
 
-            <div className="w-full max-w-[480px] bg-white rounded-[24px] border border-[#A9A9A9] shadow-[0_10px_40px_rgba(0,0,0,0.04)] p-12 relative z-10">
-                <h1 className="text-[2.5rem] font-black text-[#1A1A1A] text-center mb-3 tracking-tighter">Create Account</h1>
-                <p className="text-center text-[#A9A9A9] font-medium mb-10">Join our community today</p>
+            <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8 relative z-10 backdrop-blur-sm">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Create Account</h1>
+                    <p className="text-gray-500">Join our community today</p>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-bold text-[#1A1A1A] mb-2 tracking-tight">
-                            Email Address
+                {error && (
+                    <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg p-3 mb-6 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{error}</span>
+                    </div>
+                )}
+
+                {success && (
+                    <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 text-sm rounded-lg p-3 mb-6 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                        <CheckCircle className="w-4 h-4 shrink-0" />
+                        <span>{success}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-2">
+                        <label htmlFor="email" className="text-sm font-medium text-gray-700 block">
+                            Email
                         </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            disabled={loading}
-                            placeholder="you@example.com"
-                            className="w-full px-[18px] py-[14px] text-base border border-[#A9A9A9] rounded-xl transition-all duration-300 focus:outline-none focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5"
-                        />
+                        <div className="relative group">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                disabled={loading || googleLoading}
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
+                                placeholder="you@example.com"
+                            />
+                        </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-bold text-[#1A1A1A] mb-2 tracking-tight">
+                    <div className="space-y-2">
+                        <label htmlFor="password" className="text-sm font-medium text-gray-700 block">
                             Password
                         </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={8}
-                            disabled={loading}
-                            placeholder="••••••••"
-                            className="w-full px-[18px] py-[14px] text-base border border-[#A9A9A9] rounded-xl transition-all duration-300 focus:outline-none focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5"
-                        />
-                        <p className="mt-2 text-xs font-medium text-[#A9A9A9]">
-                            Minimum 8 characters for security
+                        <div className="relative group">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                minLength={8}
+                                disabled={loading || googleLoading}
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                            Must be at least 8 characters
                         </p>
                     </div>
 
-                    {error && (
-                        <div className="bg-[#FFF1F2] border border-[#C8102E]/10 text-[#C8102E] px-4 py-3.5 rounded-xl text-sm font-bold text-center">
-                            {error}
-                        </div>
-                    )}
-
-                    {success && (
-                        <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 px-4 py-3.5 rounded-xl text-sm font-bold text-center">
-                            {success}
-                        </div>
-                    )}
-
                     <button
                         type="submit"
-                        disabled={loading}
-                        className={`w-full py-4 text-base font-black rounded-[14px] transition-all duration-300 shadow-lg flex items-center justify-center gap-3 ${loading
-                                ? "bg-[#A9A9A9] cursor-not-allowed"
-                                : "bg-[#C8102E] text-white hover:bg-[#A90D27] hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(200,16,46,0.3)] active:translate-y-0"
-                            }`}
+                        disabled={loading || googleLoading}
+                        className="w-full bg-primary text-white hover:bg-primary/90 font-medium py-2.5 rounded-lg transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
                     >
                         {loading ? (
                             <>
-                                <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-                                Processing...
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Creating Account...</span>
                             </>
                         ) : (
                             "Create Account"
@@ -119,14 +147,59 @@ export default function RegisterPage() {
                     </button>
                 </form>
 
-                <p className="mt-10 text-center text-[#A9A9A9] font-medium">
+                <div className="my-6 relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-gray-200"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-2 text-gray-400">Or continue with</span>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading || googleLoading}
+                    className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                    {googleLoading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                            <span>Connecting...</span>
+                        </>
+                    ) : (
+                        <>
+                            <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                <path
+                                    fill="#4285F4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                />
+                                <path
+                                    fill="#34A853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                />
+                                <path
+                                    fill="#FBBC05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                />
+                                <path
+                                    fill="#EA4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                />
+                            </svg>
+                            <span>Sign up with Google</span>
+                        </>
+                    )}
+                </button>
+
+                <p className="mt-8 text-center text-sm text-gray-500">
                     Already have an account?{" "}
-                    <a
+                    <Link
                         href="/login"
-                        className="text-[#C8102E] font-black border-b-2 border-transparent hover:border-[#C8102E]/30 pb-0.5 transition-all"
+                        className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
                     >
                         Sign in
-                    </a>
+                    </Link>
                 </p>
             </div>
         </div>

@@ -88,7 +88,14 @@ export default function ProductDetailClient({
     const handleAddToCart = async () => {
         if (isAddingToCart) return;
         setIsAddingToCart(true);
-        await addToCart(product.id, quantity);
+
+        const result = await addToCart(product.id, quantity);
+
+        // If user is not authenticated, redirect to register page
+        if (result === "unauthorized") {
+            router.push("/register");
+        }
+
         setIsAddingToCart(false);
     };
 

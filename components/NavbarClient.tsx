@@ -99,7 +99,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                         />
                     </svg>
                     {cartCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-[#C8102E] text-white text-[0.7rem] font-bold py-0.5 px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center leading-none shadow-[0_2px_4px_rgba(200,16,46,0.2)] border-2 border-white">
+                        <span className="absolute -top-1 -right-1 bg-[#C8102E] text-white text-[0.7rem] font-bold py-1.5 px-1.5 rounded-full min-w-[20px] h-6 flex items-center justify-center leading-none shadow-[0_2px_4px_rgba(200,16,46,0.2)] border-2 border-white">
                             {cartCount}
                         </span>
                     )}
