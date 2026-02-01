@@ -6,9 +6,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@@/components/ui/alert-dialog";
 
 interface UploadedImage {
     url: string;
+    path?: string; // Supabase storage path
     file?: File;
 }
 
@@ -28,7 +40,10 @@ export default function NewProductPage() {
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+
+    // Delete confirmation state
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch categories
     useEffect(() => {
@@ -41,6 +56,7 @@ export default function NewProductPage() {
                 }
             } catch (error) {
                 console.error("Failed to fetch categories", error);
+                toast.error("Failed to load categories");
             }
         };
         fetchCategories();
@@ -58,7 +74,8 @@ export default function NewProductPage() {
                 const formData = new FormData();
                 formData.append("file", file);
 
-                const response = await fetch("/api/admin/upload/product-image", {
+                // Use the new Supabase upload endpoint
+                const response = await fetch("/api/upload", {
                     method: "POST",
                     body: formData,
                 });
@@ -69,7 +86,7 @@ export default function NewProductPage() {
                 }
 
                 const data = await response.json();
-                return { url: data.url, file };
+                return { url: data.url, path: data.path, file };
             });
 
             const uploadedImages = await Promise.all(uploadPromises);
@@ -80,9 +97,10 @@ export default function NewProductPage() {
                 setThumbnail(uploadedImages[0].url);
             }
 
-            setSuccess(`${uploadedImages.length} image(s) uploaded successfully`);
-            setTimeout(() => setSuccess(""), 3000);
+            toast.success(`${uploadedImages.length} image(s) uploaded successfully`);
         } catch (err: any) {
+            console.error(err);
+            toast.error(err.message || "Failed to upload images");
             setError(err.message || "Failed to upload images");
         } finally {
             setUploading(false);
@@ -90,48 +108,89 @@ export default function NewProductPage() {
         }
     };
 
-    const handleRemoveImage = (urlToRemove: string) => {
-        setImages((prev) => prev.filter((img) => img.url !== urlToRemove));
-        if (thumbnail === urlToRemove) {
-            const remaining = images.filter((img) => img.url !== urlToRemove);
-            setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+    const confirmDeleteImage = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+
+        const imageIndex = images.findIndex((img) => img.url === deleteId);
+        if (imageIndex === -1) {
+            setDeleteId(null);
+            setIsDeleting(false);
+            return;
+        }
+
+        const image = images[imageIndex];
+
+        try {
+            // Delete from Supabase if we have a path
+            if (image.path) {
+                const response = await fetch("/api/upload/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: image.path }),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete image from storage");
+                }
+            }
+
+            // Update UI
+            setImages((prev) => prev.filter((img) => img.url !== deleteId));
+            if (thumbnail === deleteId) {
+                const remaining = images.filter((img) => img.url !== deleteId);
+                setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+            }
+
+            toast.success("Image deleted successfully");
+        } catch (err: any) {
+            console.error(err);
+            toast.error("Failed to delete image");
+        } finally {
+            setIsDeleting(false);
+            setDeleteId(null);
         }
     };
 
     const handleSetThumbnail = (url: string) => {
         setThumbnail(url);
+        toast.info("Thumbnail updated");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setSuccess("");
 
         // Frontend Validation
         if (images.length === 0) {
             setError("Please upload at least one product image");
+            toast.error("Please upload at least one product image");
             return;
         }
 
         if (!thumbnail) {
             setError("Please select a thumbnail image");
+            toast.error("Please select a thumbnail image");
             return;
         }
 
         if (!title.trim() || !description.trim() || !category.trim()) {
-            setError("Please fill in all required fields (Title, Description, Category)");
+            setError("Please fill in all required fields");
+            toast.error("Please fill in all required fields");
             return;
         }
 
         const priceInCents = Math.round(parseFloat(price) * 100);
         if (isNaN(priceInCents) || priceInCents <= 0) {
             setError("Please enter a valid positive price");
+            toast.error("Please enter a valid positive price");
             return;
         }
 
         const stockNumber = parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
             setError("Please enter a valid stock quantity");
+            toast.error("Please enter a valid stock quantity");
             return;
         }
 
@@ -164,12 +223,13 @@ export default function NewProductPage() {
                 throw new Error(data.error || "Failed to create product");
             }
 
-            setSuccess("Product created successfully! Redirecting...");
+            toast.success("Product created successfully!");
             setTimeout(() => {
                 router.push("/admin/products");
             }, 1500);
         } catch (err: any) {
             setError(err.message || "Failed to create product");
+            toast.error(err.message || "Failed to create product");
             setSubmitting(false);
         }
     };
@@ -191,18 +251,11 @@ export default function NewProductPage() {
                 </div>
             </div>
 
-            {/* Alerts */}
+            {/* Error Alert */}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
                     <X className="h-5 w-5 shrink-0" />
                     <p className="text-sm font-medium">{error}</p>
-                </div>
-            )}
-
-            {success && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
-                    <Check className="h-5 w-5 shrink-0" />
-                    <p className="text-sm font-medium">{success}</p>
                 </div>
             )}
 
@@ -213,7 +266,7 @@ export default function NewProductPage() {
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                Upload product images. Select the star icon to set the thumbnail.
+                                Upload product images (Supabase Storage). Select the star icon to set the thumbnail.
                             </p>
 
                             {/* Image Upload Area */}
@@ -266,7 +319,6 @@ export default function NewProductPage() {
                                         {/* Actions */}
                                         {thumbnail !== img.url && (
                                             <>
-                                                {/* Desktop Overlay */}
                                                 <div className="hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                                                     <Button
                                                         type="button"
@@ -278,8 +330,6 @@ export default function NewProductPage() {
                                                         Set Thumbnail
                                                     </Button>
                                                 </div>
-
-                                                {/* Mobile Button */}
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -294,8 +344,9 @@ export default function NewProductPage() {
                                         <Button
                                             type="button"
                                             size="icon"
-                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-white hover:bg-red-600 text-red-600 hover:text-white border border-gray-200"
-                                            onClick={() => handleRemoveImage(img.url)}
+                                            variant="destructive"
+                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
+                                            onClick={() => setDeleteId(img.url)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -449,6 +500,30 @@ export default function NewProductPage() {
                     </div>
                 </div>
             </form>
+
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete this image from storage. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmDeleteImage();
+                            }}
+                            disabled={isDeleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

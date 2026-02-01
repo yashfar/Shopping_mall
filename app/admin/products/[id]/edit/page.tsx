@@ -5,11 +5,37 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
-import { ArrowLeft, Upload, X, Check, Loader2, Trash2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@@/components/ui/alert-dialog";
 
 interface UploadedImage {
     url: string;
+    path?: string;
     file?: File;
+}
+
+// Helper to extract path from Supabase URL if not explicitly stored
+function getPathFromUrl(url: string) {
+    try {
+        // Expected format: .../public/products/products/filename
+        const parts = url.split('/public/products/');
+        if (parts.length > 1) {
+            return parts[1];
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
 }
 
 export default function EditProductPage() {
@@ -31,7 +57,10 @@ export default function EditProductPage() {
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+
+    // Delete state
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch product details
     useEffect(() => {
@@ -55,13 +84,15 @@ export default function EditProductPage() {
 
                 if (product.images && Array.isArray(product.images)) {
                     setImages(product.images.map((img: any) => ({
-                        url: img.url
+                        url: img.url,
+                        path: img.path || getPathFromUrl(img.url)
                     })));
                 } else {
                     setImages([]);
                 }
             } catch (err: any) {
                 setError(err.message || "Failed to load product");
+                toast.error(err.message || "Failed to load product");
             } finally {
                 setLoading(false);
             }
@@ -98,7 +129,7 @@ export default function EditProductPage() {
                 const formData = new FormData();
                 formData.append("file", file);
 
-                const response = await fetch("/api/admin/upload/product-image", {
+                const response = await fetch("/api/upload", {
                     method: "POST",
                     body: formData,
                 });
@@ -109,7 +140,7 @@ export default function EditProductPage() {
                 }
 
                 const data = await response.json();
-                return { url: data.url, file };
+                return { url: data.url, path: data.path, file };
             });
 
             const uploadedImages = await Promise.all(uploadPromises);
@@ -119,45 +150,88 @@ export default function EditProductPage() {
                 setThumbnail(uploadedImages[0].url);
             }
 
-            setSuccess(`${uploadedImages.length} image(s) uploaded successfully`);
-            setTimeout(() => setSuccess(""), 3000);
+            toast.success(`${uploadedImages.length} image(s) uploaded successfully`);
         } catch (err: any) {
             setError(err.message || "Failed to upload images");
+            toast.error(err.message);
         } finally {
             setUploading(false);
             e.target.value = "";
         }
     };
 
-    const handleRemoveImage = (urlToRemove: string) => {
-        setImages((prev) => prev.filter((img) => img.url !== urlToRemove));
-        if (thumbnail === urlToRemove) {
-            const remaining = images.filter((img) => img.url !== urlToRemove);
-            setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+    const confirmDeleteImage = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+
+        const imageIndex = images.findIndex((img) => img.url === deleteId);
+        if (imageIndex === -1) {
+            setDeleteId(null);
+            setIsDeleting(false);
+            return;
+        }
+
+        const image = images[imageIndex];
+
+        try {
+            const pathToDelete = image.path || getPathFromUrl(image.url);
+
+            if (pathToDelete) {
+                const response = await fetch("/api/upload/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: pathToDelete }),
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to delete from storage");
+                    toast.warning("Could not delete from storage, but removing from list.");
+                } else {
+                    toast.success("Image removed");
+                }
+            } else {
+                toast.success("Image removed from list");
+            }
+
+            setImages((prev) => prev.filter((img) => img.url !== deleteId));
+            if (thumbnail === deleteId) {
+                const remaining = images.filter((img) => img.url !== deleteId);
+                setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            toast.error("Failed to remove image");
+        } finally {
+            setIsDeleting(false);
+            setDeleteId(null);
         }
     };
 
     const handleSetThumbnail = (url: string) => {
         setThumbnail(url);
+        toast.info("Thumbnail selected");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setSuccess("");
 
         if (images.length === 0) {
             setError("Please upload at least one product image");
+            toast.error("Please upload at least one product image");
             return;
         }
 
         if (!thumbnail) {
             setError("Please select a thumbnail image");
+            toast.error("Please select a thumbnail image");
             return;
         }
 
         if (!title.trim() || !description.trim() || !category.trim()) {
-            setError("Please fill in all required fields (Title, Description, Category)");
+            setError("Please fill in all required fields");
+            toast.error("Please fill in all required fields");
             return;
         }
 
@@ -198,12 +272,13 @@ export default function EditProductPage() {
                 throw new Error(data.error || "Failed to update product");
             }
 
-            setSuccess("Product updated successfully! Redirecting...");
+            toast.success("Product updated successfully!");
             setTimeout(() => {
                 router.push("/admin/products");
             }, 1000);
         } catch (err: any) {
             setError(err.message || "Failed to update product");
+            toast.error(err.message);
             setSubmitting(false);
         }
     };
@@ -218,7 +293,6 @@ export default function EditProductPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
                     <Link href="/admin/products">
@@ -233,7 +307,6 @@ export default function EditProductPage() {
                 </div>
             </div>
 
-            {/* Alerts */}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
                     <X className="h-5 w-5 shrink-0" />
@@ -241,16 +314,8 @@ export default function EditProductPage() {
                 </div>
             )}
 
-            {success && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
-                    <Check className="h-5 w-5 shrink-0" />
-                    <p className="text-sm font-medium">{success}</p>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column: Images */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
@@ -258,7 +323,6 @@ export default function EditProductPage() {
                                 Upload product images. Select the star icon to set the thumbnail.
                             </p>
 
-                            {/* Image Upload Area */}
                             <div className="relative mb-6">
                                 <input
                                     type="file"
@@ -288,7 +352,6 @@ export default function EditProductPage() {
                                 </label>
                             </div>
 
-                            {/* Image Grid */}
                             <div className="grid grid-cols-2 gap-4 max-h-[320px] overflow-y-auto">
                                 {images.map((img) => (
                                     <div
@@ -305,10 +368,8 @@ export default function EditProductPage() {
                                             className="object-cover"
                                         />
 
-                                        {/* Actions: Desktop Overlay / Mobile Icons */}
                                         {thumbnail !== img.url && (
                                             <>
-                                                {/* Desktop: Centered Overlay Button */}
                                                 <div className="hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                                                     <Button
                                                         type="button"
@@ -320,8 +381,6 @@ export default function EditProductPage() {
                                                         Set Thumbnail
                                                     </Button>
                                                 </div>
-
-                                                {/* Mobile: Small Pill Button next to Remove */}
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -333,17 +392,16 @@ export default function EditProductPage() {
                                             </>
                                         )}
 
-                                        {/* Remove Button (Bottom Right, Icon Only) */}
                                         <Button
                                             type="button"
                                             size="icon"
-                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-white hover:bg-red-600 text-red-600 hover:text-white border border-gray-200"
-                                            onClick={() => handleRemoveImage(img.url)}
+                                            variant="destructive"
+                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
+                                            onClick={() => setDeleteId(img.url)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
 
-                                        {/* Thumbnail Badge */}
                                         {thumbnail === img.url && (
                                             <div className="absolute top-2 right-2 bg-[#C8102E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
                                                 MAIN
@@ -355,13 +413,11 @@ export default function EditProductPage() {
                         </div>
                     </div>
 
-                    {/* Right Column: Details */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-6">Product Information</h2>
 
                             <div className="space-y-6">
-                                {/* Title */}
                                 <div>
                                     <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                                         Product Title <span className="text-red-500">*</span>
@@ -378,7 +434,6 @@ export default function EditProductPage() {
                                     />
                                 </div>
 
-                                {/* Description */}
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                                         Description <span className="text-red-500">*</span>
@@ -395,7 +450,6 @@ export default function EditProductPage() {
                                     />
                                 </div>
 
-                                {/* Row: Price & Stock */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
                                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
@@ -436,7 +490,6 @@ export default function EditProductPage() {
                                     </div>
                                 </div>
 
-                                {/* Category */}
                                 <div>
                                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                                         Category <span className="text-red-500">*</span>
@@ -464,7 +517,6 @@ export default function EditProductPage() {
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="flex items-center justify-end gap-3 pt-4">
                             <Button
                                 type="button"
@@ -493,6 +545,30 @@ export default function EditProductPage() {
                     </div>
                 </div>
             </form>
+
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete this image from storage. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmDeleteImage();
+                            }}
+                            disabled={isDeleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
