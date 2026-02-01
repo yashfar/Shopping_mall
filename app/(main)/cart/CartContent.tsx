@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@@/context/CartContext";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
+import { calculateCartTotals } from "@@/lib/payment-utils";
+import Image from "next/image";
+import Link from "next/link";
 
 type CartItem = {
     id: string;
@@ -14,6 +17,7 @@ type CartItem = {
         title: string;
         price: number;
         stock: number;
+        thumbnail: string | null;
     };
 };
 
@@ -26,6 +30,7 @@ export default function CartContent() {
     const router = useRouter();
     const { refreshCart } = useCart();
     const [cart, setCart] = useState<Cart | null>(null);
+    const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
     const [hasAddresses, setHasAddresses] = useState(true);
@@ -44,6 +49,7 @@ export default function CartContent() {
             if (!response.ok) throw new Error("Failed to fetch cart");
             const data = await response.json();
             setCart(data.cart);
+            setConfig(data.config);
         } catch (error) {
             console.error("Error fetching cart:", error);
             // toast.error("Failed to load cart"); // Optional on load
@@ -176,10 +182,7 @@ export default function CartContent() {
         );
     }
 
-    const total = cart.items.reduce(
-        (sum, item) => sum + item.product.price * item.quantity,
-        0
-    );
+    const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
 
     return (
         <div className="space-y-8">
@@ -202,14 +205,41 @@ export default function CartContent() {
                     >
                         <div className="flex flex-col gap-4">
                             {/* Product Info */}
-                            <div>
-                                <h3 className="font-bold text-[#1A1A1A] text-lg mb-1">{item.product.title}</h3>
-                                <div className="text-xs font-bold uppercase tracking-wider">
-                                    {item.product.stock > 0 ? (
-                                        <span className="text-emerald-600">In stock</span>
+                            {/* Product Info with Image */}
+                            <div className="flex gap-4">
+                                {/* Thumbnail */}
+                                <Link
+                                    href={`/product/${item.product.id}`}
+                                    className="relative w-24 h-24 shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100"
+                                >
+                                    {item.product.thumbnail ? (
+                                        <Image
+                                            src={item.product.thumbnail}
+                                            alt={item.product.title}
+                                            fill
+                                            className="object-cover"
+                                        />
                                     ) : (
-                                        <span className="text-[#C8102E]">Out of stock</span>
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                            <span className="text-2xl">📦</span>
+                                        </div>
                                     )}
+                                </Link>
+
+                                <div>
+                                    <Link
+                                        href={`/product/${item.product.id}`}
+                                        className="font-bold text-[#1A1A1A] text-lg mb-1 hover:text-[#C8102E] transition-colors line-clamp-2"
+                                    >
+                                        {item.product.title}
+                                    </Link>
+                                    <div className="text-xs font-bold uppercase tracking-wider mt-1">
+                                        {item.product.stock > 0 ? (
+                                            <span className="text-emerald-600">In stock</span>
+                                        ) : (
+                                            <span className="text-[#C8102E]">Out of stock</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -289,13 +319,40 @@ export default function CartContent() {
                                     className={`transition-all duration-300 ${updating === item.product.id ? "opacity-50 pointer-events-none" : "hover:bg-red-50/5"}`}
                                 >
                                     <td className="px-6 py-6">
-                                        <div className="font-bold text-[#1A1A1A] leading-tight mb-1 line-clamp-2">{item.product.title}</div>
-                                        <div className="text-xs font-bold uppercase tracking-wider">
-                                            {item.product.stock > 0 ? (
-                                                <span className="text-emerald-600">In stock</span>
-                                            ) : (
-                                                <span className="text-[#C8102E]">Out of stock</span>
-                                            )}
+                                        <div className="flex items-center gap-4">
+                                            <Link
+                                                href={`/product/${item.product.id}`}
+                                                className="relative w-16 h-16 shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 group-hover:border-[#C8102E]/20 transition-colors"
+                                            >
+                                                {item.product.thumbnail ? (
+                                                    <Image
+                                                        src={item.product.thumbnail}
+                                                        alt={item.product.title}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                        <span className="text-2xl">📦</span>
+                                                    </div>
+                                                )}
+                                            </Link>
+
+                                            <div>
+                                                <Link
+                                                    href={`/product/${item.product.id}`}
+                                                    className="font-bold text-[#1A1A1A] leading-tight mb-1 line-clamp-2 hover:text-[#C8102E] transition-colors"
+                                                >
+                                                    {item.product.title}
+                                                </Link>
+                                                <div className="text-xs font-bold uppercase tracking-wider">
+                                                    {item.product.stock > 0 ? (
+                                                        <span className="text-emerald-600">In stock</span>
+                                                    ) : (
+                                                        <span className="text-[#C8102E]">Out of stock</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right font-bold text-[#1A1A1A]">
@@ -354,29 +411,44 @@ export default function CartContent() {
                         Order Summary
                     </h2>
 
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Subtotal</span>
-                            <span className="text-[#1A1A1A] font-bold">${(total / 100).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Shipping estimate</span>
-                            <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">FREE</span>
-                        </div>
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Tax estimate</span>
-                            <span className="text-[#1A1A1A] font-bold">$0.00</span>
-                        </div>
+                    {totals && config ? (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center text-gray-500 font-medium">
+                                <span>Subtotal (Tax included)</span>
+                                <span className="text-[#1A1A1A] font-bold">${(totals.subtotal / 100).toFixed(2)}</span>
+                            </div>
 
-                        <div className="h-px bg-gray-100 my-4" />
+                            <div className="flex justify-between items-center text-gray-500 font-medium">
+                                <span>Shipping</span>
+                                {totals.shippingAmount === 0 ? (
+                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">FREE</span>
+                                ) : (
+                                    <span className="text-[#1A1A1A] font-bold">${(totals.shippingAmount / 100).toFixed(2)}</span>
+                                )}
+                            </div>
 
-                        <div className="flex justify-between items-center">
-                            <span className="text-lg font-bold text-[#1A1A1A]">Order Total</span>
-                            <span className="text-2xl font-black text-[#C8102E]">
-                                ${(total / 100).toFixed(2)}
-                            </span>
+                            <div className="flex justify-between items-center text-gray-400 text-sm">
+                                <span>Estimated Tax (Included)</span>
+                                <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
+                            </div>
+
+                            <div className="h-px bg-gray-100 my-4" />
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-lg font-bold text-[#1A1A1A]">Order Total</span>
+                                <div className="text-right">
+                                    <span className="text-2xl font-black text-[#C8102E] block">
+                                        ${(totals.total / 100).toFixed(2)}
+                                    </span>
+                                    {totals.shippingAmount === 0 && config.freeShippingThreshold > 0 && (
+                                        <p className="text-xs text-emerald-600 font-bold mt-1">Free Shipping Applied!</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="py-4 text-center text-gray-400">Loading summary...</div>
+                    )}
 
                     <div className="space-y-4 pt-2">
                         {!hasAddresses ? (

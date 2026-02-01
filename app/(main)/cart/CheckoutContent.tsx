@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { calculateCartTotals } from "@@/lib/payment-utils";
+import Image from "next/image";
+import Link from "next/link";
 
 type CartItem = {
     id: string;
@@ -10,6 +13,7 @@ type CartItem = {
         id: string;
         title: string;
         price: number;
+        thumbnail: string | null;
     };
 };
 
@@ -21,6 +25,7 @@ type Cart = {
 export default function CheckoutContent() {
     const router = useRouter();
     const [cart, setCart] = useState<Cart | null>(null);
+    const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [hasAddresses, setHasAddresses] = useState(true);
@@ -32,6 +37,7 @@ export default function CheckoutContent() {
                 if (!response.ok) throw new Error("Failed to fetch cart");
                 const data = await response.json();
                 setCart(data.cart);
+                setConfig(data.config);
 
                 // Redirect to cart if empty (only on initial load)
                 if (!data.cart || data.cart.items.length === 0) {
@@ -105,10 +111,9 @@ export default function CheckoutContent() {
         return null; // Will redirect
     }
 
-    const total = cart.items.reduce(
-        (sum, item) => sum + item.product.price * item.quantity,
-        0
-    );
+    const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
+
+    if (!totals || !config) return null; // Should wait for loading but cart checked above
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
@@ -128,15 +133,32 @@ export default function CheckoutContent() {
                                 key={item.id}
                                 className="flex gap-4 py-4 border-b border-gray-100 last:border-0 last:pb-0"
                             >
-                                {/* Placeholder for Image if available, or generic icon */}
-                                <div className="w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100">
-                                    <span className="text-2xl">📦</span>
-                                </div>
+                                {/* Thumbnail */}
+                                <Link
+                                    href={`/product/${item.product.id}`}
+                                    className="relative w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden"
+                                >
+                                    {item.product.thumbnail ? (
+                                        <Image
+                                            src={item.product.thumbnail}
+                                            alt={item.product.title}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-2xl">📦</span>
+                                    )}
+                                </Link>
 
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start gap-4">
                                         <div>
-                                            <h3 className="font-bold text-[#1A1A1A] leading-snug">{item.product.title}</h3>
+                                            <Link
+                                                href={`/product/${item.product.id}`}
+                                                className="font-bold text-[#1A1A1A] leading-snug hover:text-[#C8102E] transition-colors"
+                                            >
+                                                {item.product.title}
+                                            </Link>
                                             <p className="text-sm text-gray-500 mt-1">Quantity: {item.quantity}</p>
                                         </div>
                                         <div className="font-extrabold text-[#1A1A1A]">
@@ -159,9 +181,11 @@ export default function CheckoutContent() {
                         </svg>
                     </div>
                     <div className="space-y-1">
-                        <p className="text-[#1A1A1A] font-bold">Shipping</p>
+                        <p className="text-[#1A1A1A] font-bold">Shipping Information</p>
                         <p className="text-sm text-gray-600 leading-relaxed">
-                            Standard shipping is free. Your items will be shipped to your default address immediately after confirmation.
+                            {totals.shippingAmount === 0
+                                ? "You qualify for free shipping! Your items will be shipped immediately."
+                                : `Standard shipping fee of $${(config.shippingFee / 100).toFixed(2)} applies.`}
                         </p>
                     </div>
                 </div>
@@ -169,28 +193,32 @@ export default function CheckoutContent() {
 
             {/* Right Column: Place Order */}
             <div className="lg:col-span-1">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:p-8 space-y-6 sticky top-24">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
                     <h2 className="text-xl font-extrabold text-[#1A1A1A]">Order Summary</h2>
 
                     <div className="space-y-3 pb-6 border-b border-gray-100">
                         <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Subtotal</span>
-                            <span className="text-[#1A1A1A] font-bold">${(total / 100).toFixed(2)}</span>
+                            <span className="text-md flex flex-col">Subtotal <span className="text-xs">(Tax included)</span></span>
+                            <span className="text-[#1A1A1A] font-bold">${(totals.subtotal / 100).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Shipping</span>
-                            <span className="text-emerald-600 font-bold">FREE</span>
+                            <span className="text-md">Shipping</span>
+                            {totals.shippingAmount === 0 ? (
+                                <span className="text-emerald-600 font-bold">FREE</span>
+                            ) : (
+                                <span className="text-[#1A1A1A] font-bold">${(totals.shippingAmount / 100).toFixed(2)}</span>
+                            )}
                         </div>
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span>Tax</span>
-                            <span className="text-[#1A1A1A] font-bold">$0.00</span>
+                        <div className="flex justify-between items-center text-gray-400 text-sm">
+                            <span>Estimated Tax (Included)</span>
+                            <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
                         </div>
                     </div>
 
                     <div className="flex justify-between items-center">
                         <span className="text-lg font-bold text-[#1A1A1A]">Total</span>
                         <span className="text-2xl font-black text-[#C8102E]">
-                            ${(total / 100).toFixed(2)}
+                            ${(totals.total / 100).toFixed(2)}
                         </span>
                     </div>
 

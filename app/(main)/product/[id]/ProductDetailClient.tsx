@@ -203,8 +203,8 @@ export default function ProductDetailClient({
                                             key={image.id}
                                             onClick={() => setSelectedImageIndex(index)}
                                             className={`relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${selectedImageIndex === index
-                                                    ? "border-[#C8102E] ring-2 ring-[#C8102E]/20"
-                                                    : "border-transparent hover:border-gray-300"
+                                                ? "border-[#C8102E] ring-2 ring-[#C8102E]/20"
+                                                : "border-transparent hover:border-gray-300"
                                                 }`}
                                         >
                                             <Image
@@ -322,68 +322,87 @@ export default function ProductDetailClient({
                 </div>
 
                 {/* Reviews Section */}
-                <div id="reviews" className="max-w-4xl mx-auto pt-16 border-t border-[#A9A9A9]/20">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                        <div>
-                            <h2 className="text-2xl font-black text-[#1A1A1A] flex items-center gap-3">
-                                Customer Reviews
-                                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-bold rounded-full">
-                                    {product.reviews.length}
-                                </span>
-                            </h2>
-                        </div>
+                <div id="reviews" className="max-w-7xl mx-auto md:pt-20 border-t border-gray-100 mt-20">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24">
 
-                        {/* Summary Bar */}
-                        {product.reviews.length > 0 && (
-                            <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-xl border border-[#E5E5E5] shadow-sm">
-                                <div className="text-center md:text-right">
-                                    <div className="text-sm text-gray-400 font-bold uppercase tracking-wider">Average Rating</div>
-                                    <div className="text-2xl font-black text-[#1A1A1A]">{averageRating.toFixed(1)} / 5</div>
+                        {/* LEFT COLUMN: Summary & Form (Sticky on Desktop) */}
+                        <div className="lg:col-span-4 space-y-10">
+                            {/* Summary Header */}
+                            <div>
+                                <h2 className="text-3xl font-black text-[#1A1A1A] mb-2 tracking-tight">Customer Reviews</h2>
+                                <div className="flex items-baseline gap-4 mb-6">
+                                    <div className="text-4xl font-black text-[#1A1A1A]">{averageRating.toFixed(1)}</div>
+                                    <div className="flex flex-col">
+                                        <StarRating rating={averageRating} size="md" />
+                                        <span className="text-sm font-medium text-gray-400 mt-1">
+                                            Based on {product.reviews.length} reviews
+                                        </span>
+                                    </div>
                                 </div>
-                                <StarRating rating={averageRating} size="lg" />
-                            </div>
-                        )}
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-                        {/* Review Form - Left Side on Desktop */}
-                        <div className="md:col-span-1">
+                                {/* Rating Bars breakdown */}
+                                {product.reviews.length > 0 && (
+                                    <div className="space-y-3 mb-10">
+                                        {[5, 4, 3, 2, 1].map((star) => {
+                                            const count = product.reviews.filter(r => Math.round(r.rating) === star).length;
+                                            const percent = (count / product.reviews.length) * 100;
+                                            return (
+                                                <div key={star} className="flex items-center gap-4 text-sm">
+                                                    <div className="font-bold text-[#1A1A1A] w-3">{star}</div>
+                                                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[#1A1A1A] rounded-full"
+                                                            style={{ width: `${percent}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-8 text-right text-gray-400 font-medium">{percent > 0 ? `${Math.round(percent)}%` : '0%'}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Review Form */}
                             {isAuthenticated ? (
                                 userReview ? (
-                                    <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-green-800">
-                                        <div className="flex items-center gap-2 font-bold mb-2">
-                                            <Check className="w-5 h-5" />
-                                            Product Reviewed
+                                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 text-emerald-800 flex flex-col gap-3">
+                                        <div className="flex items-center gap-2 font-bold text-lg">
+                                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                                <Check className="w-4 h-4 text-emerald-600" />
+                                            </div>
+                                            Review Submitted
                                         </div>
-                                        <p className="text-sm text-green-700">
-                                            Thanks for sharing your experience! Your review is live.
+                                        <p className="text-sm text-emerald-700/80 leading-relaxed font-medium">
+                                            Thank you! Your feedback helps others make better decisions.
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="bg-white rounded-2xl border border-[#A9A9A9]/20 shadow-sm p-6 sticky top-24">
-                                        <h3 className="font-bold text-lg text-[#1A1A1A] mb-4">Write a Review</h3>
-                                        <form onSubmit={handleSubmitReview} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
-                                                <StarRating
-                                                    rating={rating}
-                                                    size="lg"
-                                                    interactive
-                                                    onRatingChange={setRating}
-                                                />
+                                    <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] ring-4 ring-gray-50/50">
+                                        <h3 className="font-bold text-xl text-[#1A1A1A] mb-6">Share your thoughts</h3>
+                                        <form onSubmit={handleSubmitReview} className="space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rating</label>
+                                                <div className="flex justify-center py-4 bg-gray-50 rounded-xl">
+                                                    <StarRating
+                                                        rating={rating}
+                                                        size="xl"
+                                                        interactive
+                                                        onRatingChange={setRating}
+                                                    />
+                                                </div>
                                             </div>
 
-                                            <div>
-                                                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Your Review (Optional)
+                                            <div className="space-y-2">
+                                                <label htmlFor="comment" className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                    Review
                                                 </label>
                                                 <textarea
                                                     id="comment"
                                                     value={comment}
                                                     onChange={(e) => setComment(e.target.value)}
-                                                    className="w-full p-3 rounded-xl border border-[#A9A9A9] focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] outline-none transition-all resize-none text-sm"
-                                                    rows={4}
-                                                    placeholder="How was your experience?"
+                                                    className="w-full p-4 rounded-xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-[#1A1A1A] outline-none transition-all resize-none text-sm font-medium min-h-[120px]"
+                                                    placeholder="What did you like or dislike?"
                                                     disabled={submitting}
                                                 />
                                             </div>
@@ -391,61 +410,77 @@ export default function ProductDetailClient({
                                             <button
                                                 type="submit"
                                                 disabled={submitting}
-                                                className="w-full py-3 bg-[#1A1A1A] text-white rounded-xl font-bold hover:bg-[#C8102E] transition-colors disabled:opacity-70"
+                                                className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold hover:bg-[#C8102E] transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
                                             >
-                                                {submitting ? "Submitting..." : "Submit Review"}
+                                                {submitting ? "Posting..." : "Post Review"}
                                             </button>
                                         </form>
                                     </div>
                                 )
                             ) : (
-                                <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 text-center">
-                                    <User className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-gray-900 font-bold mb-1">Want to review?</p>
-                                    <p className="text-sm text-gray-500 mb-4">Please log in to share your thoughts.</p>
+                                <div className="bg-gray-50 rounded-3xl border border-gray-200 p-8 text-center space-y-4">
+                                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                                        <User className="w-8 h-8 text-[#1A1A1A]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-lg text-[#1A1A1A]">Have this product?</p>
+                                        <p className="text-sm text-gray-500">Sign in to share your experience with the community.</p>
+                                    </div>
                                     <button
                                         onClick={() => router.push("/login")}
-                                        className="w-full py-2.5 bg-white border border-[#A9A9A9] text-[#1A1A1A] font-bold rounded-xl hover:border-[#C8102E] hover:text-[#C8102E] transition-all"
+                                        className="w-full py-3 bg-white border-2 border-gray-200 text-[#1A1A1A] font-bold rounded-xl hover:border-[#1A1A1A] transition-all"
                                     >
-                                        Login
+                                        Log in to Review
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Reviews List - Right Side on Desktop */}
-                        <div className="md:col-span-2 space-y-6">
-                            {product.reviews.length > 0 ? (
-                                product.reviews.map((review) => (
-                                    <div key={review.id} className="bg-white rounded-2xl border border-[#E5E5E5] p-6 hover:shadow-md transition-shadow">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center text-[#C8102E] font-black text-sm border border-red-100">
-                                                    {getUserName(review.user).charAt(0).toUpperCase()}
+                        {/* RIGHT COLUMN: Review List */}
+                        <div className="lg:col-span-8">
+                            <div className="space-y-6">
+                                {product.reviews.length > 0 ? (
+                                    product.reviews.map((review) => (
+                                        <div key={review.id} className="group bg-white rounded-3xl p-8 border border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300">
+                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-lg shadow-md ring-4 ring-gray-50">
+                                                        {getUserName(review.user).charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-[#1A1A1A] text-lg">{getUserName(review.user)}</div>
+                                                        <div className="text-xs font-medium text-gray-400 uppercase tracking-widest">{formatDate(review.createdAt)}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-[#1A1A1A]">{getUserName(review.user)}</div>
-                                                    <div className="text-xs text-gray-400">{formatDate(review.createdAt)}</div>
+                                                <div className="bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                                                    <StarRating rating={review.rating} size="sm" />
                                                 </div>
                                             </div>
-                                            <StarRating rating={review.rating} size="sm" />
+
+                                            {review.comment ? (
+                                                <div className="relative">
+                                                    <svg className="absolute -top-3 -left-2 w-8 h-8 text-gray-100 -z-10 transform -scale-x-100" fill="currentColor" viewBox="0 0 32 32">
+                                                        <path d="M10 8v8h6v10h-10v-10h4v-8h-4zM24 8v8h6v10h-10v-10h4v-8h-4z"></path>
+                                                    </svg>
+                                                    <p className="text-gray-600 leading-relaxed text-lg font-medium">"{review.comment}"</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-400 italic">No written review</p>
+                                            )}
                                         </div>
-                                        {review.comment && (
-                                            <p className="text-gray-600 leading-relaxed text-sm md:text-base">"{review.comment}"</p>
-                                        )}
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-24 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200">
+                                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
+                                            <Star className="w-10 h-10 text-gray-300" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">No reviews yet</h3>
+                                        <p className="text-gray-500 max-w-sm mx-auto">
+                                            Be the first to share your thoughts on this product. Your feedback matters!
+                                        </p>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-300">
-                                    <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                                        <Star className="w-8 h-8 text-yellow-400 fill-current" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-[#1A1A1A]">No reviews yet</h3>
-                                    <p className="text-gray-500 max-w-xs mt-1">
-                                        Be the first to tell others about this product!
-                                    </p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
