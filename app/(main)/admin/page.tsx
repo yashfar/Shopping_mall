@@ -1,6 +1,7 @@
 import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import UserManagementTable from "./UserManagementTable";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminPage() {
     const session = await auth();
@@ -14,6 +15,12 @@ export default async function AdminPage() {
     if (session.user.role !== "ADMIN") {
         redirect("/");
     }
+
+    const paidOrderCount = await prisma.order.count({
+        where: {
+            status: "PAID"
+        }
+    });
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
@@ -43,7 +50,12 @@ export default async function AdminPage() {
                     <p className="text-sm text-gray-500 mt-1">Add, edit, or remove products from your catalog.</p>
                 </a>
 
-                <a href="/admin/orders" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                <a href="/admin/orders" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
+                    {paidOrderCount > 0 && (
+                        <span className="absolute top-4 right-4 bg-purple-600 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">
+                            {paidOrderCount}
+                        </span>
+                    )}
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-purple-50 text-purple-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">

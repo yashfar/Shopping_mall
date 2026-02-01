@@ -233,7 +233,7 @@ export default function CheckoutContent() {
                                 <div className="absolute top-0 -left-[120%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:left-[120%] transition-all duration-1000 ease-in-out" />
                             )}
 
-                            <span className="relative z-10 flex items-center justify-center gap-2 text-xs md:text-sm">
+                            <span className="relative z-10 flex items-center justify-center gap-2 text-lg md:text-sm">
                                 {creating ? "Processing..." : "Confirm Payment"}
                                 {!creating && (
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

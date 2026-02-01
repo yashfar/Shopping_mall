@@ -6,6 +6,7 @@ import MobileMenu from "@@/components/MobileMenu";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import FilishopLogoLight from "@@/public/logo/Filishop-logo-light.png";
+import AdminNavbarLink from "@@/components/AdminNavbarLink";
 
 export default async function Navbar() {
     const session = await auth();
@@ -34,9 +35,7 @@ export default async function Navbar() {
                     </Link>
                     <CategoryDropdown categories={categories} />
                     {session?.user?.role === "ADMIN" && (
-                        <Link href="/admin" className="no-underline text-[#1A1A1A] font-semibold text-[0.95rem] transition-all duration-200 hover:text-[#C8102E] relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C8102E] after:transition-all after:duration-300 hover:after:w-full">
-                            Admin
-                        </Link>
+                        <AdminNavbarLink />
                     )}
                 </div>
 
