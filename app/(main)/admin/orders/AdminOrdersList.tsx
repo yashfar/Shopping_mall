@@ -44,6 +44,8 @@ export default function AdminOrdersList({ initialStatus }: Props) {
 
     const [searchQuery, setSearchQuery] = useState(initialSearch);
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+    const [sortConfig, setSortConfig] = useState("date_desc");
+    const [isSortOpen, setIsSortOpen] = useState(false);
 
     // Debounce search input and reset state on change
     useEffect(() => {
@@ -96,7 +98,7 @@ export default function AdminOrdersList({ initialStatus }: Props) {
         setPage(1);
         setOrders([]);
         setHasMore(true);
-    }, [currentStatus]);
+    }, [currentStatus, sortConfig]);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -105,6 +107,12 @@ export default function AdminOrdersList({ initialStatus }: Props) {
                 const params = new URLSearchParams();
                 if (currentStatus) params.append("status", currentStatus);
                 if (debouncedSearch) params.append("search", debouncedSearch);
+
+                // Add sort params
+                const [sort, order] = sortConfig.split("_");
+                params.append("sort", sort);
+                params.append("order", order);
+
                 params.append("page", page.toString());
                 params.append("limit", "15");
 
@@ -127,7 +135,7 @@ export default function AdminOrdersList({ initialStatus }: Props) {
         };
 
         fetchOrders();
-    }, [page, currentStatus, debouncedSearch]);
+    }, [page, currentStatus, debouncedSearch, sortConfig]);
 
     const handleFilterChange = (filterValue: string | null) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -251,6 +259,62 @@ export default function AdminOrdersList({ initialStatus }: Props) {
                         {orders.length}
                     </span>
                 </h2>
+
+                {/* Sort Dropdown */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsSortOpen(!isSortOpen)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:border-[#C8102E] hover:text-[#C8102E] transition-all shadow-sm"
+                    >
+                        <span className="text-gray-400 font-medium">Sort by:</span>
+                        <span>
+                            {sortConfig === "date_desc" && "Date: Newest"}
+                            {sortConfig === "date_asc" && "Date: Oldest"}
+                            {sortConfig === "total_desc" && "Total: High to Low"}
+                            {sortConfig === "total_asc" && "Total: Low to High"}
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-4 h-4 transition-transform ${isSortOpen ? "rotate-180" : ""}`}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+
+                    {isSortOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsSortOpen(false)} />
+                            <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="p-1">
+                                    {[
+                                        { label: "Date: Newest", value: "date_desc" },
+                                        { label: "Date: Oldest", value: "date_asc" },
+                                        { label: "Total: High to Low", value: "total_desc" },
+                                        { label: "Total: Low to High", value: "total_asc" },
+                                    ].map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => {
+                                                setSortConfig(option.value);
+                                                setIsSortOpen(false);
+                                                setPage(1);
+                                                setOrders([]);
+                                            }}
+                                            className={`w-full text-left px-4 py-2.5 text-sm font-medium rounded-lg flex items-center justify-between group ${sortConfig === option.value
+                                                ? "bg-[#C8102E]/5 text-[#C8102E]"
+                                                : "text-gray-700 hover:bg-gray-50"
+                                                }`}
+                                        >
+                                            {option.label}
+                                            {sortConfig === option.value && (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-[#C8102E]">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Empty State */}

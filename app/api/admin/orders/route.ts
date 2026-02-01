@@ -79,6 +79,16 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get("limit") || "15");
         const skip = (page - 1) * limit;
 
+        const sort = searchParams.get("sort") || "date";
+        const order = searchParams.get("order") || "desc";
+
+        let orderByClause: any = {};
+        if (sort === "total") {
+            orderByClause = { total: order };
+        } else {
+            orderByClause = { createdAt: order };
+        }
+
         const orders = await prisma.order.findMany({
             where: whereClause,
             include: {
@@ -88,9 +98,7 @@ export async function GET(request: Request) {
                     },
                 },
             },
-            orderBy: {
-                createdAt: "desc",
-            },
+            orderBy: orderByClause,
             take: limit,
             skip: skip,
         });
