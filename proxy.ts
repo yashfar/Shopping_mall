@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
  * - /admin routes: require authenticated user with role === "ADMIN"
  */
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
