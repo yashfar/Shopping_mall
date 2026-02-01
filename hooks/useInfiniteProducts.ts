@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { sortProducts } from "@@/lib/sort-utils";
+import { sortProducts, type ProductWithReviews } from "@@/lib/sort-utils";
 
-interface Product {
+interface Product extends ProductWithReviews {
     id: string;
     title: string;
     price: number;
@@ -71,7 +71,7 @@ export function useInfiniteProducts({
 
             if (response.ok) {
                 // Apply client-side sorting for rating/reviews if needed
-                const sortedProducts = sortProducts(data.products, queryParams.sort);
+                const sortedProducts: Product[] = sortProducts<Product>(data.products, queryParams.sort);
 
                 setProducts((prev) => [...prev, ...sortedProducts]);
                 setCurrentPage((prev) => prev + 1);

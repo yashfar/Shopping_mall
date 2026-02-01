@@ -52,7 +52,7 @@ export default function RegisterPage() {
         setError("");
         setGoogleLoading(true);
         try {
-            await signIn("google", { callbackUrl: "/dashboard" });
+            await signIn("google", { callbackUrl: "/" });
         } catch (err) {
             setError("Failed to sign in with Google");
             setGoogleLoading(false);
