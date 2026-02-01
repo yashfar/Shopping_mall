@@ -26,8 +26,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const res = await fetch("/api/cart");
             if (res.ok) {
                 const data = await res.json();
-                // Assumes data.items is the array of cart items
-                const count = data.items ? data.items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 0;
+                const items = data.cart?.items || [];
+                const count = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
                 setCartCount(count);
             }
         } catch (e) {

@@ -229,7 +229,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
     return (
         <div className="max-w-4xl mx-auto px-6 py-12">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => router.back()}
@@ -252,7 +252,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                         </svg>
                         Back
                     </button>
-                    <h1 className="text-4xl font-black text-[#1A1A1A] tracking-tight">
+                    <h1 className="text-3xl md:text-4xl font-black text-[#1A1A1A] tracking-tight">
                         Edit Banner
                     </h1>
                 </div>
@@ -261,7 +261,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <button
-                            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
                             disabled={submitting || deleting}
                         >
                             <svg
@@ -281,7 +281,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                             Delete Banner
                         </button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="border-2 border-[#E5E5E5] rounded-2xl">
+                    <AlertDialogContent className="border-2 border-[#E5E5E5] rounded-2xl w-[90vw] md:w-full">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-2xl font-black text-[#1A1A1A]">
                                 Delete Banner?
@@ -309,7 +309,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Image Upload Section */}
-                <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-8">
+                <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-6 md:p-8">
                     <h2 className="text-2xl font-bold text-[#1A1A1A] mb-2">
                         Banner Image
                     </h2>
@@ -343,7 +343,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                             />
                             <label
                                 htmlFor="banner-upload"
-                                className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200 cursor-pointer"
+                                className="w-full md:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200 cursor-pointer"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -366,7 +366,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 {/* Banner Details Section */}
-                <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-8 space-y-6">
+                <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-6 md:p-8 space-y-6">
                     <h2 className="text-2xl font-bold text-[#1A1A1A] mb-4">
                         Banner Details
                     </h2>
@@ -494,7 +494,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
                     </div>
 
                     {/* Order and Active Toggle Row */}
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {/* Order */}
                         <div>
                             <label

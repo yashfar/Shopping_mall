@@ -1,6 +1,9 @@
+
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { getPaymentConfig } from "@/lib/payment-config";
+import { calculateCartTotals } from "@@/lib/payment-utils";
 
 /**
  * POST /api/orders/create
@@ -52,11 +55,10 @@ export async function POST() {
             }
         }
 
-        // Calculate total
-        const total = cart.items.reduce(
-            (sum, item) => sum + item.product.price * item.quantity,
-            0
-        );
+        // Calculate total using dynamic configuration
+        const config = await getPaymentConfig();
+        const totals = calculateCartTotals(cart.items, config);
+        const total = totals.total;
 
         // Create order with items in a transaction
         const order = await prisma.$transaction(async (tx) => {
@@ -64,7 +66,7 @@ export async function POST() {
             const newOrder = await tx.order.create({
                 data: {
                     userId: session.user.id,
-                    total,
+                    total, // Using the dynamically calculated total
                     status: "PENDING",
                 },
             });

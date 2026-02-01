@@ -64,45 +64,64 @@ function SortableBannerItem({
         <div
             ref={setNodeRef}
             style={style}
-            className={`group relative flex items-center gap-4 p-4 bg-gradient-to-br from-white to-gray-50/50 border-2 rounded-2xl mb-4 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${isDragging
+            className={`group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-gradient-to-br from-white to-gray-50/50 border-2 rounded-2xl mb-4 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${isDragging
                 ? "shadow-2xl ring-4 ring-[#C8102E]/30 opacity-90 scale-[1.02] border-[#C8102E] z-50"
                 : "border-gray-100 hover:border-[#C8102E]/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:shadow-[#C8102E]/5 hover:-translate-y-1"
                 }`}
         >
-            {/* Drag Handle */}
+            {/* Mobile Header: Drag Handle & Actions (visible on mobile top) */}
+            <div className="flex sm:hidden w-full items-center justify-between mb-2">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-2 text-gray-300 hover:text-[#C8102E] transition-all bg-gray-50 rounded-lg"
+                >
+                    <GripVertical className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <Link
+                        href={`/admin/banners/${banner.id}/edit`}
+                        className="p-2 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-lg"
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </Link>
+                    <DeleteBannerButton bannerId={banner.id} onSuccess={() => onDelete(banner.id)} />
+                </div>
+            </div>
+
+            {/* Drag Handle (Desktop) */}
             <div
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing p-2 text-gray-300 hover:text-[#C8102E] transition-all duration-200 hover:scale-110 group-hover:text-gray-400 group-hover:bg-gray-50 rounded-lg"
+                className="hidden sm:block cursor-grab active:cursor-grabbing p-2 text-gray-300 hover:text-[#C8102E] transition-all duration-200 hover:scale-110 group-hover:text-gray-400 group-hover:bg-gray-50 rounded-lg"
             >
                 <GripVertical className="w-6 h-6" />
             </div>
 
-            {/* Banner Preview - Larger and More Prominent */}
-            <div className="relative w-32 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-100 flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:border-[#C8102E]/20 transition-all duration-500 ease-out group-hover:scale-105">
+            {/* Banner Preview */}
+            <div className="relative w-full sm:w-32 h-32 sm:h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-100 flex-shrink-0 shadow-sm group-hover:shadow-xl group-hover:border-[#C8102E]/20 transition-all duration-500 ease-out sm:group-hover:scale-105">
                 <Image
                     src={banner.imageUrl}
                     alt={banner.title || "Banner"}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
 
             {/* Banner Info */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
                 <h4 className="font-bold text-[#1A1A1A] text-base truncate mb-1.5 group-hover:text-[#C8102E] transition-colors duration-300">
                     {banner.title || "Untitled Banner"}
                 </h4>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {banner.active ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-gradient-to-r from-emerald-100 to-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm group-hover:shadow-md transition-shadow">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-gradient-to-r from-emerald-100 to-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Active
                         </span>
                     ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1 rounded-full border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1 rounded-full border border-gray-200 shadow-sm">
                             <XCircle className="w-3.5 h-3.5" />
                             Inactive
                         </span>
@@ -115,8 +134,8 @@ function SortableBannerItem({
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+            {/* Desktop Actions */}
+            <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
                 <Link
                     href={`/admin/banners/${banner.id}/edit`}
                     className="p-2.5 text-gray-400 hover:text-white hover:bg-gradient-to-br hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all duration-200 hover:shadow-lg hover:scale-110 active:scale-95 group-hover:bg-gray-50 group-hover:text-blue-500"
@@ -214,18 +233,18 @@ export default function BannersManagementCard() {
                 <div className="relative flex justify-between items-start gap-4">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-gradient-to-br from-[#C8102E] to-pink-600 rounded-xl shadow-lg">
+                            <div className="hidden md:block p-2 bg-gradient-to-br from-[#C8102E] to-pink-600 rounded-xl shadow-lg">
                                 <Sparkles className="w-5 h-5 text-white" />
                             </div>
                             <h3 className="text-2xl font-black text-[#1A1A1A] tracking-tight">
                                 Main Banners
                             </h3>
                         </div>
-                        <p className="text-gray-500 text-sm font-medium ml-14">
+                        <p className="text-gray-500 text-sm font-medium md:ml-12">
                             Manage your hero section carousel banners
                         </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-col items-end gap-2 items-center">
                         <span className="bg-gradient-to-r from-[#1A1A1A] to-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap shadow-lg">
                             {banners.length} Total
                         </span>

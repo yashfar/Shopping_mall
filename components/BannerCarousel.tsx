@@ -112,7 +112,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
     };
 
     return (
-        <div className="relative w-full aspect-video overflow-hidden mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]">
+        <div className="relative w-full h-[300px] sm:h-[400px] md:h-auto md:aspect-video overflow-hidden mb-8 md:mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]">
             {/* Slides */}
             {settings.animationType === "slide" ? (
                 // Slide animation (horizontal scroll)
@@ -180,7 +180,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
                     <button
                         onClick={prevSlide}
                         disabled={!settings.loop && currentIndex === 0}
-                        className={`absolute left-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
+                        className={`cursor-pointer absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-20 p-3 md:p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100"
                             }`}
@@ -192,7 +192,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
                             viewBox="0 0 24 24"
                             strokeWidth={2.5}
                             stroke="currentColor"
-                            className="w-6 h-6"
+                            className="w-5 h-5 md:w-6 md:h-6"
                         >
                             <path
                                 strokeLinecap="round"
@@ -204,7 +204,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
                     <button
                         onClick={nextSlide}
                         disabled={!settings.loop && currentIndex === banners.length - 1}
-                        className={`absolute right-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
+                        className={`cursor-pointer absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-20 p-3 md:p-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 transition-all hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed ${(settings.arrowDisplay || "hover") === "show"
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100"
                             }`}
@@ -216,7 +216,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
                             viewBox="0 0 24 24"
                             strokeWidth={2.5}
                             stroke="currentColor"
-                            className="w-6 h-6"
+                            className="w-5 h-5 md:w-6 md:h-6"
                         >
                             <path
                                 strokeLinecap="round"
@@ -230,14 +230,14 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
 
             {/* Indicators - Only show if more than 1 banner */}
             {banners.length > 1 && (
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+                <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
                     {banners.map((banner, index) => (
                         <button
                             key={banner.id}
                             onClick={() => goToSlide(index)}
                             className={`transition-all duration-300 rounded-full ${currentIndex === index
-                                ? "w-8 h-2 bg-white"
-                                : "w-2 h-2 bg-white/40 hover:bg-white/60"
+                                ? "w-6 h-2 md:w-8 md:h-2.5 bg-white"
+                                : "w-2 h-2 md:w-2.5 md:h-2.5 bg-white/40 hover:bg-white/60"
                                 }`}
                             aria-label={`Go to banner ${index + 1}`}
                         />

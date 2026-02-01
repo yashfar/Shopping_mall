@@ -246,3 +246,14 @@ model CarouselItem {
 
   @@unique([carouselId, productId])
 }
+
+// ============================================================================
+// Payment Configuration System
+// ============================================================================
+model PaymentConfig {
+  id                    String   @id @default(cuid())
+  taxPercent            Float    @default(0)
+  shippingFee           Float    @default(0)
+  freeShippingThreshold Float    @default(0)
+  updatedAt             DateTime @updatedAt
+}

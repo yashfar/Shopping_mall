@@ -64,21 +64,21 @@ export default function FeaturedProductsCarousel({
     if (products.length === 0) return null;
 
     return (
-        <section className="py-12 bg-white">
-            <div className="max-w-[1400px] mx-auto px-6">
-                <div className="flex justify-between items-end mb-8">
+        <section className="py-8 md:py-12 bg-white">
+            <div className="max-w-[1400px] mx-auto px-4 md:px-6">
+                <div className="flex justify-between items-end mb-6 md:mb-8">
                     <div>
-                        <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight mb-2">
+                        <h2 className="text-xl md:text-2xl font-black text-[#1A1A1A] tracking-tight mb-2">
                             {title}
                         </h2>
-                        <div className="h-1 w-20 bg-[#C8102E]" />
+                        <div className="h-1 w-16 md:w-20 bg-[#C8102E]" />
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center">
                         {linkHref && (
                             <Link
                                 href={linkHref}
-                                className="hidden sm:block text-sm font-bold text-[#A9A9A9] hover:text-[#C8102E] transition-colors mb-1 mr-4"
+                                className="hidden sm:block text-sm font-bold text-[#A9A9A9] hover:text-[#C8102E] transition-colors h-fit"
                             >
                                 {linkText}
                             </Link>
@@ -87,16 +87,16 @@ export default function FeaturedProductsCarousel({
                             <button
                                 onClick={() => scroll("left")}
                                 disabled={!canScrollLeft}
-                                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-[#FAFAFA] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-[#FAFAFA] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >
-                                <ChevronLeft className="w-5 h-5 text-[#1A1A1A]" />
+                                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-[#1A1A1A]" />
                             </button>
                             <button
                                 onClick={() => scroll("right")}
                                 disabled={!canScrollRight}
-                                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-[#FAFAFA] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-[#FAFAFA] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >
-                                <ChevronRight className="w-5 h-5 text-[#1A1A1A]" />
+                                <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-[#1A1A1A]" />
                             </button>
                         </div>
                     </div>
@@ -105,14 +105,14 @@ export default function FeaturedProductsCarousel({
                 <div
                     ref={scrollContainerRef}
                     onScroll={checkScroll}
-                    className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-6 px-6"
+                    className="flex gap-4 md:gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide px-4 md:px-6"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                     {products.map((product) => (
                         <Link
                             key={product.id}
                             href={`/product/${product.id}`}
-                            className="flex-shrink-0 w-[240px] snap-start group"
+                            className="flex-shrink-0 w-[160px] sm:w-[180px] md:w-[220px] lg:w-[240px] snap-start group"
                         >
                             <div className="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden mb-4 border border-gray-100">
                                 {product.thumbnail ? (
@@ -161,7 +161,7 @@ export default function FeaturedProductsCarousel({
                     {linkHref && (
                         <Link
                             href={linkHref}
-                            className="flex-shrink-0 w-[160px] snap-start flex flex-col items-center justify-center gap-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#C8102E] hover:text-[#C8102E] transition-all"
+                            className="flex-shrink-0 w-[140px] md:w-[160px] snap-start flex flex-col items-center justify-center gap-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#C8102E] hover:text-[#C8102E] transition-all"
                         >
                             <span className="font-bold">View All</span>
                             <div className="w-8 h-8 rounded-full bg-current flex items-center justify-center text-white">

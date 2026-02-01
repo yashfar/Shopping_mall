@@ -21,12 +21,12 @@ export default async function BannersPage() {
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-[#A9A9A9]/20 pb-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-12 border-b border-[#A9A9A9]/20 pb-6 md:pb-8">
                 <div>
-                    <h1 className="text-4xl font-black text-[#1A1A1A] tracking-tight">
+                    <h1 className="text-3xl md:text-4xl font-black text-[#1A1A1A] tracking-tight">
                         Featured Content
                     </h1>
-                    <p className="text-[#A9A9A9] font-medium mt-2">
+                    <p className="text-[#A9A9A9] font-medium mt-2 text-sm md:text-base">
                         Manage homepage banners and carousel collections.
                     </p>
                 </div>

@@ -3,7 +3,7 @@
 interface StarRatingProps {
     rating: number;
     maxRating?: number;
-    size?: "sm" | "md" | "lg";
+    size?: "sm" | "md" | "lg" | "xl";
     interactive?: boolean;
     onRatingChange?: (rating: number) => void;
 }
@@ -19,6 +19,7 @@ export default function StarRating({
         sm: "w-4 h-4",
         md: "w-5 h-5",
         lg: "w-6 h-6",
+        xl: "w-8 h-8",
     };
 
     const handleClick = (value: number) => {
