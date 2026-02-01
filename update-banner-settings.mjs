@@ -1,5 +1,5 @@
 // Script to update existing BannerSettings with arrowDisplay field
-import { PrismaClient } from '@/generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
