@@ -93,6 +93,19 @@ export default async function AdminPage() {
                     <h3 className="text-lg font-bold text-gray-900">Payment Settings</h3>
                     <p className="text-sm text-gray-500 mt-1">Configure taxes, shipping fees, and thresholds.</p>
                 </a>
+
+                <a href="/admin/sale-analysis" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M6 16.5h2.25m-2.25 0V9m2.25 7.5V9m2.25-6v13.5c0 .414.336.75.75.75h3.75a.75.75 0 00.75-.75V3" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Analyze</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Sale Analysis</h3>
+                    <p className="text-sm text-gray-500 mt-1">View sales performance, revenue, and key metrics.</p>
+                </a>
             </div>
 
             {/* Section Header */}
