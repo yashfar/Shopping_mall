@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/My-Store/online_shop -maxdepth 3 -not -path */node_modules/* -not -path */.next/* -not -path */.history/* -not -path */.git/* -type f)",
+      "Bash(find /c/My-Store/online_shop/app/api -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
+    ]
+  }
+}

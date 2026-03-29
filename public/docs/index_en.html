@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Shop User & Admin Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 0.5em;
+            color: #111;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            margin-top: 40px;
+            color: #222;
+            border-left: 4px solid #0070f3;
+            padding-left: 10px;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            margin-top: 30px;
+            color: #444;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            color: #555;
+        }
+
+        img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 60px;
+            page-break-inside: avoid;
+        }
+
+        .footer {
+            margin-top: 50px;
+            font-size: 0.9em;
+            color: #888;
+            border-top: 1px solid #eaeaea;
+            padding-top: 20px;
+        }
+
+        @media print {
+            body {
+                max-width: 100%;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            h2 {
+                page-break-before: auto;
+            }
+
+            img {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Online Shop User & Admin Guide</h1>
+    <p>A complete guide to using your customer storefront and administrative panel.</p>
+
+    <h2>Part 1: Customer Guide</h2>
+
+    <div class="section">
+        <h3>1. Home Page</h3>
+        <p>Your store's main landing page.</p>
+        <img src="images/1_home_auth.png" alt="Home Page">
+    </div>
+
+    <div class="section">
+        <h3>2. Product Detail</h3>
+        <p>View product pricing, description, and add to cart.</p>
+        <img src="images/2_product_auth.png" alt="Product Detail">
+    </div>
+
+    <div class="section">
+        <h3>3. Shopping Cart</h3>
+        <p>Review your selected items and proceed to checkout.</p>
+        <img src="images/cart_first_page.png" alt="Cart Screenshot">
+    </div>
+
+    <div class="section">
+        <h3>4. Checkout & Payment</h3>
+        <p>Complete your order securely.</p>
+        <!-- Reverted: checkout_page.png belongs here -->
+        <img src="images/checkout_page.png" alt="Checkout Page">
+        <p>Select your payment method (e.g., Stripe).</p>
+        <img src="images/stripe_payment.png" alt="Stripe Payment">
+    </div>
+
+    <div class="section">
+        <h3>5. Login & User Profile</h3>
+        <p>Securely log, register, or manage your account.</p>
+        <img src="images/4_login.png" alt="Login Page">
+        <p>Manage your account settings.</p>
+        <img src="images/4_profile_auth.png" alt="User Profile">
+    </div>
+
+    <div class="section">
+        <h3>6. Address Management</h3>
+        <p>Add and edit shipping addresses.</p>
+        <img src="images/adresses_page.png" alt="Address Management">
+    </div>
+
+    <div class="section">
+        <h3>7. Order History</h3>
+        <p>View your past orders and their status.</p>
+        <img src="images/order_page.png" alt="Order History">
+    </div>
+
+    <h2>Part 2: Admin Guide</h2>
+
+    <div class="section">
+        <h3>8. Admin Dashboard & Analytics</h3>
+        <p>Overview of sales and recent activity.</p>
+        <img src="images/5_admin_dashboard.png" alt="Admin Dashboard">
+        <p>Detailed sales analysis and charts.</p>
+        <img src="images/admin_sale_analysis.png" alt="Sale Analysis">
+    </div>
+
+    <div class="section">
+        <h3>9. Order Management</h3>
+        <p>View and manage all customer orders.</p>
+        <img src="images/admin_order_page.png" alt="Admin Orders">
+    </div>
+
+    <div class="section">
+        <h3>10. Order Details</h3>
+        <p>Detailed view of a specific order, including shipping and billing info.</p>
+        <!-- Reverted: admin_order_detail.png belongs here -->
+        <img src="images/admin_order_detail.png" alt="Order Detail">
+    </div>
+
+    <div class="section">
+        <h3>11. Product Management</h3>
+        <p>Manage inventory list.</p>
+        <img src="images/6_admin_products.png" alt="Admin Products">
+    </div>
+
+    <div class="section">
+        <h3>12. Add Product</h3>
+        <p>Create new item listings.</p>
+        <img src="images/7_admin_add_product.png" alt="Add Product">
+    </div>
+
+    <div class="section">
+        <h3>13. Banner Management</h3>
+        <p>Manage homepage banners.</p>
+        <img src="images/admin_banners_page.png" alt="Admin Banners">
+        <p>Edit individual banners.</p>
+        <img src="images/admin_banner_edit.png" alt="Banner Edit">
+    </div>
+
+    <div class="section">
+        <h3>14. Banner Settings</h3>
+        <p>Configure global banner settings like animation speed.</p>
+        <img src="images/banners_settings.png" alt="Banner Settings">
+    </div>
+
+    <!-- <div class="footer">
+        <p>Generated automatically.</p>
+        <p class="no-print"><strong>To Save as PDF:</strong> Right-click > Print > Save as PDF.</p>
+    </div> -->
+</body>
+
+</html>
