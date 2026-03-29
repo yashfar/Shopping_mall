@@ -10,6 +10,7 @@ type Order = {
     total: number;
     status: string;
     createdAt: string;
+    returnRequest?: { status: string } | null;
     items?: {
         product: {
             title: string;
@@ -57,9 +58,32 @@ export default function OrdersList() {
             case "CANCELED":
             case "CANCELLED":
                 return `${base} bg-red-50 text-[#C8102E] border-red-100`;
+            case "RETURN_REQUESTED":
+                return `${base} bg-orange-50 text-orange-600 border-orange-100`;
+            case "RETURNED":
+                return `${base} bg-violet-50 text-violet-600 border-violet-100`;
             default:
                 return `${base} bg-gray-50 text-gray-600 border-gray-100`;
         }
+    };
+
+    const getReturnBadge = (order: Order) => {
+        if (!order.returnRequest) return null;
+        if (order.returnRequest.status === "REJECTED") {
+            return (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-500 border border-red-100 ml-1.5">
+                    Return Rejected
+                </span>
+            );
+        }
+        if (order.returnRequest.status === "APPROVED") {
+            return (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-500 border border-emerald-100 ml-1.5">
+                    Refunded
+                </span>
+            );
+        }
+        return null;
     };
 
     if (loading) {
@@ -127,8 +151,9 @@ export default function OrdersList() {
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className={getStatusStyles(order.status)}>
-                                        {order.status}
+                                        {order.status.replace("_", " ")}
                                     </span>
+                                    {getReturnBadge(order)}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <span className="font-black text-gray-900 text-lg">
@@ -157,9 +182,12 @@ export default function OrdersList() {
                     <div key={order.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg shadow-gray-100/50 flex flex-col gap-4">
                         <div className="flex justify-between items-start">
                             <div>
-                                <span className={getStatusStyles(order.status)}>
-                                    {order.status}
-                                </span>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className={getStatusStyles(order.status)}>
+                                        {order.status.replace("_", " ")}
+                                    </span>
+                                    {getReturnBadge(order)}
+                                </div>
                                 <p className="text-xs text-gray-400 mt-2 font-medium">
                                     {new Date(order.createdAt).toLocaleDateString()}
                                 </p>

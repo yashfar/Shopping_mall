@@ -32,6 +32,37 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     const [error, setError] = useState("");
     const [canceling, setCanceling] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showReturn, setShowReturn] = useState(false);
+    const [returnReason, setReturnReason] = useState("");
+    const [returnNote, setReturnNote] = useState("");
+    const [submittingReturn, setSubmittingReturn] = useState(false);
+
+    const submitReturn = async () => {
+        if (!returnReason) {
+            toast.error("Please select a reason");
+            return;
+        }
+        setSubmittingReturn(true);
+        try {
+            const res = await fetch(`/api/orders/${orderId}/return`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: returnReason, note: returnNote }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || "Failed to submit return request");
+                return;
+            }
+            toast.success("Return request submitted successfully");
+            setOrder((prev) => prev ? { ...prev, status: "RETURN_REQUESTED" } : prev);
+            setShowReturn(false);
+        } catch {
+            toast.error("Failed to submit return request");
+        } finally {
+            setSubmittingReturn(false);
+        }
+    };
 
     const cancelOrder = async () => {
         setCanceling(true);
@@ -91,6 +122,10 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             case "CANCELED":
             case "CANCELLED":
                 return `${base} bg-red-50 text-[#C8102E] border-red-100`;
+            case "RETURN_REQUESTED":
+                return `${base} bg-orange-50 text-orange-600 border-orange-100`;
+            case "RETURNED":
+                return `${base} bg-violet-50 text-violet-600 border-violet-100`;
             default:
                 return `${base} bg-gray-50 text-gray-600 border-gray-100`;
         }
@@ -293,6 +328,78 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {["PAID", "SHIPPED", "COMPLETED", "DELIVERED"].includes(order.status) && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            {!showReturn ? (
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-400 font-bold"
+                                    onClick={() => setShowReturn(true)}
+                                >
+                                    Request Return
+                                </Button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-xs text-gray-500 font-medium">Why do you want to return this order?</p>
+                                    <select
+                                        value={returnReason}
+                                        onChange={(e) => setReturnReason(e.target.value)}
+                                        className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                                    >
+                                        <option value="">Select a reason...</option>
+                                        <option value="DAMAGED">Damaged product</option>
+                                        <option value="WRONG_ITEM">Wrong item received</option>
+                                        <option value="NOT_AS_DESCRIBED">Not as described</option>
+                                        <option value="CHANGED_MIND">Changed my mind</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                    <textarea
+                                        value={returnNote}
+                                        onChange={(e) => setReturnNote(e.target.value)}
+                                        placeholder="Additional details (optional)"
+                                        rows={2}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1 text-sm"
+                                            onClick={() => { setShowReturn(false); setReturnReason(""); setReturnNote(""); }}
+                                            disabled={submittingReturn}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            className="flex-1 text-sm bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                                            onClick={submitReturn}
+                                            disabled={submittingReturn || !returnReason}
+                                        >
+                                            {submittingReturn ? "Submitting..." : "Submit Request"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {order.status === "RETURN_REQUESTED" && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
+                                <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Return Pending</p>
+                                <p className="text-xs text-orange-500">Your return request is being reviewed by our team.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {order.status === "RETURNED" && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
+                                <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">Return Approved</p>
+                                <p className="text-xs text-violet-500">Your return has been processed. Refund will be issued shortly.</p>
+                            </div>
                         </div>
                     )}
                 </div>

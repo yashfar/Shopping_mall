@@ -42,6 +42,10 @@ export default async function AdminPage() {
         where: { stock: 0, isActive: false },
     });
 
+    const pendingReturnsCount = await prisma.returnRequest.count({
+        where: { status: "PENDING" },
+    });
+
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -152,6 +156,24 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Sale Analysis</h3>
                     <p className="text-sm text-gray-500 mt-1">View sales performance, revenue, and key metrics.</p>
+                </Link>
+
+                <Link href="/admin/returns" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
+                    {pendingReturnsCount > 0 && (
+                        <span className="absolute top-4 right-4 bg-orange-500 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">
+                            {pendingReturnsCount}
+                        </span>
+                    )}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Review</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Returns</h3>
+                    <p className="text-sm text-gray-500 mt-1">Review and process return requests.</p>
                 </Link>
             </div>
 
