@@ -14,7 +14,9 @@ import {
     ImageIcon,
     Package,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Download,
+    Upload
 } from "lucide-react";
 import Link from "next/link";
 
@@ -38,6 +40,7 @@ export default function ProductManagement() {
     const [searchTerm, setSearchTerm] = useState("");
     const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "", title: "" });
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [importing, setImporting] = useState(false);
 
     // Fetch products
     const fetchProducts = async () => {
@@ -110,6 +113,39 @@ export default function ProductManagement() {
         }
     };
 
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImporting(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const res = await fetch("/api/admin/products/import", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.error || "Import failed");
+                return;
+            }
+
+            toast.success(`Imported ${data.created} of ${data.total} products`);
+            if (data.errors?.length) {
+                data.errors.slice(0, 3).forEach((err: string) => toast.error(err));
+            }
+            await fetchProducts();
+        } catch {
+            toast.error("Failed to import CSV");
+        } finally {
+            setImporting(false);
+            e.target.value = "";
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
     }, []);
@@ -164,7 +200,7 @@ export default function ProductManagement() {
                     />
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
                     <Button
                         onClick={fetchProducts}
                         variant="outline"
@@ -174,6 +210,25 @@ export default function ProductManagement() {
                     >
                         <RefreshCw className="h-4 w-4" />
                     </Button>
+                    <a href="/api/admin/products/export" download>
+                        <Button variant="outline" className="gap-2" title="Export CSV">
+                            <Download className="w-4 h-4" />
+                            <span className="hidden sm:inline">Export</span>
+                        </Button>
+                    </a>
+                    <div className="relative">
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleImport}
+                            disabled={importing}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        />
+                        <Button variant="outline" className="gap-2 pointer-events-none" disabled={importing}>
+                            <Upload className="w-4 h-4" />
+                            <span className="hidden sm:inline">{importing ? "Importing..." : "Import"}</span>
+                        </Button>
+                    </div>
                     <Link href="/admin/products/new" className="w-full md:w-auto">
                         <Button className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
                             <Plus className="w-4 h-4 mr-2" />
