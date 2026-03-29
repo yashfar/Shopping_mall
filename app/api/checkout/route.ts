@@ -35,9 +35,8 @@ export async function POST(req: Request) {
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
-                items: {
-                    include: { product: true },
-                },
+                items: { include: { product: true } },
+                coupon: { select: { code: true } },
             },
         });
 
@@ -70,12 +69,16 @@ export async function POST(req: Request) {
                 quantity: item.quantity,
             }));
 
-        // Derive shipping so the Stripe total exactly matches order.total
+        const discountAmount = order.discountAmount ?? 0;
         const itemsSubtotal = order.items.reduce(
             (sum, item) => sum + item.price * item.quantity,
             0
         );
-        const shippingAmount = order.total - itemsSubtotal;
+
+        // Restore original shipping before discount:
+        // order.total = itemsSubtotal + shipping - discount
+        // → shipping = order.total + discount - itemsSubtotal
+        const shippingAmount = order.total + discountAmount - itemsSubtotal;
 
         if (shippingAmount > 0) {
             lineItems.push({
@@ -88,11 +91,26 @@ export async function POST(req: Request) {
             });
         }
 
+        // If a coupon was applied, create a one-time Stripe coupon so the
+        // discount appears as its own line on the Stripe checkout page.
+        const discounts: { coupon: string }[] = [];
+        if (discountAmount > 0) {
+            const stripeCoupon = await stripe.coupons.create({
+                amount_off: discountAmount,
+                currency: "usd",
+                duration: "once",
+                max_redemptions: 1,
+                name: order.coupon?.code ? `Coupon: ${order.coupon.code}` : "Discount",
+            });
+            discounts.push({ coupon: stripeCoupon.id });
+        }
+
         const checkoutSession = await stripe.checkout.sessions.create({
             mode: "payment",
             payment_method_types: ["card"],
             client_reference_id: order.id,
             line_items: lineItems,
+            ...(discounts.length > 0 ? { discounts } : {}),
             success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?orderId=${order.id}`,
             cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout/cancel`,
         });

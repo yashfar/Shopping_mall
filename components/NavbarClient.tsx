@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useCart } from "@@/context/CartContext";
+import { useWishlist } from "@@/context/WishlistContext";
 import SearchBar from "./SearchBar";
 
 interface NavbarClientProps {
@@ -19,6 +20,7 @@ interface NavbarClientProps {
 
 export default function NavbarClient({ user }: NavbarClientProps) {
     const { cartCount, isAnimating } = useCart();
+    useWishlist(); // keeps wishlist state alive globally
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -81,6 +83,13 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <div className="hidden md:block flex-1 max-w-xl mx-4">
                     <SearchBar />
                 </div>
+
+                {/* Wishlist Icon */}
+                <Link href="/wishlist" className="p-2.5 text-[#1A1A1A] no-underline rounded-lg transition-all duration-200 flex items-center justify-center border border-transparent hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E] hover:border-[rgba(200,16,46,0.1)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                </Link>
 
                 {/* Cart Icon */}
                 <Link href="/cart" className="relative p-2.5 text-[#1A1A1A] no-underline rounded-lg transition-all duration-200 flex items-center justify-center border border-transparent hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E] hover:border-[rgba(200,16,46,0.1)]">
@@ -157,6 +166,17 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                     />
                                 </svg>
                                 Profile
+                            </Link>
+
+                            <Link
+                                href="/wishlist"
+                                className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
+                                onClick={() => setIsDropdownOpen(false)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                </svg>
+                                Wishlist
                             </Link>
 
                             <Link

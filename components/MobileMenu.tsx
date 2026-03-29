@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, User, LogIn, LayoutDashboard, Package, FolderTree, ChevronDown } from "lucide-react";
+import { Menu, ShoppingBag, User, LogIn, LayoutDashboard, Package, FolderTree, ChevronDown, Heart } from "lucide-react";
 import { Button } from "@@/components/ui/button";
 import {
     Sheet,
@@ -102,6 +102,20 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                                 ))}
                             </div>
                         </div>
+
+                        {/* User Links */}
+                        {user && (
+                            <div className="space-y-1">
+                                <div className="my-2 border-t border-gray-100" />
+                                <Link
+                                    href="/wishlist"
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/wishlist" ? "bg-[#C8102E]/10 text-[#C8102E]" : "text-[#1A1A1A] hover:bg-gray-100"}`}
+                                >
+                                    <Heart className="w-4 h-4" />
+                                    Wishlist
+                                </Link>
+                            </div>
+                        )}
 
                         {/* Admin Navigation */}
                         {isAdmin && (

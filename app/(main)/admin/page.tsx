@@ -94,6 +94,33 @@ export default async function AdminPage() {
                     <p className="text-sm text-gray-500 mt-1">Configure taxes, shipping fees, and thresholds.</p>
                 </a>
 
+                <a href="/admin/coupons" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-pink-50 text-pink-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185zM9.75 9h.008v.008H9.75V9zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 4.5h.008v.008h-.008V13.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Coupons</h3>
+                    <p className="text-sm text-gray-500 mt-1">Create and manage discount codes.</p>
+                </a>
+
+                <a href="/admin/categories" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Categories</h3>
+                    <p className="text-sm text-gray-500 mt-1">Add, rename or delete product categories.</p>
+                </a>
+
                 <a href="/admin/sale-analysis" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">

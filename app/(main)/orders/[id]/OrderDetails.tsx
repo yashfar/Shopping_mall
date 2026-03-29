@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
+import { toast } from "sonner";
 
 type OrderItem = {
     id: string;
@@ -29,6 +30,27 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [canceling, setCanceling] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    const cancelOrder = async () => {
+        setCanceling(true);
+        try {
+            const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || "Failed to cancel order");
+                return;
+            }
+            toast.success("Order canceled successfully");
+            setOrder((prev) => prev ? { ...prev, status: "CANCELED" } : prev);
+        } catch {
+            toast.error("Failed to cancel order");
+        } finally {
+            setCanceling(false);
+            setShowConfirm(false);
+        }
+    };
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -238,6 +260,41 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                             </svg>
                         </div>
                     </div>
+
+                    {order.status === "PENDING" && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            {!showConfirm ? (
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-red-200 text-[#C8102E] hover:bg-red-50 hover:border-[#C8102E] font-bold"
+                                    onClick={() => setShowConfirm(true)}
+                                >
+                                    Cancel Order
+                                </Button>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500 text-center font-medium">Are you sure you want to cancel this order?</p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1 text-sm"
+                                            onClick={() => setShowConfirm(false)}
+                                            disabled={canceling}
+                                        >
+                                            Keep Order
+                                        </Button>
+                                        <Button
+                                            className="flex-1 text-sm bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold"
+                                            onClick={cancelOrder}
+                                            disabled={canceling}
+                                        >
+                                            {canceling ? "Canceling..." : "Yes, Cancel"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Need Help Card */}

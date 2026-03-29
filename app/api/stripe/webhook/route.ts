@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
+import { sendOrderConfirmationEmail } from "@@/lib/mail";
 
 export const runtime = "nodejs";
 
@@ -99,6 +100,53 @@ export async function POST(req: Request) {
             });
 
             console.log(`Order ${orderId} marked as PAID, stock decremented`);
+
+            // Send order confirmation email (outside transaction — non-critical)
+            try {
+                const order = await prisma.order.findUnique({
+                    where: { id: orderId },
+                    select: {
+                        orderNumber: true,
+                        total: true,
+                        user: {
+                            select: {
+                                email: true,
+                                firstName: true,
+                            },
+                        },
+                        items: {
+                            select: {
+                                quantity: true,
+                                price: true,
+                                product: {
+                                    select: {
+                                        title: true,
+                                        thumbnail: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+
+                if (order && order.orderNumber) {
+                    await sendOrderConfirmationEmail(order.user.email, {
+                        orderNumber: order.orderNumber,
+                        total: order.total,
+                        firstName: order.user.firstName,
+                        items: order.items.map((item) => ({
+                            title: item.product.title,
+                            quantity: item.quantity,
+                            price: item.price,
+                            thumbnail: item.product.thumbnail,
+                        })),
+                    });
+                    console.log(`Order confirmation email sent for order ${orderId}`);
+                }
+            } catch (emailError) {
+                // Email failure must never break the payment confirmation
+                console.error("Failed to send order confirmation email:", emailError);
+            }
         } catch (error) {
             console.error("Error updating order after payment:", error);
             return NextResponse.json(
