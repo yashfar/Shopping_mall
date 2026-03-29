@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const CartAddSchema = z.object({
+    productId: z.string().min(1, "Product ID is required"),
+    quantity: z
+        .number({ invalid_type_error: "Quantity must be a number" })
+        .int("Quantity must be a whole number")
+        .min(1, "Quantity must be at least 1")
+        .max(99, "Quantity cannot exceed 99"),
+});
 
 /**
  * POST /api/cart/add
- * Adds a product to cart or increases quantity if already exists
+ * Adds a product to cart or increases quantity if it already exists.
  */
 export async function POST(req: Request) {
     const session = await auth();
@@ -14,14 +24,17 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { productId, quantity = 1 } = await req.json();
+        const body = await req.json();
+        const validation = CartAddSchema.safeParse(body);
 
-        if (!productId) {
+        if (!validation.success) {
             return NextResponse.json(
-                { error: "Product ID is required" },
+                { error: validation.error.issues[0].message },
                 { status: 400 }
             );
         }
+
+        const { productId, quantity } = validation.data;
 
         // Verify product exists and is active
         const product = await prisma.product.findUnique({
@@ -32,6 +45,16 @@ export async function POST(req: Request) {
             return NextResponse.json(
                 { error: "Product not found or inactive" },
                 { status: 404 }
+            );
+        }
+
+        // Validate requested quantity does not exceed available stock
+        if (quantity > product.stock) {
+            return NextResponse.json(
+                {
+                    error: `Only ${product.stock} unit(s) available in stock`,
+                },
+                { status: 400 }
             );
         }
 
@@ -57,15 +80,23 @@ export async function POST(req: Request) {
         });
 
         if (existingItem) {
-            // Increase quantity
+            const newQuantity = existingItem.quantity + quantity;
+
+            // Ensure total cart quantity does not exceed stock
+            if (newQuantity > product.stock) {
+                return NextResponse.json(
+                    {
+                        error: `Cannot add ${quantity} more — only ${product.stock - existingItem.quantity} unit(s) remaining`,
+                    },
+                    { status: 400 }
+                );
+            }
+
             await prisma.cartItem.update({
                 where: { id: existingItem.id },
-                data: {
-                    quantity: existingItem.quantity + quantity,
-                },
+                data: { quantity: newQuantity },
             });
         } else {
-            // Create new cart item
             await prisma.cartItem.create({
                 data: {
                     cartId: cart.id,
@@ -75,14 +106,11 @@ export async function POST(req: Request) {
             });
         }
 
-        // Fetch updated cart
         const updatedCart = await prisma.cart.findUnique({
             where: { id: cart.id },
             include: {
                 items: {
-                    include: {
-                        product: true,
-                    },
+                    include: { product: true },
                 },
             },
         });

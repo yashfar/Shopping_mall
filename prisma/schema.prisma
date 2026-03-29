@@ -97,6 +97,8 @@ model Review {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 model Cart {
@@ -123,14 +125,16 @@ model CartItem {
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     OrderItem[]
-  total     Int
-  status    OrderStatus @default(PENDING)
-  createdAt DateTime    @default(now())
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       OrderItem[]
+  total       Int
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
   orderNumber String?     @unique
+
+  @@index([userId])
 }
 
 model OrderItem {
@@ -141,6 +145,8 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity  Int
   price     Int
+
+  @@index([orderId])
 }
 
 enum OrderStatus {
@@ -253,8 +259,8 @@ model CarouselItem {
 // ============================================================================
 model PaymentConfig {
   id                    String   @id @default(cuid())
-  taxPercent            Float    @default(0)
-  shippingFee           Float    @default(0)
-  freeShippingThreshold Float    @default(0)
+  taxPercent            Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
+  shippingFee           Int      @default(0)    // in cents
+  freeShippingThreshold Int      @default(0)    // in cents
   updatedAt             DateTime @updatedAt
 }

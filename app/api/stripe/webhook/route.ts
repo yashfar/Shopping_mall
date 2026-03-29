@@ -10,7 +10,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 /**
  * POST /api/stripe/webhook
- * Handles Stripe webhook events
+ * Handles Stripe webhook events.
+ *
+ * Stock deduction uses atomic `decrement` to prevent race conditions
+ * when Stripe retries or two webhooks fire simultaneously.
  */
 export async function POST(req: Request) {
     const body = await req.text();
@@ -26,24 +29,23 @@ export async function POST(req: Request) {
     let event: Stripe.Event;
 
     try {
-        // Verify webhook signature
         event = stripe.webhooks.constructEvent(
             body,
             signature,
             process.env.STRIPE_WEBHOOK_SECRET!
         );
-    } catch (error: any) {
-        console.error("Webhook signature verification failed:", error.message);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("Webhook signature verification failed:", message);
         return NextResponse.json(
-            { error: `Webhook Error: ${error.message}` },
+            { error: `Webhook Error: ${message}` },
             { status: 400 }
         );
     }
 
-    // Handle the event
     if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const orderId = session.client_reference_id;
+        const stripeSession = event.data.object as Stripe.Checkout.Session;
+        const orderId = stripeSession.client_reference_id;
 
         if (!orderId) {
             console.error("No order ID in session");
@@ -54,38 +56,51 @@ export async function POST(req: Request) {
         }
 
         try {
-            // Update order status and reduce stock in a transaction
             await prisma.$transaction(async (tx) => {
-                // Update order status to PAID
+                // Mark order as PAID
                 await tx.order.update({
                     where: { id: orderId },
                     data: { status: "PAID" },
                 });
 
-                // Fetch order items to reduce stock
                 const orderItems = await tx.orderItem.findMany({
                     where: { orderId },
-                    include: { product: true },
+                    select: {
+                        productId: true,
+                        quantity: true,
+                    },
                 });
 
-                // Reduce stock for each product
+                // Atomically decrement stock for each product.
+                // Using `decrement` avoids the read-modify-write race condition
+                // that occurs when Stripe fires duplicate/retry webhooks.
                 for (const item of orderItems) {
-                    const newStock = item.product.stock - item.quantity;
-
                     await tx.product.update({
                         where: { id: item.productId },
                         data: {
-                            stock: newStock,
-                            // Auto-deactivate if stock reaches 0
-                            isActive: newStock > 0 ? item.product.isActive : false,
+                            stock: { decrement: item.quantity },
                         },
                     });
                 }
+
+                // In a second pass, deactivate any products whose stock hit zero.
+                // Done separately so the decrement above is already committed within
+                // the same transaction before we check the resulting stock value.
+                await tx.product.updateMany({
+                    where: {
+                        id: { in: orderItems.map((i) => i.productId) },
+                        stock: { lte: 0 },
+                    },
+                    data: {
+                        isActive: false,
+                        stock: 0, // clamp to zero — never go negative
+                    },
+                });
             });
 
-            console.log(`Order ${orderId} marked as PAID and stock reduced`);
+            console.log(`Order ${orderId} marked as PAID, stock decremented`);
         } catch (error) {
-            console.error("Error updating order:", error);
+            console.error("Error updating order after payment:", error);
             return NextResponse.json(
                 { error: "Failed to update order" },
                 { status: 500 }

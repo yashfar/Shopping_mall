@@ -95,35 +95,20 @@ export async function POST(req: Request) {
             },
         });
 
-        // Get updated reviews for the product
-        const reviews = await prisma.review.findMany({
+        // Use aggregate to compute average and count — avoids loading all reviews into memory
+        const agg = await prisma.review.aggregate({
             where: { productId },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
+            _avg: { rating: true },
+            _count: { id: true },
         });
-
-        // Calculate average rating
-        const avgRating =
-            reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
         return NextResponse.json(
             {
                 success: true,
                 message: "Review added successfully",
                 review,
-                averageRating: avgRating,
-                totalReviews: reviews.length,
+                averageRating: agg._avg.rating ?? 0,
+                totalReviews: agg._count.id,
             },
             { status: 201 }
         );

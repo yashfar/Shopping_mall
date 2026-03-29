@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import type { User, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import type { Account, Profile } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -11,32 +12,22 @@ import { prisma } from "@/lib/prisma";
  * NextAuth v4 configuration with hybrid approach:
  * - Credentials login: JWT sessions
  * - Google OAuth: Account linking + JWT sessions
- * 
- * Features:
- * - Both credentials and Google sign-in supported
- * - Account linking by email for existing users
- * - JWT sessions for both auth methods
- * - PrismaAdapter for OAuth account management
  */
 export const authOptions = {
-  // Use Prisma adapter for OAuth account linking
   adapter: PrismaAdapter(prisma),
 
-  // JWT strategy for sessions
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
   providers: [
-    // Google OAuth Provider
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      allowDangerousEmailAccountLinking: true, // Enable account linking by email
+      allowDangerousEmailAccountLinking: true,
     }),
 
-    // Credentials Provider (existing login)
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
@@ -48,14 +39,13 @@ export const authOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email as string },
         });
 
-        // User must exist and have a password (not OAuth-only account)
         if (!user?.password) return null;
 
         const isValid = await bcrypt.compare(
-          credentials.password,
+          credentials.password as string,
           user.password
         );
         if (!isValid) return null;
@@ -73,16 +63,52 @@ export const authOptions = {
   ],
 
   callbacks: {
-    // Add user data to JWT token
-    async jwt({ token, user, account, trigger }: any) {
-      // Initial sign in or when user object is available
+    /**
+     * JWT callback — runs on every token read.
+     *
+     * DB is queried ONLY:
+     *  1. On first sign-in (user object is present)
+     *  2. On explicit session update (trigger === "update")
+     *
+     * This prevents a DB hit on every authenticated request.
+     * To refresh profile data after a profile edit, call:
+     *   update() from useSession() on the client.
+     */
+    async jwt({
+      token,
+      user,
+      trigger,
+    }: {
+      token: JWT;
+      user?: User;
+      trigger?: "signIn" | "signUp" | "update";
+    }) {
       if (user) {
+        // First sign-in: seed token from the just-authenticated user
         token.id = user.id;
-        token.picture = user.image; // Preserve original provider image
+        token.picture = (user as User & { image?: string }).image ?? null;
+
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            role: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            image: true,
+          },
+        });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
+          token.avatar = dbUser.avatar || dbUser.image || token.picture;
+        }
       }
 
-      // Always fetch fresh user data from database to get latest avatar
-      if (token.id) {
+      // Re-fetch only when the client explicitly triggers a session update
+      if (trigger === "update" && token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: {
@@ -98,7 +124,6 @@ export const authOptions = {
           token.role = dbUser.role;
           token.firstName = dbUser.firstName;
           token.lastName = dbUser.lastName;
-          // Use avatar if available, otherwise fall back to Google image, then token picture
           token.avatar = dbUser.avatar || dbUser.image || token.picture;
         }
       }
@@ -106,7 +131,6 @@ export const authOptions = {
       return token;
     },
 
-    // Add token data to session
     async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
@@ -118,35 +142,41 @@ export const authOptions = {
       return session;
     },
 
-
-    // Handle account linking and profile sync
-    async signIn({ user, account, profile }: any) {
-      // For OAuth sign-ins, sync profile data
+    async signIn({
+      user,
+      account,
+      profile,
+    }: {
+      user: User;
+      account: Account | null;
+      profile?: Profile;
+    }) {
       if (account?.provider === "google" && profile) {
         try {
-          // Check if user exists (by ID or Email)
           const existingUser = await prisma.user.findFirst({
             where: {
-              OR: [
-                { id: user.id },
-                { email: user.email }
-              ]
+              OR: [{ id: user.id }, { email: user.email ?? "" }],
             },
             select: { id: true, avatar: true },
           });
 
-          // Only update if user exists
           if (existingUser) {
+            const googleProfile = profile as Profile & {
+              picture?: string;
+              given_name?: string;
+              family_name?: string;
+              email_verified?: boolean;
+            };
+
             await prisma.user.update({
               where: { id: existingUser.id },
               data: {
                 name: profile.name,
-                image: profile.picture,
-                emailVerified: profile.email_verified ? new Date() : null,
-                firstName: profile.given_name || null,
-                lastName: profile.family_name || null,
-                // Only set avatar from Google if user doesn't have one already
-                avatar: existingUser.avatar || profile.picture || null,
+                image: googleProfile.picture,
+                emailVerified: googleProfile.email_verified ? new Date() : null,
+                firstName: googleProfile.given_name || null,
+                lastName: googleProfile.family_name || null,
+                avatar: existingUser.avatar || googleProfile.picture || null,
               },
             });
           }

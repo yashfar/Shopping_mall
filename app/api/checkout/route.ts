@@ -9,7 +9,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 /**
  * POST /api/checkout
- * Creates a Stripe Checkout Session for an order
+ * Creates a Stripe Checkout Session for an order.
+ *
+ * The Stripe total must exactly match order.total stored in the DB.
+ * order.total = itemsSubtotal + shippingAmount  (tax is display-only, not charged on top)
+ * So we derive shippingAmount = order.total - itemsSubtotal and add it as a line item.
  */
 export async function POST(req: Request) {
     const session = await auth();
@@ -28,14 +32,11 @@ export async function POST(req: Request) {
             );
         }
 
-        // Fetch order with items and products
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
                 items: {
-                    include: {
-                        product: true,
-                    },
+                    include: { product: true },
                 },
             },
         });
@@ -44,12 +45,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
 
-        // Verify order belongs to user
         if (order.userId !== session.user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Verify order is pending
         if (order.status !== "PENDING") {
             return NextResponse.json(
                 { error: "Order is not pending payment" },
@@ -57,22 +56,43 @@ export async function POST(req: Request) {
             );
         }
 
-        // Create Stripe Checkout Session
-        const checkoutSession = await stripe.checkout.sessions.create({
-            mode: "payment",
-            payment_method_types: ["card"],
-            client_reference_id: order.id,
-            line_items: order.items.map((item) => ({
+        // Build line items from order snapshot prices
+        const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+            order.items.map((item) => ({
                 price_data: {
                     currency: "usd",
                     product_data: {
                         name: item.product.title,
                         description: item.product.description || undefined,
                     },
-                    unit_amount: item.price, // Already in cents
+                    unit_amount: item.price, // cents, snapshot at order creation
                 },
                 quantity: item.quantity,
-            })),
+            }));
+
+        // Derive shipping so the Stripe total exactly matches order.total
+        const itemsSubtotal = order.items.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+        );
+        const shippingAmount = order.total - itemsSubtotal;
+
+        if (shippingAmount > 0) {
+            lineItems.push({
+                price_data: {
+                    currency: "usd",
+                    product_data: { name: "Shipping" },
+                    unit_amount: shippingAmount,
+                },
+                quantity: 1,
+            });
+        }
+
+        const checkoutSession = await stripe.checkout.sessions.create({
+            mode: "payment",
+            payment_method_types: ["card"],
+            client_reference_id: order.id,
+            line_items: lineItems,
             success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?orderId=${order.id}`,
             cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout/cancel`,
         });
