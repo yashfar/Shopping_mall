@@ -5,7 +5,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const AvatarUploadSchema = z.object({
-    image: z.string().min(1, "Image data is required"),
+    image: z.string().min(1, { error: "Image data is required" }),
     type: z.enum(["url", "base64"]).default("base64"),
 });
 

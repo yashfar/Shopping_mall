@@ -32,6 +32,8 @@ model User {
   accounts      Account[]
   addresses     Address[]
   reviews       Review[]
+  couponUsages  CouponUsage[]
+  wishlistItems Wishlist[]
 }
 
 enum Role {
@@ -66,16 +68,18 @@ model Product {
   title       String
   description String?
   price       Int            // Keep as Int for cents (backward compatibility)
+  salePrice   Int?           // Optional sale price in cents (null = no sale)
   stock       Int            @default(0)
   isActive    Boolean        @default(true)
   categoryId  String?
   category    Category?      @relation(fields: [categoryId], references: [id])
   thumbnail   String?        // selected main image
   images      ProductImage[]
-  reviews     Review[]
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
+  reviews       Review[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
   carouselItems CarouselItem[]
+  wishlistItems Wishlist[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -97,6 +101,8 @@ model Review {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 model Cart {
@@ -123,14 +129,21 @@ model CartItem {
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     OrderItem[]
-  total     Int
-  status    OrderStatus @default(PENDING)
-  createdAt DateTime    @default(now())
-  orderNumber String?     @unique
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          OrderItem[]
+  total          Int
+  status         OrderStatus  @default(PENDING)
+  createdAt      DateTime     @default(now())
+  orderNumber    String?      @unique
+  couponId       String?
+  coupon         Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  discountAmount Int?
+  couponUsage    CouponUsage?
+  returnRequest  ReturnRequest?
+
+  @@index([userId])
 }
 
 model OrderItem {
@@ -141,6 +154,8 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity  Int
   price     Int
+
+  @@index([orderId])
 }
 
 enum OrderStatus {
@@ -149,6 +164,92 @@ enum OrderStatus {
   SHIPPED
   COMPLETED
   CANCELED
+  RETURN_REQUESTED
+  RETURNED
+}
+
+// ============================================================================
+// Return Request System
+// ============================================================================
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_ITEM
+  NOT_AS_DESCRIBED
+  CHANGED_MIND
+  OTHER
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ReturnRequest {
+  id             String       @id @default(cuid())
+  orderId        String       @unique
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId         String
+  reason         ReturnReason
+  note           String?      // user's explanation
+  status         ReturnStatus @default(PENDING)
+  previousStatus String?      // order status before return request
+  adminNote      String?      // admin's response
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// ============================================================================
+// Wishlist
+// ============================================================================
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ============================================================================
+// Coupon / Discount Code System
+// ============================================================================
+
+enum CouponType {
+  PERCENTAGE   // value = percent (e.g. 20 = 20% off)
+  FIXED_AMOUNT // value = cents  (e.g. 1000 = $10 off)
+}
+
+model Coupon {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  type        CouponType
+  value       Int          // percent OR cents depending on type
+  minAmount   Int?         // minimum subtotal in cents to use coupon
+  maxUses     Int?         // null = unlimited
+  usedCount   Int          @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  usages      CouponUsage[]
+  orders      Order[]
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([couponId, userId])
 }
 
 
@@ -253,8 +354,8 @@ model CarouselItem {
 // ============================================================================
 model PaymentConfig {
   id                    String   @id @default(cuid())
-  taxPercent            Float    @default(0)
-  shippingFee           Float    @default(0)
-  freeShippingThreshold Float    @default(0)
+  taxPercent            Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
+  shippingFee           Int      @default(0)    // in cents
+  freeShippingThreshold Int      @default(0)    // in cents
   updatedAt             DateTime @updatedAt
 }

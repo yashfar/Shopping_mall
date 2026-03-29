@@ -22,6 +22,13 @@ type Cart = {
     items: CartItem[];
 };
 
+type AppliedCoupon = {
+    code: string;
+    type: string;
+    value: number;
+    discountAmount: number;
+};
+
 export default function CheckoutContent() {
     const router = useRouter();
     const [cart, setCart] = useState<Cart | null>(null);
@@ -29,6 +36,12 @@ export default function CheckoutContent() {
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [hasAddresses, setHasAddresses] = useState(true);
+
+    // Coupon state
+    const [couponInput, setCouponInput] = useState("");
+    const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+    const [couponLoading, setCouponLoading] = useState(false);
+    const [couponError, setCouponError] = useState("");
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -73,11 +86,42 @@ export default function CheckoutContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run once on mount
 
+    const applyCoupon = async () => {
+        if (!couponInput.trim() || !cart || !config) return;
+        setCouponLoading(true);
+        setCouponError("");
+
+        const totals = calculateCartTotals(cart.items, config);
+
+        try {
+            const res = await fetch("/api/coupon/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: couponInput.trim(), subtotal: totals.subtotal }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setAppliedCoupon(data);
+            setCouponInput("");
+        } catch (err: any) {
+            setCouponError(err.message || "Invalid coupon");
+        } finally {
+            setCouponLoading(false);
+        }
+    };
+
+    const removeCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponError("");
+    };
+
     const createOrder = async () => {
         try {
             setCreating(true);
             const response = await fetch("/api/orders/create", {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ couponCode: appliedCoupon?.code ?? null }),
             });
 
             if (!response.ok) {
@@ -112,8 +156,10 @@ export default function CheckoutContent() {
     }
 
     const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
+    const discountAmount = appliedCoupon?.discountAmount ?? 0;
+    const finalTotal = totals ? Math.max(0, totals.total - discountAmount) : 0;
 
-    if (!totals || !config) return null; // Should wait for loading but cart checked above
+    if (!totals || !config) return null;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
@@ -196,6 +242,50 @@ export default function CheckoutContent() {
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
                     <h2 className="text-xl font-extrabold text-[#1A1A1A]">Order Summary</h2>
 
+                    {/* Coupon Input */}
+                    {!appliedCoupon ? (
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={couponInput}
+                                    onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
+                                    onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                                    placeholder="Coupon code..."
+                                    disabled={couponLoading || creating}
+                                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                />
+                                <button
+                                    onClick={applyCoupon}
+                                    disabled={couponLoading || !couponInput.trim() || creating}
+                                    className="px-3 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 transition-colors"
+                                >
+                                    {couponLoading ? "..." : "Apply"}
+                                </button>
+                            </div>
+                            {couponError && (
+                                <p className="text-xs text-red-500 font-medium">{couponError}</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-sm font-bold text-green-700">{appliedCoupon.code}</span>
+                                <span className="text-xs text-green-600">
+                                    {appliedCoupon.type === "PERCENTAGE" ? `${appliedCoupon.value}% off` : `$${(appliedCoupon.value / 100).toFixed(2)} off`}
+                                </span>
+                            </div>
+                            <button onClick={removeCoupon} disabled={creating} className="text-gray-400 hover:text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+
                     <div className="space-y-3 pb-6 border-b border-gray-100">
                         <div className="flex justify-between items-center text-gray-500 font-medium">
                             <span className="text-md flex flex-col">Subtotal <span className="text-xs">(Tax included)</span></span>
@@ -213,13 +303,24 @@ export default function CheckoutContent() {
                             <span>Estimated Tax (Included)</span>
                             <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
                         </div>
+                        {appliedCoupon && (
+                            <div className="flex justify-between items-center text-green-600 font-medium">
+                                <span className="text-sm">Discount ({appliedCoupon.code})</span>
+                                <span className="font-bold">-${(discountAmount / 100).toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-between items-center">
                         <span className="text-lg font-bold text-[#1A1A1A]">Total</span>
-                        <span className="text-2xl font-black text-[#C8102E]">
-                            ${(totals.total / 100).toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                            {appliedCoupon && (
+                                <p className="text-sm text-gray-400 line-through">${(totals.total / 100).toFixed(2)}</p>
+                            )}
+                            <span className="text-2xl font-black text-[#C8102E]">
+                                ${(finalTotal / 100).toFixed(2)}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="space-y-3 pt-4">

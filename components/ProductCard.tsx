@@ -1,7 +1,8 @@
 "use client";
 
 import { useCart } from "@@/context/CartContext";
-import { Star, ShoppingCart, Loader2 } from "lucide-react";
+import { useWishlist } from "@@/context/WishlistContext";
+import { Star, ShoppingCart, Loader2, Heart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +16,7 @@ interface Product {
     id: string;
     title: string;
     price: number;
+    salePrice?: number | null;
     thumbnail: string | null;
     reviews?: Review[];
     stock?: number;
@@ -28,8 +30,10 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
+    const { toggle, isWishlisted } = useWishlist();
     const router = useRouter();
     const [isAdding, setIsAdding] = useState(false);
+    const wishlisted = isWishlisted(product.id);
 
     // Calculate average rating
     const averageRating =
@@ -96,11 +100,27 @@ export default function ProductCard({ product }: ProductCardProps) {
                     </div>
                 )}
 
+                {/* Wishlist Button */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); toggle(product.id); }}
+                    className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110"
+                    title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                    <Heart
+                        className={`w-4 h-4 transition-colors ${wishlisted ? "fill-[#C8102E] text-[#C8102E]" : "text-gray-400"}`}
+                    />
+                </button>
+
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
                     {isNew && (
                         <span className="bg-[#1A1A1A] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
                             New
+                        </span>
+                    )}
+                    {product.salePrice && product.stock !== 0 && (
+                        <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                            -{Math.round((1 - product.salePrice / product.price) * 100)}%
                         </span>
                     )}
                     {product.stock === 0 && (
@@ -162,9 +182,20 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {/* Price & Mobile Add Button */}
                 <div className="flex items-center justify-between pt-2">
                     <div className="flex flex-col">
-                        <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
-                            ${(product.price / 100).toFixed(2)}
-                        </span>
+                        {product.salePrice ? (
+                            <>
+                                <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
+                                    ${(product.salePrice / 100).toFixed(2)}
+                                </span>
+                                <span className="text-xs text-gray-400 line-through">
+                                    ${(product.price / 100).toFixed(2)}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
+                                ${(product.price / 100).toFixed(2)}
+                            </span>
+                        )}
                     </div>
 
                     {/* Mobile Only Add Button */}

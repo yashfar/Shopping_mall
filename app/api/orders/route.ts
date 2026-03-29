@@ -21,6 +21,9 @@ export async function GET() {
                 total: true,
                 status: true,
                 createdAt: true,
+                returnRequest: {
+                    select: { status: true },
+                },
             },
             orderBy: {
                 createdAt: "desc",

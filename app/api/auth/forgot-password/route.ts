@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendResetPasswordEmail } from "@@/lib/mail";
+import { rateLimit, getClientIp } from "@@/lib/rate-limit";
 import crypto from "crypto";
 
 /**
@@ -10,6 +11,15 @@ import crypto from "crypto";
  * Security: Always returns success to prevent email enumeration
  */
 export async function POST(req: Request) {
+    // 3 reset requests per IP per 15 minutes — prevents reset email flooding
+    const limit = rateLimit(getClientIp(req), { windowMs: 15 * 60 * 1000, max: 3 });
+    if (!limit.allowed) {
+        return NextResponse.json(
+            { error: "Too many password reset requests. Please try again later." },
+            { status: 429 }
+        );
+    }
+
     try {
         const { email } = await req.json();
 

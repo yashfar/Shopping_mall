@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const AddProductSchema = z.object({
-    title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
-    description: z.string().min(1, "Description is required"),
-    price: z.number().int().positive("Price must be a positive number"),
-    category: z.string().min(1, "Category is required"),
-    stock: z.number().int().min(0, "Stock cannot be negative").default(0),
-    images: z.array(z.string().min(1, "Image path cannot be empty")).min(1, "At least one image is required"),
-    thumbnail: z.string().min(1, "Thumbnail path cannot be empty"),
+    title: z.string().min(1, { error: "Title is required" }).max(200, { error: "Title must be less than 200 characters" }),
+    description: z.string().min(1, { error: "Description is required" }),
+    price: z.number().int().positive({ error: "Price must be a positive number" }),
+    salePrice: z.number().int().positive({ error: "Sale price must be a positive number" }).optional().nullable(),
+    category: z.string().min(1, { error: "Category is required" }),
+    stock: z.number().int().min(0, { error: "Stock cannot be negative" }).default(0),
+    images: z.array(z.string().min(1, { error: "Image path cannot be empty" })).min(1, { error: "At least one image is required" }),
+    thumbnail: z.string().min(1, { error: "Thumbnail path cannot be empty" }),
 });
 
 /**
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { title, description, price, category, stock, images, thumbnail } =
+        const { title, description, price, salePrice, category, stock, images, thumbnail } =
             validation.data;
 
         // Additional validation: Thumbnail must be in images array
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
                     title,
                     description,
                     price,
+                    salePrice: salePrice ?? null,
                     stock,
                     thumbnail,
                     isActive: stock > 0, // Auto-activate if stock > 0

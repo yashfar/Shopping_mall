@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
+import { PasswordSchema } from "@@/lib/auth/dto";
 
 /**
  * POST /api/auth/reset-password
@@ -27,10 +28,11 @@ export async function POST(req: Request) {
             );
         }
 
-        // Validate password strength
-        if (newPassword.length < 8) {
+        // Validate password strength (same rules as registration)
+        const passwordValidation = PasswordSchema.safeParse(newPassword);
+        if (!passwordValidation.success) {
             return NextResponse.json(
-                { error: "Password must be at least 8 characters long" },
+                { error: passwordValidation.error.issues[0].message },
                 { status: 400 }
             );
         }

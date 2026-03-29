@@ -5,8 +5,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import StarRating from "@@/components/StarRating";
 import { useCart } from "@@/context/CartContext";
+import { useWishlist } from "@@/context/WishlistContext";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus, Heart } from "lucide-react";
 
 interface ProductImage {
     id: string;
@@ -32,6 +33,7 @@ interface Product {
     title: string;
     description: string | null;
     price: number;
+    salePrice?: number | null;
     category: { name: string } | null;
     stock: number;
     thumbnail: string | null;
@@ -53,7 +55,9 @@ export default function ProductDetailClient({
     isAuthenticated,
 }: ProductDetailClientProps) {
     const { addToCart } = useCart();
+    const { toggle, isWishlisted } = useWishlist();
     const router = useRouter();
+    const wishlisted = isWishlisted(product.id);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
@@ -259,10 +263,24 @@ export default function ProductDetailClient({
                         <div className="mb-8 p-6 bg-white border border-[#A9A9A9]/20 rounded-2xl shadow-sm">
                             <div className="flex flex-col gap-2">
                                 <span className="text-sm font-medium text-[#A9A9A9] uppercase tracking-wide">Total Price</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black text-[#1A1A1A]">
-                                        ${(product.price / 100).toFixed(2)}
-                                    </span>
+                                <div className="flex items-baseline gap-3 flex-wrap">
+                                    {product.salePrice ? (
+                                        <>
+                                            <span className="text-4xl font-black text-[#C8102E]">
+                                                ${(product.salePrice / 100).toFixed(2)}
+                                            </span>
+                                            <span className="text-xl font-medium text-gray-400 line-through">
+                                                ${(product.price / 100).toFixed(2)}
+                                            </span>
+                                            <span className="text-sm font-bold text-white bg-[#C8102E] px-2 py-0.5 rounded-full">
+                                                -{Math.round((1 - product.salePrice / product.price) * 100)}%
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-black text-[#1A1A1A]">
+                                            ${(product.price / 100).toFixed(2)}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -295,24 +313,51 @@ export default function ProductDetailClient({
                                     </div>
                                 </div>
 
-                                {/* Add to Cart Button */}
-                                <button
-                                    onClick={handleAddToCart}
-                                    disabled={isAddingToCart}
-                                    className="w-full py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                                >
-                                    {isAddingToCart ? (
-                                        <Loader2 className="w-6 h-6 animate-spin" />
-                                    ) : (
-                                        <ShoppingCart className="w-6 h-6" />
-                                    )}
-                                    {isAddingToCart ? "Adding..." : "Add to Cart"}
-                                </button>
+                                {/* Add to Cart + Wishlist */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleAddToCart}
+                                        disabled={isAddingToCart}
+                                        className="flex-1 py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                    >
+                                        {isAddingToCart ? (
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                        ) : (
+                                            <ShoppingCart className="w-6 h-6" />
+                                        )}
+                                        {isAddingToCart ? "Adding..." : "Add to Cart"}
+                                    </button>
+
+                                    <button
+                                        onClick={() => toggle(product.id)}
+                                        title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                                        className={`w-14 rounded-xl border-2 flex items-center justify-center transition-all hover:-translate-y-0.5 active:translate-y-0 ${
+                                            wishlisted
+                                                ? "border-[#C8102E] bg-red-50 text-[#C8102E]"
+                                                : "border-gray-200 bg-white text-gray-400 hover:border-[#C8102E] hover:text-[#C8102E]"
+                                        }`}
+                                    >
+                                        <Heart className={`w-6 h-6 ${wishlisted ? "fill-[#C8102E]" : ""}`} />
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
-                                <User className="w-5 h-5" />
-                                Currently Out of Stock
+                            <div className="space-y-3">
+                                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
+                                    <User className="w-5 h-5" />
+                                    Currently Out of Stock
+                                </div>
+                                <button
+                                    onClick={() => toggle(product.id)}
+                                    className={`w-full py-3 rounded-xl border-2 font-semibold flex items-center justify-center gap-2 transition-all ${
+                                        wishlisted
+                                            ? "border-[#C8102E] bg-red-50 text-[#C8102E]"
+                                            : "border-gray-200 bg-white text-gray-500 hover:border-[#C8102E] hover:text-[#C8102E]"
+                                    }`}
+                                >
+                                    <Heart className={`w-5 h-5 ${wishlisted ? "fill-[#C8102E]" : ""}`} />
+                                    {wishlisted ? "Saved to Wishlist" : "Save to Wishlist"}
+                                </button>
                             </div>
                         )}
 

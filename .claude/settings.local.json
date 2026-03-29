@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\My-Store\\\\online_shop/app\" \\\\\\( -path \"*/\\(main\\)/page.tsx\" -o -path \"*/\\(main\\)/product/*/page.tsx\" -o -path \"*/\\(main\\)/cart/*\" -o -path \"*/\\(main\\)/login/*\" \\\\\\) -type f)",
+      "Bash(find \"c:\\\\My-Store\\\\online_shop/app/\\(main\\)\" -type f -name \"*.tsx\")",
+      "Bash(find . -type f -name package.json -o -name tsconfig.json -o -name next.config.js -o -name .env* -o -name prisma.schema)",
+      "Bash(find /c/My-Store/online_shop/app/api -type f -name *.ts)",
+      "Bash(xargs ls:*)",
+      "Bash(ls -la /c/My-Store/online_shop/app/\\\\\\(main\\\\\\)/)",
+      "Bash(ls -la /c/My-Store/online_shop/app/\\\\\\(main\\\\\\)/admin/)",
+      "Bash(xargs cat:*)",
+      "Bash(npx next:*)"
+    ]
+  }
+}

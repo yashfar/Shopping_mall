@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RegisterSchema } from "@@/lib/auth/dto";
+import { rateLimit, getClientIp } from "@@/lib/rate-limit";
 import bcrypt from "bcrypt";
 
 const SALT_ROUNDS = 10;
 
 export async function POST(req: Request) {
+  // 5 registration attempts per IP per 15 minutes
+  const limit = rateLimit(getClientIp(req), { windowMs: 15 * 60 * 1000, max: 5 });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many registration attempts. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     // 1. Parse JSON body
     const body = await req.json();

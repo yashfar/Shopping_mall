@@ -42,6 +42,15 @@ type Address = {
     fullAddress: string;
 } | null;
 
+type ReturnRequest = {
+    id: string;
+    reason: string;
+    note: string | null;
+    status: string;
+    adminNote: string | null;
+    createdAt: string;
+};
+
 type Order = {
     id: string;
     orderNumber?: string | null;
@@ -50,6 +59,7 @@ type Order = {
     createdAt: string;
     user?: User | null;
     items?: OrderItem[];
+    returnRequest?: ReturnRequest | null;
 };
 
 const STATUS_MAP: Record<string, string> = {
@@ -76,6 +86,8 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [selectedStatus, setSelectedStatus] = useState<string>("");
     const [updating, setUpdating] = useState(false);
     const [downloading, setDownloading] = useState<"invoice" | "label" | null>(null);
+    const [processingReturn, setProcessingReturn] = useState(false);
+    const [returnAdminNote, setReturnAdminNote] = useState("");
 
     useEffect(() => {
         fetchOrder();
@@ -171,6 +183,40 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
         }
     };
 
+    const handleReturnAction = async (action: "approve" | "reject") => {
+        if (!order?.returnRequest) return;
+        setProcessingReturn(true);
+        try {
+            const res = await fetch(`/api/admin/returns/${order.returnRequest.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, adminNote: returnAdminNote }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error || `Failed to ${action} return`);
+                return;
+            }
+            toast.success(action === "approve"
+                ? `Return approved${data.refunded ? " — Stripe refund issued" : ""}`
+                : "Return rejected"
+            );
+            await fetchOrder();
+        } catch {
+            toast.error(`Failed to ${action} return`);
+        } finally {
+            setProcessingReturn(false);
+        }
+    };
+
+    const reasonLabels: Record<string, string> = {
+        DAMAGED: "Damaged product",
+        WRONG_ITEM: "Wrong item received",
+        NOT_AS_DESCRIBED: "Not as described",
+        CHANGED_MIND: "Changed mind",
+        OTHER: "Other",
+    };
+
     const getStatusStyles = (status: string) => {
         const base = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border";
         switch (status) {
@@ -186,6 +232,10 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             case "CANCELED":
             case "CANCELLED":
                 return `${base} bg-red-50 text-[#C8102E] border-red-100`;
+            case "RETURN_REQUESTED":
+                return `${base} bg-orange-50 text-orange-600 border-orange-100`;
+            case "RETURNED":
+                return `${base} bg-violet-50 text-violet-600 border-violet-100`;
             default:
                 return `${base} bg-gray-50 text-gray-600 border-gray-100`;
         }
@@ -365,6 +415,65 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             {updating ? "Updating..." : "Update Status"}
                         </Button>
                     </div>
+
+                    {/* Return Request Section */}
+                    {order.returnRequest && order.returnRequest.status === "PENDING" && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            <div className="bg-orange-50 rounded-xl p-4 border border-orange-200 mb-3">
+                                <p className="text-xs font-black text-orange-600 uppercase tracking-wider mb-2">Return Request</p>
+                                <p className="text-sm font-medium text-gray-800">{reasonLabels[order.returnRequest.reason] || order.returnRequest.reason}</p>
+                                {order.returnRequest.note && (
+                                    <p className="text-xs text-gray-500 mt-1">{order.returnRequest.note}</p>
+                                )}
+                                <p className="text-[10px] text-gray-400 mt-2">
+                                    {new Date(order.returnRequest.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                </p>
+                            </div>
+                            <textarea
+                                value={returnAdminNote}
+                                onChange={(e) => setReturnAdminNote(e.target.value)}
+                                placeholder="Admin note (optional)"
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 mb-3"
+                            />
+                            <div className="flex gap-2">
+                                <Button
+                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm"
+                                    onClick={() => handleReturnAction("approve")}
+                                    disabled={processingReturn}
+                                >
+                                    {processingReturn ? "Processing..." : "Approve"}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm"
+                                    onClick={() => handleReturnAction("reject")}
+                                    disabled={processingReturn}
+                                >
+                                    Reject
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {order.returnRequest && order.returnRequest.status !== "PENDING" && (
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            <div className={`rounded-xl p-3 border ${
+                                order.returnRequest.status === "APPROVED"
+                                    ? "bg-emerald-50 border-emerald-100"
+                                    : "bg-red-50 border-red-100"
+                            }`}>
+                                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${
+                                    order.returnRequest.status === "APPROVED" ? "text-emerald-600" : "text-red-600"
+                                }`}>
+                                    Return {order.returnRequest.status === "APPROVED" ? "Approved" : "Rejected"}
+                                </p>
+                                {order.returnRequest.adminNote && (
+                                    <p className="text-xs text-gray-500">{order.returnRequest.adminNote}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Customer Details */}

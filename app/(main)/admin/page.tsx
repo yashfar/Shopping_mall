@@ -1,5 +1,6 @@
 import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import UserManagementTable from "./UserManagementTable";
 import { prisma } from "@/lib/prisma";
 
@@ -22,12 +23,35 @@ export default async function AdminPage() {
         }
     });
 
+    const lowStockProducts = await prisma.product.findMany({
+        where: {
+            stock: { gt: 0, lte: 5 },
+            isActive: true,
+        },
+        select: {
+            id: true,
+            title: true,
+            stock: true,
+            thumbnail: true,
+        },
+        orderBy: { stock: "asc" },
+        take: 10,
+    });
+
+    const outOfStockCount = await prisma.product.count({
+        where: { stock: 0, isActive: false },
+    });
+
+    const pendingReturnsCount = await prisma.returnRequest.count({
+        where: { status: "PENDING" },
+    });
+
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
-                    <p className="text-gray-500 mt-2">Overview of your store's performance and settings.</p>
+                    <p className="text-gray-500 mt-2">Overview of your store&apos;s performance and settings.</p>
                 </div>
                 <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -37,7 +61,7 @@ export default async function AdminPage() {
 
             {/* Quick Access Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                <a href="/admin/products" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                <Link href="/admin/products" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -48,9 +72,9 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Products</h3>
                     <p className="text-sm text-gray-500 mt-1">Add, edit, or remove products from your catalog.</p>
-                </a>
+                </Link>
 
-                <a href="/admin/orders" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
+                <Link href="/admin/orders" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
                     {paidOrderCount > 0 && (
                         <span className="absolute top-4 right-4 bg-purple-600 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">
                             {paidOrderCount}
@@ -66,9 +90,9 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Orders</h3>
                     <p className="text-sm text-gray-500 mt-1">Track and manage customer orders.</p>
-                </a>
+                </Link>
 
-                <a href="/admin/banners" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                <Link href="/admin/banners" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -79,9 +103,9 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Banners</h3>
                     <p className="text-sm text-gray-500 mt-1">Update promotional banners and sliders.</p>
-                </a>
+                </Link>
 
-                <a href="/admin/payment-management" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                <Link href="/admin/payment-management" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -92,9 +116,36 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Payment Settings</h3>
                     <p className="text-sm text-gray-500 mt-1">Configure taxes, shipping fees, and thresholds.</p>
-                </a>
+                </Link>
 
-                <a href="/admin/sale-analysis" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                <Link href="/admin/coupons" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-pink-50 text-pink-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185zM9.75 9h.008v.008H9.75V9zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 4.5h.008v.008h-.008V13.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Coupons</h3>
+                    <p className="text-sm text-gray-500 mt-1">Create and manage discount codes.</p>
+                </Link>
+
+                <Link href="/admin/categories" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Categories</h3>
+                    <p className="text-sm text-gray-500 mt-1">Add, rename or delete product categories.</p>
+                </Link>
+
+                <Link href="/admin/sale-analysis" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -105,8 +156,78 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Sale Analysis</h3>
                     <p className="text-sm text-gray-500 mt-1">View sales performance, revenue, and key metrics.</p>
-                </a>
+                </Link>
+
+                <Link href="/admin/returns" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
+                    {pendingReturnsCount > 0 && (
+                        <span className="absolute top-4 right-4 bg-orange-500 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">
+                            {pendingReturnsCount}
+                        </span>
+                    )}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Review</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Returns</h3>
+                    <p className="text-sm text-gray-500 mt-1">Review and process return requests.</p>
+                </Link>
             </div>
+
+            {/* Low Stock Warning */}
+            {(lowStockProducts.length > 0 || outOfStockCount > 0) && (
+                <div className="mb-12 bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-amber-600">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 className="text-base font-bold text-amber-900">Low Stock Alert</h2>
+                                <p className="text-xs text-amber-600">
+                                    {lowStockProducts.length} product{lowStockProducts.length !== 1 ? "s" : ""} running low
+                                    {outOfStockCount > 0 && <span className="text-red-600 font-bold"> &middot; {outOfStockCount} out of stock</span>}
+                                </p>
+                            </div>
+                        </div>
+                        <Link href="/admin/products" className="text-xs font-semibold text-amber-700 hover:text-[#C8102E] transition-colors">
+                            View All Products &rarr;
+                        </Link>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                        {lowStockProducts.map((product) => (
+                            <a key={product.id} href={`/admin/products/${product.id}/edit`} className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                                    {product.thumbnail ? (
+                                        <img src={product.thumbnail} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{product.title}</p>
+                                </div>
+                                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                                    product.stock <= 2
+                                        ? "bg-red-50 text-red-600 border border-red-100"
+                                        : "bg-amber-50 text-amber-600 border border-amber-100"
+                                }`}>
+                                    <span>{product.stock} left</span>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Section Header */}
             <div className="mb-6">

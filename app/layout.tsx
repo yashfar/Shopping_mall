@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@@/context/CartContext";
+import { WishlistProvider } from "@@/context/WishlistContext";
 import { Toaster } from "@@/components/ui/sonner";
 import "./globals.css";
 
@@ -30,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
       >
         <CartProvider>
-          {children}
-          <Toaster />
+          <WishlistProvider>
+            {children}
+            <Toaster />
+          </WishlistProvider>
         </CartProvider>
       </body>
     </html>

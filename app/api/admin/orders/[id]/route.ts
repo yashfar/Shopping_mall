@@ -43,6 +43,7 @@ export async function GET(
                         },
                     },
                 },
+                returnRequest: true,
             },
         });
 
