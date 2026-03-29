@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const AddReviewSchema = z.object({
-    productId: z.string().min(1, "Product ID is required"),
-    rating: z.number().int().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+    productId: z.string().min(1, { error: "Product ID is required" }),
+    rating: z.number().int().min(1, { error: "Rating must be at least 1" }).max(5, { error: "Rating must be at most 5" }),
     comment: z.string().optional().nullable(),
 });
 

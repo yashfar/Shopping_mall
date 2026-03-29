@@ -33,6 +33,7 @@ interface Product {
     title: string;
     description: string | null;
     price: number;
+    salePrice?: number | null;
     category: { name: string } | null;
     stock: number;
     thumbnail: string | null;
@@ -262,10 +263,24 @@ export default function ProductDetailClient({
                         <div className="mb-8 p-6 bg-white border border-[#A9A9A9]/20 rounded-2xl shadow-sm">
                             <div className="flex flex-col gap-2">
                                 <span className="text-sm font-medium text-[#A9A9A9] uppercase tracking-wide">Total Price</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black text-[#1A1A1A]">
-                                        ${(product.price / 100).toFixed(2)}
-                                    </span>
+                                <div className="flex items-baseline gap-3 flex-wrap">
+                                    {product.salePrice ? (
+                                        <>
+                                            <span className="text-4xl font-black text-[#C8102E]">
+                                                ${(product.salePrice / 100).toFixed(2)}
+                                            </span>
+                                            <span className="text-xl font-medium text-gray-400 line-through">
+                                                ${(product.price / 100).toFixed(2)}
+                                            </span>
+                                            <span className="text-sm font-bold text-white bg-[#C8102E] px-2 py-0.5 rounded-full">
+                                                -{Math.round((1 - product.salePrice / product.price) * 100)}%
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-black text-[#1A1A1A]">
+                                            ${(product.price / 100).toFixed(2)}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

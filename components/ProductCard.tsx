@@ -16,6 +16,7 @@ interface Product {
     id: string;
     title: string;
     price: number;
+    salePrice?: number | null;
     thumbnail: string | null;
     reviews?: Review[];
     stock?: number;
@@ -117,6 +118,11 @@ export default function ProductCard({ product }: ProductCardProps) {
                             New
                         </span>
                     )}
+                    {product.salePrice && product.stock !== 0 && (
+                        <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                            -{Math.round((1 - product.salePrice / product.price) * 100)}%
+                        </span>
+                    )}
                     {product.stock === 0 && (
                         <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
                             Out of Stock
@@ -176,9 +182,20 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {/* Price & Mobile Add Button */}
                 <div className="flex items-center justify-between pt-2">
                     <div className="flex flex-col">
-                        <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
-                            ${(product.price / 100).toFixed(2)}
-                        </span>
+                        {product.salePrice ? (
+                            <>
+                                <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
+                                    ${(product.salePrice / 100).toFixed(2)}
+                                </span>
+                                <span className="text-xs text-gray-400 line-through">
+                                    ${(product.price / 100).toFixed(2)}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
+                                ${(product.price / 100).toFixed(2)}
+                            </span>
+                        )}
                     </div>
 
                     {/* Mobile Only Add Button */}

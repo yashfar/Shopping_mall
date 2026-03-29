@@ -58,12 +58,13 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { title, description, price, stock, isActive, images, thumbnail, category } = await req.json();
+        const { title, description, price, salePrice, stock, isActive, images, thumbnail, category } = await req.json();
 
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (price !== undefined) updateData.price = Math.round(price);
+        if (salePrice !== undefined) updateData.salePrice = salePrice ? Math.round(salePrice) : null;
         if (category !== undefined) {
             updateData.category = {
                 connectOrCreate: {

@@ -4,12 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const CartAddSchema = z.object({
-    productId: z.string().min(1, "Product ID is required"),
+    productId: z.string().min(1, { error: "Product ID is required" }),
     quantity: z
-        .number({ invalid_type_error: "Quantity must be a number" })
-        .int("Quantity must be a whole number")
-        .min(1, "Quantity must be at least 1")
-        .max(99, "Quantity cannot exceed 99"),
+        .number({ error: "Quantity must be a number" })
+        .int({ error: "Quantity must be a whole number" })
+        .min(1, { error: "Quantity must be at least 1" })
+        .max(99, { error: "Quantity cannot exceed 99" }),
 });
 
 /**

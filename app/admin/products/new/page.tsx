@@ -18,6 +18,7 @@ export default function NewProductPage() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("");
+    const [salePrice, setSalePrice] = useState("");
     const [category, setCategory] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
@@ -129,6 +130,19 @@ export default function NewProductPage() {
             return;
         }
 
+        let salePriceInCents: number | null = null;
+        if (salePrice.trim()) {
+            salePriceInCents = Math.round(parseFloat(salePrice) * 100);
+            if (isNaN(salePriceInCents) || salePriceInCents <= 0) {
+                setError("Please enter a valid sale price");
+                return;
+            }
+            if (salePriceInCents >= priceInCents) {
+                setError("Sale price must be lower than the original price");
+                return;
+            }
+        }
+
         const stockNumber = parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
             setError("Please enter a valid stock quantity");
@@ -147,6 +161,7 @@ export default function NewProductPage() {
                     title: title.trim(),
                     description: description.trim(),
                     price: priceInCents,
+                    salePrice: salePriceInCents,
                     category: category.trim(),
                     stock: stockNumber,
                     images: images.map((img) => img.url),
@@ -351,8 +366,8 @@ export default function NewProductPage() {
                                     />
                                 </div>
 
-                                {/* Row: Price & Stock */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {/* Row: Price, Sale Price & Stock */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div>
                                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
                                             Price (USD) <span className="text-red-500">*</span>
@@ -369,6 +384,26 @@ export default function NewProductPage() {
                                                 className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
                                                 placeholder="0.00"
                                                 required
+                                                disabled={submitting}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Sale Price <span className="text-gray-400 font-normal">(optional)</span>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                            <input
+                                                type="number"
+                                                id="salePrice"
+                                                value={salePrice}
+                                                onChange={(e) => setSalePrice(e.target.value)}
+                                                step="0.01"
+                                                min="0"
+                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                placeholder="0.00"
                                                 disabled={submitting}
                                             />
                                         </div>

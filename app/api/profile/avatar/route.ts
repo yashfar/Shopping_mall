@@ -7,7 +7,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 
 const AvatarUploadSchema = z.object({
-    image: z.string().min(1, "Image data is required"),
+    image: z.string().min(1, { error: "Image data is required" }),
     type: z.enum(["url", "base64"]).default("base64"),
 });
 

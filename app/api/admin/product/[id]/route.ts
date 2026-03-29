@@ -4,11 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const UpdateProductSchema = z.object({
-    title: z.string().min(1, "Title is required").max(200).optional(),
+    title: z.string().min(1, { error: "Title is required" }).max(200).optional(),
     description: z.string().optional().nullable(),
-    price: z.number().int().positive("Price must be positive").optional(),
-    category: z.string().min(1, "Category is required").optional(),
-    stock: z.number().int().min(0, "Stock cannot be negative").optional(),
+    price: z.number().int().positive({ error: "Price must be positive" }).optional(),
+    category: z.string().min(1, { error: "Category is required" }).optional(),
+    stock: z.number().int().min(0, { error: "Stock cannot be negative" }).optional(),
     isActive: z.boolean().optional(),
     images: z.array(z.string().url()).optional(),
     thumbnail: z.string().url().optional().nullable(),

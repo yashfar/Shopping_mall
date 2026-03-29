@@ -6,17 +6,17 @@ import { z } from "zod";
 const ProductCreateSchema = z.object({
     title: z
         .string()
-        .min(1, "Title is required")
-        .max(255, "Title must be less than 255 characters"),
+        .min(1, { error: "Title is required" })
+        .max(255, { error: "Title must be less than 255 characters" }),
     description: z.string().optional().nullable(),
     price: z
-        .number({ invalid_type_error: "Price must be a number" })
-        .int("Price must be a whole number (cents)")
-        .positive("Price must be greater than 0"),
+        .number({ error: "Price must be a number" })
+        .int({ error: "Price must be a whole number (cents)" })
+        .positive({ error: "Price must be greater than 0" }),
     stock: z
-        .number({ invalid_type_error: "Stock must be a number" })
-        .int("Stock must be a whole number")
-        .min(0, "Stock cannot be negative")
+        .number({ error: "Stock must be a number" })
+        .int({ error: "Stock must be a whole number" })
+        .min(0, { error: "Stock cannot be negative" })
         .default(0),
     isActive: z.boolean().default(true),
     categoryId: z.string().optional().nullable(),
