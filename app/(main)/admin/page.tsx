@@ -46,6 +46,10 @@ export default async function AdminPage() {
         where: { status: "PENDING" },
     });
 
+    const unreadMessagesCount = await prisma.contactMessage.count({
+        where: { isRead: false },
+    });
+
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -174,6 +178,24 @@ export default async function AdminPage() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">Returns</h3>
                     <p className="text-sm text-gray-500 mt-1">Review and process return requests.</p>
+                </Link>
+
+                <Link href="/admin/messages" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
+                    {unreadMessagesCount > 0 && (
+                        <span className="absolute top-4 right-4 bg-sky-500 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">
+                            {unreadMessagesCount}
+                        </span>
+                    )}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-sky-50 text-sky-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">View</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Messages</h3>
+                    <p className="text-sm text-gray-500 mt-1">View and reply to contact form messages.</p>
                 </Link>
             </div>
 
