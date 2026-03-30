@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useCurrency } from "@@/context/CurrencyContext";
 import {
     DndContext,
     closestCenter,
@@ -53,6 +54,7 @@ function SortableItem({
     onDelete: (id: string) => void;
     t: (key: string) => string;
 }) {
+    const { formatPrice } = useCurrency();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({ id: item.id });
 
@@ -99,7 +101,7 @@ function SortableItem({
                 </h4>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs">
                     <span className="text-gray-500 font-medium">
-                        ${(item.product.price / 100).toFixed(2)}
+                        {formatPrice(item.product.price)}
                     </span>
                     <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.product.stock > 0

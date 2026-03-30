@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type CartItem = {
     id: string;
@@ -21,6 +22,7 @@ type Cart = {
 
 export default function CheckoutContent() {
     const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function CheckoutContent() {
                                 </div>
                             </div>
                             <div style={{ fontWeight: "600" }}>
-                                ${((item.product.price * item.quantity) / 100).toFixed(2)}
+                                {formatPrice(item.product.price * item.quantity)}
                             </div>
                         </div>
                     ))}
@@ -134,7 +136,7 @@ export default function CheckoutContent() {
                     }}
                 >
                     <span>{t("total")}</span>
-                    <span style={{ color: "#0070f3" }}>${(total / 100).toFixed(2)}</span>
+                    <span style={{ color: "#0070f3" }}>{formatPrice(total)}</span>
                 </div>
             </div>
 

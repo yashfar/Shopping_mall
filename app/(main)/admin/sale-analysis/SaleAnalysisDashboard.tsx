@@ -1,6 +1,7 @@
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type Labels = {
     todayOrders: string;
@@ -50,12 +51,8 @@ export default function SaleAnalysisDashboard({
     labels: l,
 }: DashboardProps) {
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(value);
-    };
+    const { formatPrice: fp } = useCurrency();
+    const formatCurrency = (value: number) => fp(Math.round(value * 100));
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -158,11 +155,11 @@ export default function SaleAnalysisDashboard({
                                     fontSize={12}
                                     tickLine={false}
                                     axisLine={false}
-                                    tickFormatter={(value) => `$${value}`}
+                                    tickFormatter={(value) => fp(Math.round(value * 100))}
                                 />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value: any) => [`$${value}`, l.revenueLabel]}
+                                    formatter={(value: any) => [fp(Math.round(value * 100)), l.revenueLabel]}
                                 />
                                 <Bar
                                     dataKey="total"

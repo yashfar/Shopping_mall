@@ -2,6 +2,7 @@
 
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { Star, ShoppingCart, Loader2, Heart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggle, isWishlisted } = useWishlist();
     const t = useTranslations("productCard");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [isAdding, setIsAdding] = useState(false);
     const wishlisted = isWishlisted(product.id);
@@ -187,15 +189,15 @@ export default function ProductCard({ product }: ProductCardProps) {
                         {product.salePrice ? (
                             <>
                                 <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
-                                    ${(product.salePrice / 100).toFixed(2)}
+                                    {formatPrice(product.salePrice)}
                                 </span>
                                 <span className="text-xs text-gray-400 line-through">
-                                    ${(product.price / 100).toFixed(2)}
+                                    {formatPrice(product.price)}
                                 </span>
                             </>
                         ) : (
                             <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
-                                ${(product.price / 100).toFixed(2)}
+                                {formatPrice(product.price)}
                             </span>
                         )}
                     </div>

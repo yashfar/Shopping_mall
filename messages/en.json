@@ -1115,7 +1115,7 @@
     "noCouponsYet": "No coupons yet",
     "noCouponsDesc": "Create your first discount code above",
     "percentOff": "{value}% off",
-    "fixedOff": "${value} off",
+    "fixedOff": "{value} off",
     "failedToLoad": "Failed to load coupons",
     "couponCreated": "Coupon \"{code}\" created",
     "failedToCreate": "Failed to create coupon",

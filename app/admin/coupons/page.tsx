@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2, Loader2, Tag, ToggleLeft, ToggleRight } from "
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Coupon {
     id: string;
@@ -32,6 +33,7 @@ const emptyForm = {
 
 export default function CouponsPage() {
     const t = useTranslations("adminCoupons");
+    const { formatPrice } = useCurrency();
     const [coupons, setCoupons] = useState<Coupon[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -120,7 +122,7 @@ export default function CouponsPage() {
     function formatValue(coupon: Coupon) {
         return coupon.type === "PERCENTAGE"
             ? t("percentOff", { value: coupon.value })
-            : t("fixedOff", { value: (coupon.value / 100).toFixed(2) });
+            : t("fixedOff", { value: formatPrice(coupon.value) });
     }
 
     function isExpired(coupon: Coupon) {

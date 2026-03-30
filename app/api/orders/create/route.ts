@@ -156,7 +156,7 @@ export async function POST(req: Request) {
             }
             if (error.message.startsWith("COUPON_MIN_AMOUNT:")) {
                 const minAmount = parseInt(error.message.split(":")[1]);
-                return NextResponse.json({ error: `Minimum order amount of $${(minAmount / 100).toFixed(2)} required` }, { status: 400 });
+                return NextResponse.json({ error: `Minimum order amount of ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(minAmount / 100)} required` }, { status: 400 });
             }
             if (error.message.startsWith("PRODUCT_INACTIVE:")) {
                 const title = error.message.split(":")[1];

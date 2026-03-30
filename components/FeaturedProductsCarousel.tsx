@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
@@ -29,6 +30,7 @@ export default function FeaturedProductsCarousel({
     linkText,
 }: FeaturedProductsCarouselProps) {
     const t = useTranslations("featuredCarousel");
+    const { formatPrice } = useCurrency();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -148,7 +150,7 @@ export default function FeaturedProductsCarousel({
                             </h3>
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-gray-500 text-sm">
-                                    ${(product.price / 100).toFixed(2)}
+                                    {formatPrice(product.price)}
                                 </p>
                                 {product.category && (
                                     <span className="text-xs text-gray-400 font-medium">

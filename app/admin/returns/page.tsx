@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { ArrowLeft, RefreshCw, Check, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -36,6 +37,7 @@ type ReturnRequest = {
 
 export default function ReturnsPage() {
     const t = useTranslations("adminReturns");
+    const { formatPrice } = useCurrency();
     const [returns, setReturns] = useState<ReturnRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
@@ -147,7 +149,7 @@ export default function ReturnsPage() {
                                                     {t("requested")} {new Date(r.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                                                 </p>
                                             </div>
-                                            <span className="text-lg font-black text-gray-900">${(r.order.total / 100).toFixed(2)}</span>
+                                            <span className="text-lg font-black text-gray-900">{formatPrice(r.order.total)}</span>
                                         </div>
 
                                         {/* Reason */}

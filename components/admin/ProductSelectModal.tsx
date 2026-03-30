@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Search, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Product {
     id: string;
@@ -32,6 +33,7 @@ export default function ProductSelectModal({
     existingProductIds,
 }: ProductSelectModalProps) {
     const t = useTranslations("adminCarousel");
+    const { formatPrice } = useCurrency();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
@@ -182,7 +184,7 @@ export default function ProductSelectModal({
                                                 </div>
                                             </div>
                                             <p className="text-gray-500 text-xs mt-1">
-                                                ${(product.price / 100).toFixed(2)}
+                                                {formatPrice(product.price)}
                                             </p>
                                             <p className="text-xs mt-1 text-gray-400">
                                                 {isAlreadyIn ? t("alreadyAdded") : product.stock > 0 ? t("inStock") : t("outOfStock")}

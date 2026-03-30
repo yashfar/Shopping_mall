@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import StarRating from "@@/components/StarRating";
@@ -57,6 +58,7 @@ export default function ProductDetailClient({
 }: ProductDetailClientProps) {
     const { addToCart } = useCart();
     const { toggle, isWishlisted } = useWishlist();
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const t = useTranslations("productDetail");
     const wishlisted = isWishlisted(product.id);
@@ -303,10 +305,10 @@ export default function ProductDetailClient({
                                     {product.salePrice ? (
                                         <>
                                             <span className="text-4xl font-black text-[#C8102E]">
-                                                ${(product.salePrice / 100).toFixed(2)}
+                                                {formatPrice(product.salePrice)}
                                             </span>
                                             <span className="text-xl font-medium text-gray-400 line-through">
-                                                ${(product.price / 100).toFixed(2)}
+                                                {formatPrice(product.price)}
                                             </span>
                                             <span className="text-sm font-bold text-white bg-[#C8102E] px-2 py-0.5 rounded-full">
                                                 -{Math.round((1 - product.salePrice / product.price) * 100)}%
@@ -314,7 +316,7 @@ export default function ProductDetailClient({
                                         </>
                                     ) : (
                                         <span className="text-4xl font-black text-[#1A1A1A]">
-                                            ${(product.price / 100).toFixed(2)}
+                                            {formatPrice(product.price)}
                                         </span>
                                     )}
                                 </div>

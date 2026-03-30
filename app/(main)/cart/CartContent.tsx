@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { calculateCartTotals } from "@@/lib/payment-utils";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -30,6 +31,7 @@ type Cart = {
 export default function CartContent() {
     const router = useRouter();
     const { refreshCart } = useCart();
+    const { formatPrice } = useCurrency();
     const t = useTranslations("cart");
     const tc = useTranslations("common");
     const [cart, setCart] = useState<Cart | null>(null);
@@ -250,7 +252,7 @@ export default function CartContent() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("price")}</span>
                                 <span className="text-lg font-bold text-[#1A1A1A]">
-                                    ${(item.product.price / 100).toFixed(2)}
+                                    {formatPrice(item.product.price)}
                                 </span>
                             </div>
 
@@ -282,7 +284,7 @@ export default function CartContent() {
                             <div className="flex items-center justify-between pt-3 border-t border-[#A9A9A9]/20">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("subtotal")}</span>
                                 <span className="text-xl font-extrabold text-[#C8102E]">
-                                    ${((item.product.price * item.quantity) / 100).toFixed(2)}
+                                    {formatPrice(item.product.price * item.quantity)}
                                 </span>
                             </div>
 
@@ -359,7 +361,7 @@ export default function CartContent() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right font-bold text-[#1A1A1A]">
-                                        ${(item.product.price / 100).toFixed(2)}
+                                        {formatPrice(item.product.price)}
                                     </td>
                                     <td className="px-6 py-6">
                                         <div className="flex items-center justify-center gap-3">
@@ -383,7 +385,7 @@ export default function CartContent() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right font-extrabold text-[#C8102E] text-lg">
-                                        ${((item.product.price * item.quantity) / 100).toFixed(2)}
+                                        {formatPrice(item.product.price * item.quantity)}
                                     </td>
                                     <td className="px-6 py-6 text-center">
                                         <button
@@ -418,7 +420,7 @@ export default function CartContent() {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center text-gray-500 font-medium">
                                 <span>{t("subtotalTaxIncluded")}</span>
-                                <span className="text-[#1A1A1A] font-bold">${(totals.subtotal / 100).toFixed(2)}</span>
+                                <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.subtotal)}</span>
                             </div>
 
                             <div className="flex justify-between items-center text-gray-500 font-medium">
@@ -426,13 +428,13 @@ export default function CartContent() {
                                 {totals.shippingAmount === 0 ? (
                                     <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">{tc("free")}</span>
                                 ) : (
-                                    <span className="text-[#1A1A1A] font-bold">${(totals.shippingAmount / 100).toFixed(2)}</span>
+                                    <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.shippingAmount)}</span>
                                 )}
                             </div>
 
                             <div className="flex justify-between items-center text-gray-400 text-sm">
                                 <span>{t("estimatedTaxIncluded")}</span>
-                                <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
+                                <span className="font-medium">{formatPrice(totals.taxAmount)}</span>
                             </div>
 
                             <div className="h-px bg-gray-100 my-4" />
@@ -441,7 +443,7 @@ export default function CartContent() {
                                 <span className="text-lg font-bold text-[#1A1A1A]">{t("orderTotal")}</span>
                                 <div className="text-right">
                                     <span className="text-2xl font-black text-[#C8102E] block">
-                                        ${(totals.total / 100).toFixed(2)}
+                                        {formatPrice(totals.total)}
                                     </span>
                                     {totals.shippingAmount === 0 && config.freeShippingThreshold > 0 && (
                                         <p className="text-xs text-emerald-600 font-bold mt-1">{t("freeShippingApplied")}</p>

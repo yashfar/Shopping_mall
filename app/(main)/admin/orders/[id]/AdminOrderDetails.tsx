@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
+import { useCurrency } from "@@/context/CurrencyContext";
 import {
     Select,
     SelectContent,
@@ -87,6 +88,7 @@ const REVERSE_STATUS_MAP: Record<string, string> = {
 
 export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const t = useTranslations("adminOrderDetails");
+    const { formatPrice } = useCurrency();
     const [order, setOrder] = useState<Order | null>(null);
     const [address, setAddress] = useState<Address>(null);
     const [loading, setLoading] = useState(true);
@@ -418,7 +420,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                         <div>
                                             <div className="flex justify-between items-start mb-2">
                                                 <h3 className="font-bold text-[#1A1A1A] text-base sm:text-lg">{item.product.title}</h3>
-                                                <p className="font-black text-[#1A1A1A] text-lg sm:text-xl">${((item.price * item.quantity) / 100).toFixed(2)}</p>
+                                                <p className="font-black text-[#1A1A1A] text-lg sm:text-xl">{formatPrice(item.price * item.quantity)}</p>
                                             </div>
                                             {item.product.description && (
                                                 <p className="text-sm text-gray-500 line-clamp-2 max-w-xl">{item.product.description}</p>
@@ -432,7 +434,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                             </div>
                                             <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
                                                 <span className="text-[10px] uppercase font-black text-[#A9A9A9] tracking-widest">{t("unitPrice")}</span>
-                                                <span className="font-medium text-gray-600">${(item.price / 100).toFixed(2)}</span>
+                                                <span className="font-medium text-gray-600">{formatPrice(item.price)}</span>
                                             </div>
                                             <div className="ml-auto text-[10px] text-gray-400 font-mono">ID: {item.product.id.substring(0, 8)}...</div>
                                         </div>
@@ -446,7 +448,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                         <div className="flex flex-col gap-2 max-w-xs ml-auto">
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-500 font-medium">{t("subtotal")}</span>
-                                <span className="font-bold text-gray-900">${(order.total / 100).toFixed(2)}</span>
+                                <span className="font-bold text-gray-900">{formatPrice(order.total)}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-500 font-medium">{t("shipping")}</span>
@@ -455,7 +457,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             <div className="my-2 border-t border-gray-200 border-dashed"></div>
                             <div className="flex justify-between items-center text-lg">
                                 <span className="font-black text-[#1A1A1A]">{t("total")}</span>
-                                <span className="font-black text-[#C8102E] text-2xl">${(order.total / 100).toFixed(2)}</span>
+                                <span className="font-black text-[#C8102E] text-2xl">{formatPrice(order.total)}</span>
                             </div>
                         </div>
                     </div>

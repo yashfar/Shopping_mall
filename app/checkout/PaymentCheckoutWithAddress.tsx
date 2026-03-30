@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AddressModal from "@@/components/AddressModal";
 import "./address-selection.css";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Address {
     id: string;
@@ -45,6 +46,7 @@ interface BankDetails {
 
 export default function PaymentCheckoutWithAddress({ orderId }: { orderId: string }) {
     const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -421,7 +423,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                     <tr key={item.id}>
                                         <td>{item.product.title}</td>
                                         <td>{item.quantity}</td>
-                                        <td>${((item.price * item.quantity) / 100).toFixed(2)}</td>
+                                        <td>{formatPrice(item.price * item.quantity)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -433,15 +435,15 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                         <>
                                             <tr>
                                                 <td colSpan={2}>{t("subtotal")}</td>
-                                                <td>${(subtotal / 100).toFixed(2)}</td>
+                                                <td>{formatPrice(subtotal)}</td>
                                             </tr>
                                             <tr>
                                                 <td colSpan={2}>{t("shipping")}</td>
-                                                <td>{shipping > 0 ? `$${(shipping / 100).toFixed(2)}` : t("free")}</td>
+                                                <td>{shipping > 0 ? formatPrice(shipping) : t("free")}</td>
                                             </tr>
                                             <tr>
                                                 <td colSpan={2}>{t("total")}</td>
-                                                <td className="total-amount">${(order.total / 100).toFixed(2)}</td>
+                                                <td className="total-amount">{formatPrice(order.total)}</td>
                                             </tr>
                                         </>
                                     );
@@ -463,7 +465,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                 {t("bankTransferDetails")}
                             </h3>
                             <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
-                                Please transfer <strong>${(order.total / 100).toFixed(2)}</strong> to the
+                                Please transfer <strong>{formatPrice(order.total)}</strong> to the
                                 following account, then upload your receipt below.
                             </p>
 

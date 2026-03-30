@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
@@ -35,6 +36,7 @@ type Product = {
 
 export default function ProductManagement() {
     const t = useTranslations("adminProducts");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -286,7 +288,7 @@ export default function ProductManagement() {
                                 <div className="flex flex-col">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("price")}</span>
                                     <span className="font-bold text-lg text-gray-900">
-                                        ${(product.price / 100).toFixed(2)}
+                                        {formatPrice(product.price)}
                                     </span>
                                 </div>
                                 <div className="flex flex-col items-end">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type OrderItem = {
     id: string;
@@ -30,6 +31,7 @@ type BankDetails = {
 
 export default function PaymentCheckout({ orderId }: { orderId: string }) {
     const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
@@ -195,7 +197,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                 <td style={{ padding: "12px" }}>{item.product.title}</td>
                                 <td style={{ padding: "12px", textAlign: "center" }}>{item.quantity}</td>
                                 <td style={{ padding: "12px", textAlign: "right" }}>
-                                    ${((item.price * item.quantity) / 100).toFixed(2)}
+                                    {formatPrice(item.price * item.quantity)}
                                 </td>
                             </tr>
                         ))}
@@ -214,7 +216,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                     color: "#0070f3",
                                 }}
                             >
-                                ${(order.total / 100).toFixed(2)}
+                                {formatPrice(order.total)}
                             </td>
                         </tr>
                     </tfoot>
@@ -236,7 +238,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         {t("bankTransferDetails")}
                     </h3>
                     <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
-                        Please transfer <strong>${(order.total / 100).toFixed(2)}</strong> to the
+                        Please transfer <strong>{formatPrice(order.total)}</strong> to the
                         following bank account, then upload your payment receipt below.
                     </p>
 

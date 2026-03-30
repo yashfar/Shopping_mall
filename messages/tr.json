@@ -1115,7 +1115,7 @@
     "noCouponsYet": "Henüz kupon yok",
     "noCouponsDesc": "Yukarıdan ilk indirim kodunu oluştur",
     "percentOff": "%{value} indirim",
-    "fixedOff": "${value} indirim",
+    "fixedOff": "{value} indirim",
     "failedToLoad": "Kuponlar yüklenemedi",
     "couponCreated": "\"{code}\" kuponu oluşturuldu",
     "failedToCreate": "Kupon oluşturulamadı",

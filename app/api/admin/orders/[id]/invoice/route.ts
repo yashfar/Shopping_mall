@@ -3,6 +3,10 @@ import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { jsPDF } from "jspdf";
 
+function formatPrice(kurus: number): string {
+    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(kurus / 100);
+}
+
 /**
  * GET /api/admin/orders/[id]/invoice
  * Generates and downloads invoice PDF (admin only)
@@ -162,8 +166,8 @@ export async function GET(
             const itemTotal = (item.price * item.quantity) / 100;
             doc.text(item.product.title.substring(0, 40), 20, yPos);
             doc.text(item.quantity.toString(), 120, yPos, { align: "center" });
-            doc.text(`$${(item.price / 100).toFixed(2)}`, 150, yPos, { align: "right" });
-            doc.text(`$${itemTotal.toFixed(2)}`, 180, yPos, { align: "right" });
+            doc.text(formatPrice(item.price), 150, yPos, { align: "right" });
+            doc.text(formatPrice(item.price * item.quantity), 180, yPos, { align: "right" });
             yPos += 6;
         });
 
@@ -172,23 +176,21 @@ export async function GET(
         yPos += 7;
 
         // Totals
-        const subtotal = order.total / 100;
         const shippingCost = 0; // You can calculate this based on your logic
-        const total = subtotal;
 
         doc.setFont("helvetica", "normal");
         doc.text("Subtotal:", 150, yPos, { align: "right" });
-        doc.text(`$${subtotal.toFixed(2)}`, 180, yPos, { align: "right" });
+        doc.text(formatPrice(order.total), 180, yPos, { align: "right" });
         yPos += 6;
 
         doc.text("Shipping:", 150, yPos, { align: "right" });
-        doc.text(`$${shippingCost.toFixed(2)}`, 180, yPos, { align: "right" });
+        doc.text(formatPrice(shippingCost), 180, yPos, { align: "right" });
         yPos += 6;
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Total:", 150, yPos, { align: "right" });
-        doc.text(`$${total.toFixed(2)}`, 180, yPos, { align: "right" });
+        doc.text(formatPrice(order.total), 180, yPos, { align: "right" });
 
         // Footer
         yPos = doc.internal.pageSize.getHeight() - 20;

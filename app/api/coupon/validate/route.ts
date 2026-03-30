@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
         if (coupon.minAmount !== null && subtotal < coupon.minAmount) {
             return NextResponse.json({
-                error: `Minimum order amount of $${(coupon.minAmount / 100).toFixed(2)} required for this coupon`,
+                error: `Minimum order amount of ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(coupon.minAmount / 100)} required for this coupon`,
             }, { status: 400 });
         }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type Order = {
     id: string;
@@ -24,6 +25,7 @@ type Order = {
 
 export default function OrdersList() {
     const t = useTranslations("orders");
+    const { formatPrice } = useCurrency();
 
     const STATUS_OPTIONS = [
         { value: "", label: t("all") },
@@ -264,7 +266,7 @@ export default function OrdersList() {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <span className="font-black text-gray-900 text-lg">
-                                        ${(order.total / 100).toFixed(2)}
+                                        {formatPrice(order.total)}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
@@ -300,7 +302,7 @@ export default function OrdersList() {
                                 </p>
                             </div>
                             <span className="font-black text-gray-900 text-xl">
-                                ${(order.total / 100).toFixed(2)}
+                                {formatPrice(order.total)}
                             </span>
                         </div>
 
