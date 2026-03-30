@@ -315,6 +315,124 @@ function getReturnResultTemplate(data: ReturnResultData): string {
 }
 
 // ---------------------------------------------------------------------------
+// Order Shipped / Tracking Email
+// ---------------------------------------------------------------------------
+
+export interface OrderShippedData {
+    orderNumber: string;
+    firstName?: string | null;
+    trackingNumber?: string | null;
+}
+
+export async function sendOrderShippedEmail(
+    email: string,
+    data: OrderShippedData
+) {
+    try {
+        const { data: result, error } = await resend.emails.send({
+            from: "My Store <onboarding@resend.dev>",
+            to: email,
+            subject: `Your Order #${data.orderNumber} Has Been Shipped! - My Store`,
+            html: getOrderShippedTemplate(data),
+        });
+
+        if (error) {
+            console.error("Error sending shipped email:", error);
+            return { success: false, error };
+        }
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Error sending shipped email:", error);
+        return { success: false, error };
+    }
+}
+
+function getOrderShippedTemplate(data: OrderShippedData): string {
+    const { orderNumber, firstName, trackingNumber } = data;
+    const greeting = firstName ? `Hello ${firstName},` : "Hello,";
+    const storeUrl = process.env.NEXT_PUBLIC_URL ?? "#";
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Shipped</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#0ea5e9 0%,#0369a1 100%);padding:40px;text-align:center;border-radius:8px 8px 0 0;">
+              <p style="margin:0 0 8px 0;color:rgba(255,255,255,0.85);font-size:14px;letter-spacing:1px;text-transform:uppercase;">My Store</p>
+              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Your Order Is On Its Way!</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 20px 0;color:#374151;font-size:16px;line-height:1.6;">${greeting}</p>
+              <p style="margin:0 0 24px 0;color:#374151;font-size:16px;line-height:1.6;">
+                Great news! Your order <strong>#${orderNumber}</strong> has been shipped and is on its way to you.
+              </p>
+
+              ${trackingNumber ? `
+              <!-- Tracking Number Card -->
+              <div style="margin:0 0 28px 0;padding:24px;background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;text-align:center;">
+                <p style="margin:0 0 4px 0;color:#0369a1;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Tracking Number</p>
+                <p style="margin:0;color:#0c4a6e;font-size:24px;font-weight:700;letter-spacing:2px;font-family:monospace;">${trackingNumber}</p>
+                <p style="margin:12px 0 0 0;color:#6b7280;font-size:13px;">Use this number to track your shipment on the carrier's website.</p>
+              </div>
+              ` : `
+              <div style="margin:0 0 28px 0;padding:20px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;text-align:center;">
+                <p style="margin:0;color:#6b7280;font-size:14px;">Tracking information will be available shortly.</p>
+              </div>
+              `}
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${storeUrl}/orders"
+                       style="display:inline-block;background:linear-gradient(135deg,#C8102E 0%,#8b0000 100%);color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:600;font-size:16px;box-shadow:0 4px 12px rgba(200,16,46,0.3);">
+                      View My Orders
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.6;">
+                If you have any questions about your delivery, feel free to contact our support team.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px;background-color:#f9fafb;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+                This email was sent by My Store<br />
+                &copy; ${new Date().getFullYear()} My Store. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// ---------------------------------------------------------------------------
 // Stock Alert Email
 // ---------------------------------------------------------------------------
 
@@ -416,6 +534,110 @@ function getStockAlertTemplate(data: StockAlertData): string {
             </td>
           </tr>
 
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// ---------------------------------------------------------------------------
+// Contact Form Email (sent to admin)
+// ---------------------------------------------------------------------------
+
+export interface ContactFormData {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+}
+
+export async function sendContactFormEmail(data: ContactFormData) {
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
+    try {
+        const { data: result, error } = await resend.emails.send({
+            from: "My Store <onboarding@resend.dev>",
+            to: adminEmail,
+            replyTo: data.email,
+            subject: `[Contact] ${data.subject}`,
+            html: getContactFormTemplate(data),
+        });
+
+        if (error) {
+            console.error("Error sending contact email:", error);
+            return { success: false, error };
+        }
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Error sending contact email:", error);
+        return { success: false, error };
+    }
+}
+
+function getContactFormTemplate(data: ContactFormData): string {
+    const { name, email, subject, message } = data;
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Contact Message</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#1A1A1A 0%,#333 100%);padding:30px 40px;border-radius:8px 8px 0 0;">
+              <p style="margin:0 0 4px 0;color:rgba(255,255,255,0.7);font-size:12px;letter-spacing:1px;text-transform:uppercase;">New Contact Message</p>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${subject}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="padding:12px 16px;background-color:#f9fafb;border-radius:8px 8px 0 0;border:1px solid #e5e7eb;border-bottom:none;">
+                    <p style="margin:0 0 2px 0;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">From</p>
+                    <p style="margin:0;color:#1a1a1a;font-size:15px;font-weight:600;">${name}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px;">
+                    <p style="margin:0 0 2px 0;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</p>
+                    <a href="mailto:${email}" style="color:#C8102E;font-size:15px;font-weight:600;text-decoration:none;">${email}</a>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="padding:20px;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">
+                <p style="margin:0 0 8px 0;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Message</p>
+                <p style="margin:0;color:#374151;font-size:15px;line-height:1.7;white-space:pre-wrap;">${message}</p>
+              </div>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="mailto:${email}?subject=Re: ${encodeURIComponent(subject)}"
+                       style="display:inline-block;background:linear-gradient(135deg,#C8102E 0%,#8b0000 100%);color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-weight:600;font-size:14px;">
+                      Reply to ${name}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px;background-color:#f9fafb;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;">This message was sent via the contact form on My Store</p>
+            </td>
+          </tr>
         </table>
       </td>
     </tr>

@@ -320,6 +320,20 @@ model VerificationToken {
 }
 
 // ============================================================================
+// Contact Messages
+// ============================================================================
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
 // Banner Management System
 // ============================================================================
 model Banner {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { sendOrderShippedEmail } from "@@/lib/mail";
 
 /**
  * PATCH /api/admin/orders/[id]/status
@@ -41,6 +42,30 @@ export async function PATCH(
             where: { id },
             data: updateData,
         });
+
+        // Send shipped notification email
+        if (status === "SHIPPED") {
+            (async () => {
+                try {
+                    const fullOrder = await prisma.order.findUnique({
+                        where: { id },
+                        include: {
+                            user: { select: { email: true, firstName: true } },
+                        },
+                    });
+
+                    if (fullOrder?.user) {
+                        await sendOrderShippedEmail(fullOrder.user.email, {
+                            orderNumber: fullOrder.orderNumber || id.substring(0, 8),
+                            firstName: fullOrder.user.firstName,
+                            trackingNumber: fullOrder.trackingNumber,
+                        });
+                    }
+                } catch (emailErr) {
+                    console.error("Failed to send shipped email:", emailErr);
+                }
+            })();
+        }
 
         return NextResponse.json({ order, message: "Order status updated successfully" });
     } catch (error) {

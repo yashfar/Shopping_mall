@@ -11,7 +11,8 @@
       "Bash(xargs cat:*)",
       "Bash(npx next:*)",
       "Bash(rm -rf .next)",
-      "Bash(rm -rf node_modules/.cache)"
+      "Bash(rm -rf node_modules/.cache)",
+      "Bash(ls \"c:/My-Store/online_shop/app/\\(main\\)/contact/\")"
     ]
   }
 }
