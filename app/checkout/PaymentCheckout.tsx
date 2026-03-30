@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type OrderItem = {
@@ -17,62 +17,120 @@ type Order = {
     total: number;
     status: string;
     items: OrderItem[];
+    paymentProofUrl?: string | null;
+};
+
+type BankDetails = {
+    bankName: string;
+    accountHolder: string;
+    iban: string;
+    bankTransferNote: string;
 };
 
 export default function PaymentCheckout({ orderId }: { orderId: string }) {
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
+    const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [paying, setPaying] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const fetchOrder = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                if (!response.ok) throw new Error("Failed to fetch order");
-                const data = await response.json();
-                setOrder(data.order);
+                const [orderRes, bankRes] = await Promise.all([
+                    fetch(`/api/orders/${orderId}`),
+                    fetch("/api/bank-details"),
+                ]);
 
-                // If order is not pending, redirect
-                if (data.order.status !== "PENDING") {
+                if (!orderRes.ok) throw new Error("Failed to fetch order");
+                const orderData = await orderRes.json();
+                setOrder(orderData.order);
+
+                // If order already has proof uploaded or is paid, redirect
+                if (orderData.order.status === "PAYMENT_UPLOADED") {
+                    router.push(`/checkout/success?orderId=${orderId}`);
+                    return;
+                }
+                if (!["PENDING", "PAYMENT_REJECTED"].includes(orderData.order.status)) {
                     router.push(`/orders/${orderId}`);
+                    return;
+                }
+
+                if (bankRes.ok) {
+                    const bankData = await bankRes.json();
+                    setBankDetails(bankData);
                 }
             } catch (error) {
-                console.error("Error fetching order:", error);
+                console.error("Error fetching data:", error);
                 router.push("/orders");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchOrder();
+        fetchData();
     }, [orderId, router]);
 
-    const handlePayment = async () => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUploadError("");
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+        if (!allowedTypes.includes(file.type)) {
+            setUploadError("Please upload an image (JPG, PNG, WebP) or PDF file.");
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setUploadError("File is too large. Maximum size is 5MB.");
+            return;
+        }
+
+        setSelectedFile(file);
+
+        if (file.type.startsWith("image/")) {
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        } else {
+            setPreviewUrl(null);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) return;
+
+        setUploading(true);
+        setUploadError("");
+
         try {
-            setPaying(true);
-            const response = await fetch("/api/checkout", {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const response = await fetch(`/api/orders/${orderId}/upload-payment`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId }),
+                body: formData,
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create checkout session");
+                throw new Error(data.error || "Failed to upload payment proof");
             }
 
-            const data = await response.json();
-
-            // Redirect to Stripe Checkout
-            if (data.url) {
-                window.location.href = data.url;
-            }
+            router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
-            console.error("Error creating checkout session:", error);
-            alert(error.message || "Failed to proceed to payment");
-            setPaying(false);
+            console.error("Upload error:", error);
+            setUploadError(error.message || "Failed to upload. Please try again.");
+            setUploading(false);
         }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
 
     if (loading) {
@@ -83,8 +141,28 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
         return null;
     }
 
+    const isRejected = order.status === "PAYMENT_REJECTED";
+
     return (
         <div>
+            {/* Rejection Notice */}
+            {isRejected && (
+                <div
+                    style={{
+                        backgroundColor: "#fef2f2",
+                        padding: "16px 20px",
+                        borderRadius: "8px",
+                        marginBottom: "24px",
+                        border: "1px solid #fecaca",
+                    }}
+                >
+                    <p style={{ margin: 0, fontSize: "14px", color: "#991b1b" }}>
+                        <strong>Payment Rejected:</strong> Your previous payment proof was not approved.
+                        Please upload a new receipt below.
+                    </p>
+                </div>
+            )}
+
             {/* Order Summary */}
             <div
                 style={{
@@ -142,27 +220,163 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                 </table>
             </div>
 
-            {/* Payment Info */}
+            {/* Bank Transfer Details */}
+            {bankDetails && (bankDetails.bankName || bankDetails.iban) && (
+                <div
+                    style={{
+                        backgroundColor: "#f0f9ff",
+                        padding: "24px",
+                        borderRadius: "8px",
+                        marginBottom: "24px",
+                        border: "1px solid #bae6fd",
+                    }}
+                >
+                    <h3 style={{ margin: "0 0 16px 0", color: "#0369a1" }}>
+                        Bank Transfer Details
+                    </h3>
+                    <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
+                        Please transfer <strong>${(order.total / 100).toFixed(2)}</strong> to the
+                        following bank account, then upload your payment receipt below.
+                    </p>
+
+                    <div style={{ display: "grid", gap: "12px" }}>
+                        {bankDetails.bankName && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Bank Name</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.bankName)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        )}
+
+                        {bankDetails.accountHolder && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Account Holder</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.accountHolder)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        )}
+
+                        {bankDetails.iban && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>IBAN</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.iban)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {bankDetails.bankTransferNote && (
+                        <p style={{ margin: "16px 0 0 0", fontSize: "13px", color: "#6b7280", fontStyle: "italic" }}>
+                            {bankDetails.bankTransferNote}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Upload Payment Proof */}
             <div
                 style={{
-                    backgroundColor: "#e3f2fd",
-                    padding: "20px",
+                    backgroundColor: "white",
                     borderRadius: "8px",
+                    padding: "24px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                     marginBottom: "24px",
-                    border: "1px solid #2196f3",
                 }}
             >
-                <p style={{ margin: 0, fontSize: "14px" }}>
-                    🔒 <strong>Secure Payment:</strong> You will be redirected to Stripe's secure payment page.
-                    We accept all major credit cards.
+                <h3 style={{ margin: "0 0 16px 0" }}>Upload Payment Proof</h3>
+                <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
+                    After completing your bank transfer, upload a screenshot or photo of your
+                    payment receipt. Accepted formats: JPG, PNG, WebP, PDF (max 5MB).
                 </p>
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={handleFileChange}
+                    style={{ display: "none" }}
+                />
+
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                        border: "2px dashed #ccc",
+                        borderRadius: "8px",
+                        padding: "32px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: selectedFile ? "#f0fdf4" : "#fafafa",
+                        transition: "all 0.2s",
+                    }}
+                >
+                    {previewUrl ? (
+                        <div>
+                            <img
+                                src={previewUrl}
+                                alt="Payment proof preview"
+                                style={{ maxWidth: "300px", maxHeight: "200px", borderRadius: "4px", marginBottom: "8px" }}
+                            />
+                            <p style={{ margin: 0, fontSize: "14px", color: "#16a34a", fontWeight: 600 }}>
+                                {selectedFile?.name}
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
+                                Click to change file
+                            </p>
+                        </div>
+                    ) : selectedFile ? (
+                        <div>
+                            <p style={{ margin: 0, fontSize: "14px", color: "#16a34a", fontWeight: 600 }}>
+                                {selectedFile.name}
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
+                                Click to change file
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <p style={{ margin: 0, fontSize: "16px", color: "#999" }}>
+                                Click to select your payment receipt
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#bbb" }}>
+                                JPG, PNG, WebP, or PDF (max 5MB)
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {uploadError && (
+                    <p style={{ margin: "12px 0 0 0", color: "#dc2626", fontSize: "14px" }}>
+                        {uploadError}
+                    </p>
+                )}
             </div>
 
             {/* Action Buttons */}
             <div style={{ display: "flex", gap: "12px" }}>
                 <button
                     onClick={() => router.push("/orders")}
-                    disabled={paying}
+                    disabled={uploading}
                     style={{
                         flex: 1,
                         padding: "14px",
@@ -170,30 +384,30 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         color: "#333",
                         border: "1px solid #ccc",
                         borderRadius: "6px",
-                        cursor: paying ? "not-allowed" : "pointer",
+                        cursor: uploading ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
-                        opacity: paying ? 0.5 : 1,
+                        opacity: uploading ? 0.5 : 1,
                     }}
                 >
                     Cancel
                 </button>
                 <button
-                    onClick={handlePayment}
-                    disabled={paying}
+                    onClick={handleUpload}
+                    disabled={uploading || !selectedFile}
                     style={{
                         flex: 2,
                         padding: "14px",
-                        backgroundColor: paying ? "#ccc" : "#10b981",
+                        backgroundColor: uploading || !selectedFile ? "#ccc" : "#10b981",
                         color: "white",
                         border: "none",
                         borderRadius: "6px",
-                        cursor: paying ? "not-allowed" : "pointer",
+                        cursor: uploading || !selectedFile ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
                     }}
                 >
-                    {paying ? "Redirecting to Payment..." : "Pay Now"}
+                    {uploading ? "Uploading..." : "Submit Payment Proof"}
                 </button>
             </div>
         </div>

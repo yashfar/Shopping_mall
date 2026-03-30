@@ -21,7 +21,7 @@ export interface OrderConfirmationData {
 }
 
 /**
- * Send order confirmation email after successful Stripe payment.
+ * Send order confirmation email after payment is approved.
  */
 export async function sendOrderConfirmationEmail(
     email: string,

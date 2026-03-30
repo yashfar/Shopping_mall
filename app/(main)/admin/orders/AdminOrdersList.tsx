@@ -23,7 +23,9 @@ type FilterOption = {
 
 const FILTER_OPTIONS: FilterOption[] = [
     { label: "All Orders", value: null, description: "Show all orders" },
-    { label: "Pending", value: "pending", description: "Payment not completed" },
+    { label: "Pending", value: "pending", description: "Awaiting payment proof" },
+    { label: "Payment Uploaded", value: "payment_uploaded", description: "Proof uploaded, needs review" },
+    { label: "Payment Rejected", value: "payment_rejected", description: "Proof rejected, awaiting re-upload" },
     { label: "Ready to Ship", value: "ready_to_ship", description: "Paid, awaiting shipment" },
     { label: "Shipped", value: "shipped", description: "Order shipped" },
     { label: "Delivered", value: "delivered", description: "Order delivered" },
@@ -153,6 +155,10 @@ export default function AdminOrdersList({ initialStatus }: Props) {
         switch (status) {
             case "PENDING":
                 return `${base} bg-amber-50 text-amber-600 border-amber-100`;
+            case "PAYMENT_UPLOADED":
+                return `${base} bg-blue-50 text-blue-600 border-blue-100`;
+            case "PAYMENT_REJECTED":
+                return `${base} bg-red-50 text-red-600 border-red-100`;
             case "PAID":
                 return `${base} bg-emerald-50 text-emerald-600 border-emerald-100`;
             case "SHIPPED":

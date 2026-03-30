@@ -28,7 +28,6 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
 
     useEffect(() => {
         const fetchOrder = async () => {
-            // Simulate loading for smoother UX
             await new Promise(resolve => setTimeout(resolve, 500));
             try {
                 const response = await fetch(`/api/orders/${orderId}`);
@@ -66,7 +65,7 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                     </svg>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h3>
-                <p className="text-gray-500 max-w-sm mb-8">We couldn't find the order you're looking for. It might have been processed or the ID is incorrect.</p>
+                <p className="text-gray-500 max-w-sm mb-8">We couldn't find the order you're looking for.</p>
                 <Link href="/orders">
                     <Button variant="outline" className="border-gray-200 text-gray-900 hover:bg-gray-50">
                         View All Orders
@@ -76,23 +75,59 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
         );
     }
 
+    const isPendingReview = order.status === "PAYMENT_UPLOADED";
+    const isPaid = order.status === "PAID";
+
     return (
         <div className="space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-10">
             {/* Success Message */}
             <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-2 animate-bounce">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-12 h-12 text-emerald-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-2 ${isPaid ? "bg-emerald-50 animate-bounce" : "bg-amber-50"}`}>
+                    {isPaid ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-12 h-12 text-emerald-500">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-12 h-12 text-amber-500">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    )}
                 </div>
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Payment Successful!</h1>
-                    <p className="text-gray-500 mt-2 text-lg">Thank you for your purchase. Your order has been confirmed.</p>
+                    {isPaid ? (
+                        <>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Payment Approved!</h1>
+                            <p className="text-gray-500 mt-2 text-lg">Your payment has been verified. Your order is being prepared.</p>
+                        </>
+                    ) : isPendingReview ? (
+                        <>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Payment Proof Submitted!</h1>
+                            <p className="text-gray-500 mt-2 text-lg">
+                                Thank you! Your payment proof has been received and is being reviewed.
+                                We'll notify you once it's approved.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Order Placed!</h1>
+                            <p className="text-gray-500 mt-2 text-lg">Your order has been created successfully.</p>
+                        </>
+                    )}
                 </div>
                 <p className="text-sm font-bold bg-gray-50 px-4 py-2 rounded-full text-gray-600 border border-gray-100">
                     Order #{order.orderNumber || order.id.substring(0, 8)}
                 </p>
             </div>
+
+            {/* Pending Review Notice */}
+            {isPendingReview && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+                    <p className="text-amber-800 font-medium text-sm">
+                        Your payment proof is under review. This usually takes a few hours during
+                        business hours. You will receive an email confirmation once your payment is approved.
+                    </p>
+                </div>
+            )}
 
             {/* Order Details Card */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden">
@@ -108,8 +143,14 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                         </div>
                         <div className="text-left md:text-right">
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                {order.status}
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
+                                isPaid
+                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                    : isPendingReview
+                                    ? "bg-amber-100 text-amber-700 border-amber-200"
+                                    : "bg-gray-100 text-gray-700 border-gray-200"
+                            }`}>
+                                {isPaid ? "PAID" : isPendingReview ? "UNDER REVIEW" : order.status}
                             </span>
                         </div>
                     </div>
@@ -148,7 +189,7 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                             <span className="font-bold text-green-600">Free</span>
                         </div>
                         <div className="pt-4 border-t border-gray-200 border-dashed flex justify-between items-center">
-                            <span className="font-black text-gray-900 text-lg">Total Paid</span>
+                            <span className="font-black text-gray-900 text-lg">Total</span>
                             <span className="font-black text-[#C8102E] text-2xl">${(order.total / 100).toFixed(2)}</span>
                         </div>
                     </div>

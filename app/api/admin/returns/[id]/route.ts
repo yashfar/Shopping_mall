@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
-import Stripe from "stripe";
 import { sendReturnResultEmail } from "@@/lib/mail";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-12-15.clover",
-});
 
 export async function PATCH(
     req: Request,
@@ -49,37 +44,13 @@ export async function PATCH(
         }
 
         if (action === "approve") {
-            // Try to find Stripe checkout session and refund
-            let refunded = false;
-            try {
-                const sessions = await stripe.checkout.sessions.list({
-                    limit: 1,
-                } as any);
-
-                // Search for session with this order's ID
-                const allSessions = await stripe.checkout.sessions.list({ limit: 100 });
-                const matchingSession = allSessions.data.find(
-                    (s) => s.client_reference_id === returnRequest.orderId
-                );
-
-                if (matchingSession?.payment_intent) {
-                    await stripe.refunds.create({
-                        payment_intent: matchingSession.payment_intent as string,
-                    });
-                    refunded = true;
-                }
-            } catch (stripeErr) {
-                console.error("Stripe refund failed:", stripeErr);
-                // Continue even if refund fails — admin can refund manually
-            }
-
             await prisma.$transaction(async (tx) => {
                 // Update return request status
                 await tx.returnRequest.update({
                     where: { id },
                     data: {
                         status: "APPROVED",
-                        adminNote: adminNote?.trim() || (refunded ? "Approved — Stripe refund issued" : "Approved — manual refund required"),
+                        adminNote: adminNote?.trim() || "Approved — manual refund required",
                     },
                 });
 
@@ -116,7 +87,6 @@ export async function PATCH(
 
             return NextResponse.json({
                 message: "Return approved",
-                refunded,
             });
         } else {
             // Reject — restore order to its previous status

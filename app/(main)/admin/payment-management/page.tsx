@@ -9,6 +9,10 @@ type Config = {
     taxPercent: number;
     shippingFee: number;
     freeShippingThreshold: number;
+    bankName: string;
+    accountHolder: string;
+    iban: string;
+    bankTransferNote: string;
 };
 
 export default function PaymentManagementPage() {
@@ -21,6 +25,10 @@ export default function PaymentManagementPage() {
         taxPercent: "",
         shippingFee: "",
         freeShippingThreshold: "",
+        bankName: "",
+        accountHolder: "",
+        iban: "",
+        bankTransferNote: "",
     });
 
     useEffect(() => {
@@ -46,6 +54,10 @@ export default function PaymentManagementPage() {
                 taxPercent: config.taxPercent.toString(),
                 shippingFee: (config.shippingFee / 100).toFixed(2),
                 freeShippingThreshold: (config.freeShippingThreshold / 100).toFixed(2),
+                bankName: config.bankName || "",
+                accountHolder: config.accountHolder || "",
+                iban: config.iban || "",
+                bankTransferNote: config.bankTransferNote || "",
             });
         } catch (error) {
             console.error(error);
@@ -69,6 +81,10 @@ export default function PaymentManagementPage() {
                 taxPercent,
                 shippingFee: Math.round(shippingFeeDollars * 100),
                 freeShippingThreshold: Math.round(thresholdDollars * 100),
+                bankName: formData.bankName.trim(),
+                accountHolder: formData.accountHolder.trim(),
+                iban: formData.iban.trim(),
+                bankTransferNote: formData.bankTransferNote.trim(),
             };
 
             const res = await fetch("/api/admin/payment-config", {
@@ -86,6 +102,10 @@ export default function PaymentManagementPage() {
                 taxPercent: config.taxPercent.toString(),
                 shippingFee: (config.shippingFee / 100).toFixed(2),
                 freeShippingThreshold: (config.freeShippingThreshold / 100).toFixed(2),
+                bankName: config.bankName || "",
+                accountHolder: config.accountHolder || "",
+                iban: config.iban || "",
+                bankTransferNote: config.bankTransferNote || "",
             });
 
             toast.success("Payment configuration saved!");
@@ -108,7 +128,7 @@ export default function PaymentManagementPage() {
     return (
         <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
             <h1 className="text-3xl font-black text-[#1A1A1A] tracking-tight">Payment Management</h1>
-            <p className="text-[#A9A9A9] text-lg">Configure global tax rates, shipping fees, and free shipping thresholds.</p>
+            <p className="text-[#A9A9A9] text-lg">Configure tax rates, shipping fees, and bank transfer details for manual payments.</p>
 
             <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden p-8">
                 <form onSubmit={handleSave} className="space-y-6">
@@ -181,6 +201,59 @@ export default function PaymentManagementPage() {
                             />
                         </div>
                         <p className="text-xs text-gray-400">Cart subtotal required to qualify for free shipping.</p>
+                    </div>
+
+                    {/* Bank Transfer Details Section */}
+                    <div className="pt-6 border-t border-gray-200">
+                        <h2 className="text-lg font-black text-[#1A1A1A] tracking-tight mb-1">Bank Transfer Details</h2>
+                        <p className="text-sm text-gray-400 mb-6">These details are shown to customers at checkout for manual bank transfers.</p>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">Bank Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankName}
+                                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                    placeholder="e.g. Ziraat Bankasi"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">Account Holder</label>
+                                <input
+                                    type="text"
+                                    value={formData.accountHolder}
+                                    onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                    placeholder="e.g. John Doe"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">IBAN</label>
+                                <input
+                                    type="text"
+                                    value={formData.iban}
+                                    onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors tracking-wider"
+                                    placeholder="e.g. TR00 0000 0000 0000 0000 0000 00"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">Additional Note</label>
+                                <textarea
+                                    value={formData.bankTransferNote}
+                                    onChange={(e) => setFormData({ ...formData, bankTransferNote: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors resize-none"
+                                    rows={3}
+                                    placeholder="e.g. Please include your order number in the transfer description"
+                                />
+                                <p className="text-xs text-gray-400">Optional note shown to customers alongside bank details.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-6 border-t border-gray-100 flex justify-end">

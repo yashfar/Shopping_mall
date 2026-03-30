@@ -4,6 +4,10 @@ export type PaymentConfigData = {
     taxPercent: number;
     shippingFee: number;
     freeShippingThreshold: number;
+    bankName?: string;
+    accountHolder?: string;
+    iban?: string;
+    bankTransferNote?: string;
 };
 
 export type CartTotals = {

@@ -61,10 +61,13 @@ type Order = {
     items?: OrderItem[];
     returnRequest?: ReturnRequest | null;
     trackingNumber?: string | null;
+    paymentProofUrl?: string | null;
 };
 
 const STATUS_MAP: Record<string, string> = {
     pending: "PENDING",
+    payment_uploaded: "PAYMENT_UPLOADED",
+    payment_rejected: "PAYMENT_REJECTED",
     ready_to_ship: "PAID",
     shipped: "SHIPPED",
     delivered: "COMPLETED",
@@ -73,6 +76,8 @@ const STATUS_MAP: Record<string, string> = {
 
 const REVERSE_STATUS_MAP: Record<string, string> = {
     PENDING: "pending",
+    PAYMENT_UPLOADED: "payment_uploaded",
+    PAYMENT_REJECTED: "payment_rejected",
     PAID: "ready_to_ship",
     SHIPPED: "shipped",
     COMPLETED: "delivered",
@@ -90,6 +95,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [processingReturn, setProcessingReturn] = useState(false);
     const [returnAdminNote, setReturnAdminNote] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
 
     useEffect(() => {
         fetchOrder();
@@ -134,6 +140,32 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             toast.error(err.message || "Failed to update status");
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleVerifyPayment = async (action: "approve" | "reject") => {
+        setVerifyingPayment(true);
+        try {
+            const response = await fetch(`/api/admin/orders/${orderId}/verify-payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || `Failed to ${action} payment`);
+            }
+
+            toast.success(action === "approve"
+                ? "Payment approved! Order marked as PAID."
+                : "Payment rejected. Customer can re-upload."
+            );
+            await fetchOrder();
+        } catch (err: any) {
+            toast.error(err.message || `Failed to ${action} payment`);
+        } finally {
+            setVerifyingPayment(false);
         }
     };
 
@@ -201,7 +233,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                 return;
             }
             toast.success(action === "approve"
-                ? `Return approved${data.refunded ? " — Stripe refund issued" : ""}`
+                ? "Return approved"
                 : "Return rejected"
             );
             await fetchOrder();
@@ -225,6 +257,10 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
         switch (status) {
             case "PENDING":
                 return `${base} bg-amber-50 text-amber-600 border-amber-100`;
+            case "PAYMENT_UPLOADED":
+                return `${base} bg-blue-50 text-blue-600 border-blue-100`;
+            case "PAYMENT_REJECTED":
+                return `${base} bg-red-50 text-red-600 border-red-100`;
             case "PAID":
                 return `${base} bg-emerald-50 text-emerald-600 border-emerald-100`;
             case "SHIPPED":
@@ -279,6 +315,83 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20 animate-in fade-in duration-500 delay-150">
             {/* Left Column - Main Content (2/3 width) */}
             <div className="lg:col-span-2 space-y-8">
+                {/* Payment Proof Review Card - shown when proof is uploaded */}
+                {order.status === "PAYMENT_UPLOADED" && order.paymentProofUrl && (
+                    <div className="bg-white rounded-3xl border-2 border-blue-200 shadow-xl shadow-blue-100/50 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-blue-100 bg-blue-50/50 flex justify-between items-center">
+                            <h2 className="text-lg font-black text-blue-700 tracking-tight flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                                </svg>
+                                Payment Proof - Awaiting Review
+                            </h2>
+                        </div>
+                        <div className="p-6">
+                            <div className="mb-4 bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center justify-center min-h-[200px]">
+                                {order.paymentProofUrl.endsWith(".pdf") ? (
+                                    <a
+                                        href={order.paymentProofUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-2"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                        </svg>
+                                        View PDF Receipt
+                                    </a>
+                                ) : (
+                                    <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer">
+                                        <img
+                                            src={order.paymentProofUrl}
+                                            alt="Payment proof"
+                                            className="max-w-full max-h-[400px] rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                        />
+                                    </a>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={() => handleVerifyPayment("approve")}
+                                    disabled={verifyingPayment}
+                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl py-6"
+                                >
+                                    {verifyingPayment ? "Processing..." : "Approve Payment"}
+                                </Button>
+                                <Button
+                                    onClick={() => handleVerifyPayment("reject")}
+                                    disabled={verifyingPayment}
+                                    variant="outline"
+                                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl py-6"
+                                >
+                                    Reject
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Payment proof thumbnail for other statuses */}
+                {order.paymentProofUrl && order.status !== "PAYMENT_UPLOADED" && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30">
+                            <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Payment Proof</h2>
+                        </div>
+                        <div className="p-4 flex items-center justify-center">
+                            {order.paymentProofUrl.endsWith(".pdf") ? (
+                                <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                                    View PDF Receipt
+                                </a>
+                            ) : (
+                                <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer">
+                                    <img src={order.paymentProofUrl} alt="Payment proof" className="max-w-[200px] max-h-[150px] rounded-lg object-contain" />
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Order Summary Card */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/30 flex justify-between items-center">
@@ -295,14 +408,9 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                         {(order.items || []).map((item) => (
                             <div key={item.id} className="p-6 transition-colors hover:bg-gray-50/50">
                                 <div className="flex flex-col sm:flex-row gap-6">
-                                    {/* Product Image */}
                                     <div className="w-full sm:w-24 h-24 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
                                         {item.product.thumbnail ? (
-                                            <img
-                                                src={item.product.thumbnail}
-                                                alt={item.product.title}
-                                                className="w-full h-full object-cover"
-                                            />
+                                            <img src={item.product.thumbnail} alt={item.product.title} className="w-full h-full object-cover" />
                                         ) : (
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-gray-400">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -310,14 +418,11 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                         )}
                                     </div>
 
-                                    {/* Details */}
                                     <div className="flex-1 flex flex-col justify-between">
                                         <div>
                                             <div className="flex justify-between items-start mb-2">
                                                 <h3 className="font-bold text-[#1A1A1A] text-base sm:text-lg">{item.product.title}</h3>
-                                                <p className="font-black text-[#1A1A1A] text-lg sm:text-xl">
-                                                    ${((item.price * item.quantity) / 100).toFixed(2)}
-                                                </p>
+                                                <p className="font-black text-[#1A1A1A] text-lg sm:text-xl">${((item.price * item.quantity) / 100).toFixed(2)}</p>
                                             </div>
                                             {item.product.description && (
                                                 <p className="text-sm text-gray-500 line-clamp-2 max-w-xl">{item.product.description}</p>
@@ -333,9 +438,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                                 <span className="text-[10px] uppercase font-black text-[#A9A9A9] tracking-widest">Unit Price</span>
                                                 <span className="font-medium text-gray-600">${(item.price / 100).toFixed(2)}</span>
                                             </div>
-                                            <div className="ml-auto text-[10px] text-gray-400 font-mono">
-                                                ID: {item.product.id.substring(0, 8)}...
-                                            </div>
+                                            <div className="ml-auto text-[10px] text-gray-400 font-mono">ID: {item.product.id.substring(0, 8)}...</div>
                                         </div>
                                     </div>
                                 </div>
@@ -403,7 +506,9 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             </SelectTrigger>
                             <SelectContent className="bg-white">
                                 <SelectItem value="pending">Pending Payment</SelectItem>
-                                <SelectItem value="ready_to_ship">Ready to Ship</SelectItem>
+                                <SelectItem value="payment_uploaded">Payment Uploaded</SelectItem>
+                                <SelectItem value="payment_rejected">Payment Rejected</SelectItem>
+                                <SelectItem value="ready_to_ship">Ready to Ship (Paid)</SelectItem>
                                 <SelectItem value="shipped">Shipped</SelectItem>
                                 <SelectItem value="delivered">Delivered</SelectItem>
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -545,17 +650,13 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                 <div className="flex gap-3">
                                     <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5 flex-shrink-0"></div>
                                     <div>
-                                        <p className="text-sm text-gray-600 leading-relaxed">
-                                            {address.fullAddress}
-                                        </p>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{address.fullAddress}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-3">
                                     <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5 flex-shrink-0"></div>
                                     <div>
-                                        <p className="text-sm text-gray-600">
-                                            {address.city}, {address.district}
-                                        </p>
+                                        <p className="text-sm text-gray-600">{address.city}, {address.district}</p>
                                         <p className="text-xs text-gray-400 mt-1">{address.neighborhood}</p>
                                     </div>
                                 </div>

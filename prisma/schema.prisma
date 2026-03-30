@@ -131,20 +131,22 @@ model CartItem {
 }
 
 model Order {
-  id             String       @id @default(cuid())
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items          OrderItem[]
-  total          Int
-  status         OrderStatus  @default(PENDING)
-  createdAt      DateTime     @default(now())
-  orderNumber    String?      @unique
-  couponId       String?
-  coupon         Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  discountAmount Int?
-  trackingNumber String?
-  couponUsage    CouponUsage?
-  returnRequest  ReturnRequest?
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items            OrderItem[]
+  total            Int
+  status           OrderStatus  @default(PENDING)
+  createdAt        DateTime     @default(now())
+  orderNumber      String?      @unique
+  couponId         String?
+  coupon           Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  discountAmount   Int?
+  trackingNumber   String?
+  paymentProofUrl  String?      // URL of uploaded payment receipt
+  paymentProofPath String?      // Storage path for deletion
+  couponUsage      CouponUsage?
+  returnRequest    ReturnRequest?
 
   @@index([userId])
 }
@@ -163,6 +165,8 @@ model OrderItem {
 
 enum OrderStatus {
   PENDING
+  PAYMENT_UPLOADED
+  PAYMENT_REJECTED
   PAID
   SHIPPED
   COMPLETED
@@ -390,5 +394,10 @@ model PaymentConfig {
   taxPercent            Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
   shippingFee           Int      @default(0)    // in cents
   freeShippingThreshold Int      @default(0)    // in cents
+  // Bank transfer details shown to customers
+  bankName              String   @default("")
+  accountHolder         String   @default("")
+  iban                  String   @default("")
+  bankTransferNote      String   @default("")   // optional extra instructions
   updatedAt             DateTime @updatedAt
 }

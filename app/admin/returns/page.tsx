@@ -78,7 +78,7 @@ export default function ReturnsPage() {
                 return;
             }
             toast.success(action === "approve"
-                ? `Return approved${data.refunded ? " — Stripe refund issued" : " — manual refund may be needed"}`
+                ? "Return approved — manual refund may be needed"
                 : "Return rejected"
             );
             await fetchReturns();
