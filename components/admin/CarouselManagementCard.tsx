@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Loader2, Plus, Trash2, GripVertical } from "lucide-react";
+import { useTranslations } from "next-intl";
 import ProductSelectModal from "./ProductSelectModal";
 
 interface CarouselItem {
@@ -46,9 +47,11 @@ interface CarouselManagementCardProps {
 function SortableItem({
     item,
     onDelete,
+    t,
 }: {
     item: CarouselItem;
     onDelete: (id: string) => void;
+    t: (key: string) => string;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({ id: item.id });
@@ -85,7 +88,7 @@ function SortableItem({
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 uppercase font-bold">
-                        No Img
+                        {t("noImg")}
                     </div>
                 )}
             </div>
@@ -104,7 +107,7 @@ function SortableItem({
                             : "bg-red-100 text-red-700"
                             }`}
                     >
-                        {item.product.stock > 0 ? "In Stock" : "Out of Stock"}
+                        {item.product.stock > 0 ? t("inStock") : t("outOfStock")}
                     </span>
                 </div>
             </div>
@@ -112,7 +115,7 @@ function SortableItem({
             <button
                 onClick={() => onDelete(item.id)}
                 className="p-2 text-gray-400 hover:text-[#C8102E] hover:bg-[#C8102E]/10 rounded-lg transition-colors flex-shrink-0"
-                title="Remove from carousel"
+                title={t("itemRemoved")}
             >
                 <Trash2 className="w-4 h-4" />
             </button>
@@ -125,6 +128,7 @@ export default function CarouselManagementCard({
     description,
     type,
 }: CarouselManagementCardProps) {
+    const t = useTranslations("adminCarousel");
     const [items, setItems] = useState<CarouselItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -147,7 +151,7 @@ export default function CarouselManagementCard({
             }
         } catch (error) {
             console.error(error);
-            toast.error(`Failed to load ${title}`);
+            toast.error(t("failedToLoadCarousel"));
         } finally {
             setLoading(false);
         }
@@ -166,7 +170,6 @@ export default function CarouselManagementCard({
                 const newIndex = items.findIndex((item) => item.id === over.id);
                 const newItems = arrayMove(items, oldIndex, newIndex);
 
-                // Save new order
                 saveOrder(newItems);
 
                 return newItems;
@@ -183,9 +186,6 @@ export default function CarouselManagementCard({
                 })),
             };
 
-            // Optimistic update done in handleDragEnd, no loading state needed usually
-            // but we can show saving indicator if wanted.
-
             const res = await fetch(`/api/carousels/${type}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -196,15 +196,14 @@ export default function CarouselManagementCard({
 
         } catch (error) {
             console.error(error);
-            toast.error("Failed to save new order");
-            // Revert? For now keeping simple.
+            toast.error(t("failedToSaveOrder"));
         }
     };
 
     const handleDelete = async (itemId: string) => {
-        if (!confirm("Are you sure you want to remove this product from the carousel?")) return;
+        if (!confirm(t("removeConfirm"))) return;
 
-        setItems(items.filter((i) => i.id !== itemId)); // Optimistic
+        setItems(items.filter((i) => i.id !== itemId));
 
         try {
             const res = await fetch(`/api/carousels/${type}?itemId=${itemId}`, {
@@ -212,11 +211,11 @@ export default function CarouselManagementCard({
             });
 
             if (!res.ok) throw new Error("Failed to remove item");
-            toast.success("Item removed");
+            toast.success(t("itemRemoved"));
         } catch (error) {
             console.error(error);
-            toast.error("Failed to remove item");
-            fetchCarousel(); // Revert on failure
+            toast.error(t("failedToRemoveItem"));
+            fetchCarousel();
         }
     };
 
@@ -226,8 +225,6 @@ export default function CarouselManagementCard({
         let errors = 0;
 
         try {
-            // Process sequentially to maintain order of selection or just Promise.all
-            // Validation happens on server too.
             const results = await Promise.all(
                 productIds.map((productId) =>
                     fetch(`/api/carousels/${type}`, {
@@ -238,22 +235,21 @@ export default function CarouselManagementCard({
                 )
             );
 
-            // Check results
             for (const res of results) {
                 if (res.ok) addedCount++;
                 else errors++;
             }
 
             if (addedCount > 0) {
-                toast.success(`Added ${addedCount} products`);
+                toast.success(t("addedCount", { count: addedCount }));
                 fetchCarousel();
             }
             if (errors > 0) {
-                toast.warning(`${errors} products failed to add (maybe duplicates or limit reached)`);
+                toast.warning(t("addedWithErrors", { errors }));
             }
         } catch (error) {
             console.error(error);
-            toast.error("Failed to add products");
+            toast.error(t("failedToAdd"));
         } finally {
             setIsSaving(false);
         }
@@ -280,13 +276,13 @@ export default function CarouselManagementCard({
                     </div>
                 ) : items.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
-                        <p className="text-gray-400 font-medium mb-4">No items yet</p>
+                        <p className="text-gray-400 font-medium mb-4">{t("noItemsYet")}</p>
                         <button
                             onClick={() => setModalOpen(true)}
                             className="inline-flex items-center gap-2 text-[#C8102E] font-bold hover:underline"
                         >
                             <Plus className="w-4 h-4" />
-                            Add Products
+                            {t("addProducts")}
                         </button>
                     </div>
                 ) : (
@@ -304,6 +300,7 @@ export default function CarouselManagementCard({
                                     key={item.id}
                                     item={item}
                                     onDelete={handleDelete}
+                                    t={t}
                                 />
                             ))}
                         </SortableContext>
@@ -322,7 +319,7 @@ export default function CarouselManagementCard({
                     ) : (
                         <>
                             <Plus className="w-5 h-5" />
-                            Add Products
+                            {t("addProducts")}
                         </>
                     )}
                 </button>

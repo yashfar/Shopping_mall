@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type OrderItem = {
     id: string;
@@ -28,6 +29,7 @@ type BankDetails = {
 };
 
 export default function PaymentCheckout({ orderId }: { orderId: string }) {
+    const t = useTranslations("paymentCheckout");
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
@@ -82,12 +84,12 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
 
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
         if (!allowedTypes.includes(file.type)) {
-            setUploadError("Please upload an image (JPG, PNG, WebP) or PDF file.");
+            setUploadError(t("invalidFileType"));
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setUploadError("File is too large. Maximum size is 5MB.");
+            setUploadError(t("fileTooLarge"));
             return;
         }
 
@@ -118,13 +120,13 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to upload payment proof");
+                throw new Error(data.error || t("failedToUpload"));
             }
 
             router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
             console.error("Upload error:", error);
-            setUploadError(error.message || "Failed to upload. Please try again.");
+            setUploadError(error.message || t("failedToUploadRetry"));
             setUploading(false);
         }
     };
@@ -134,7 +136,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
     };
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return <div style={{ textAlign: "center", padding: "40px" }}>{t("loadingOrder")}</div>;
     }
 
     if (!order) {
@@ -157,8 +159,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     }}
                 >
                     <p style={{ margin: 0, fontSize: "14px", color: "#991b1b" }}>
-                        <strong>Payment Rejected:</strong> Your previous payment proof was not approved.
-                        Please upload a new receipt below.
+                        <strong>{t("paymentRejected")}</strong> {t("paymentRejectedDesc")}
                     </p>
                 </div>
             )}
@@ -173,19 +174,19 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     marginBottom: "24px",
                 }}
             >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Summary</h2>
+                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>{t("orderSummary")}</h2>
 
                 <div style={{ marginBottom: "20px" }}>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order ID</div>
+                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>{t("orderId")}</div>
                     <div style={{ fontFamily: "monospace", fontSize: "14px" }}>{order.id}</div>
                 </div>
 
                 <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "20px" }}>
                     <thead>
                         <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
-                            <th style={{ padding: "12px", textAlign: "left" }}>Product</th>
-                            <th style={{ padding: "12px", textAlign: "center" }}>Qty</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Price</th>
+                            <th style={{ padding: "12px", textAlign: "left" }}>{t("product")}</th>
+                            <th style={{ padding: "12px", textAlign: "center" }}>{t("qty")}</th>
+                            <th style={{ padding: "12px", textAlign: "right" }}>{t("price")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -202,7 +203,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     <tfoot>
                         <tr style={{ borderTop: "2px solid #ddd" }}>
                             <td colSpan={2} style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
-                                Total:
+                                {t("total")}
                             </td>
                             <td
                                 style={{
@@ -232,7 +233,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     }}
                 >
                     <h3 style={{ margin: "0 0 16px 0", color: "#0369a1" }}>
-                        Bank Transfer Details
+                        {t("bankTransferDetails")}
                     </h3>
                     <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
                         Please transfer <strong>${(order.total / 100).toFixed(2)}</strong> to the
@@ -243,14 +244,14 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         {bankDetails.bankName && (
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                 <div>
-                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Bank Name</div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("bankName")}</div>
                                     <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
                                 </div>
                                 <button
                                     onClick={() => copyToClipboard(bankDetails.bankName)}
                                     style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
                                 >
-                                    Copy
+                                    {t("copy")}
                                 </button>
                             </div>
                         )}
@@ -258,14 +259,14 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         {bankDetails.accountHolder && (
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                 <div>
-                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Account Holder</div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("accountHolder")}</div>
                                     <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
                                 </div>
                                 <button
                                     onClick={() => copyToClipboard(bankDetails.accountHolder)}
                                     style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
                                 >
-                                    Copy
+                                    {t("copy")}
                                 </button>
                             </div>
                         )}
@@ -273,14 +274,14 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         {bankDetails.iban && (
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                 <div>
-                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>IBAN</div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("iban")}</div>
                                     <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
                                 </div>
                                 <button
                                     onClick={() => copyToClipboard(bankDetails.iban)}
                                     style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
                                 >
-                                    Copy
+                                    {t("copy")}
                                 </button>
                             </div>
                         )}
@@ -304,10 +305,9 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     marginBottom: "24px",
                 }}
             >
-                <h3 style={{ margin: "0 0 16px 0" }}>Upload Payment Proof</h3>
+                <h3 style={{ margin: "0 0 16px 0" }}>{t("uploadPaymentProof")}</h3>
                 <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
-                    After completing your bank transfer, upload a screenshot or photo of your
-                    payment receipt. Accepted formats: JPG, PNG, WebP, PDF (max 5MB).
+                    {t("uploadInstructionLong")}
                 </p>
 
                 <input
@@ -341,7 +341,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                 {selectedFile?.name}
                             </p>
                             <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
-                                Click to change file
+                                {t("clickToChangeFile")}
                             </p>
                         </div>
                     ) : selectedFile ? (
@@ -350,16 +350,16 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                 {selectedFile.name}
                             </p>
                             <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
-                                Click to change file
+                                {t("clickToChangeFile")}
                             </p>
                         </div>
                     ) : (
                         <div>
                             <p style={{ margin: 0, fontSize: "16px", color: "#999" }}>
-                                Click to select your payment receipt
+                                {t("clickToSelect")}
                             </p>
                             <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#bbb" }}>
-                                JPG, PNG, WebP, or PDF (max 5MB)
+                                {t("acceptedFormats")}
                             </p>
                         </div>
                     )}
@@ -390,7 +390,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         opacity: uploading ? 0.5 : 1,
                     }}
                 >
-                    Cancel
+                    {t("cancel")}
                 </button>
                 <button
                     onClick={handleUpload}
@@ -407,7 +407,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         fontSize: "16px",
                     }}
                 >
-                    {uploading ? "Uploading..." : "Submit Payment Proof"}
+                    {uploading ? t("uploading") : t("submitPaymentProof")}
                 </button>
             </div>
         </div>

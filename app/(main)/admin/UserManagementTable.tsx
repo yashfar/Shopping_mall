@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 
 type User = {
     id: string;
@@ -10,6 +11,8 @@ type User = {
 };
 
 export default function UserManagementTable() {
+    const t = useTranslations("admin");
+    const locale = useLocale();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -29,7 +32,7 @@ export default function UserManagementTable() {
             const data = await response.json();
             setUsers(data.users);
         } catch (err) {
-            setError("Failed to load users");
+            setError(t("failedToLoadUsers"));
             console.error(err);
         } finally {
             setLoading(false);
@@ -38,7 +41,7 @@ export default function UserManagementTable() {
 
     // Delete user
     const handleDelete = async (id: string, email: string) => {
-        if (!confirm(`Are you sure you want to delete user: ${email}?`)) {
+        if (!confirm(t("confirmDeleteUser", { email }))) {
             return;
         }
 
@@ -50,13 +53,13 @@ export default function UserManagementTable() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to delete user");
+                throw new Error(data.error || t("failedToDeleteUser"));
             }
 
             // Refresh users list
             await fetchUsers();
         } catch (err: any) {
-            alert(err.message || "Failed to delete user");
+            alert(err.message || t("failedToDeleteUser"));
         } finally {
             setUpdatingId(null);
         }
@@ -76,13 +79,13 @@ export default function UserManagementTable() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to update role");
+                throw new Error(data.error || t("failedToUpdateRole"));
             }
 
             // Refresh users list
             await fetchUsers();
         } catch (err: any) {
-            alert(err.message || "Failed to update role");
+            alert(err.message || t("failedToUpdateRole"));
         } finally {
             setUpdatingId(null);
         }
@@ -96,7 +99,7 @@ export default function UserManagementTable() {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
-                <p className="text-[#A9A9A9] font-semibold tracking-tight">Accessing user directory...</p>
+                <p className="text-[#A9A9A9] font-semibold tracking-tight">{t("accessingUserDirectory")}</p>
             </div>
         );
     }
@@ -109,7 +112,7 @@ export default function UserManagementTable() {
                     onClick={fetchUsers}
                     className="px-6 py-2 bg-[#C8102E] text-white font-bold rounded-xl hover:bg-[#A90D27] transition-all"
                 >
-                    Attempt Retry
+                    {t("attemptRetry")}
                 </button>
             </div>
         );
@@ -118,7 +121,7 @@ export default function UserManagementTable() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">Active Users ({users.length})</h2>
+                <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">{t("activeUsers", { count: users.length })}</h2>
                 <button
                     onClick={fetchUsers}
                     className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#A9A9A9] rounded-xl hover:border-[#1A1A1A] text-[#1A1A1A] font-bold transition-all shadow-sm active:scale-95"
@@ -126,7 +129,7 @@ export default function UserManagementTable() {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
-                    Refresh Directory
+                    {t("refreshDirectory")}
                 </button>
             </div>
 
@@ -136,11 +139,11 @@ export default function UserManagementTable() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Identifier</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("identifier")}</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("account")}</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("role")}</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("joined")}</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">{t("actions")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -168,12 +171,12 @@ export default function UserManagementTable() {
                                                 : "bg-gray-50 text-gray-700 border-gray-200 focus:ring-gray-200"
                                                 }`}
                                         >
-                                            <option value="USER">User</option>
-                                            <option value="ADMIN">Admin</option>
+                                            <option value="USER">{t("roleUser")}</option>
+                                            <option value="ADMIN">{t("roleAdmin")}</option>
                                         </select>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        {new Date(user.createdAt).toLocaleDateString("en-US", {
+                                        {new Date(user.createdAt).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
                                             year: "numeric",
                                             month: "short",
                                             day: "numeric",
@@ -183,7 +186,7 @@ export default function UserManagementTable() {
                                         <button
                                             onClick={() => handleDelete(user.id, user.email)}
                                             className="text-gray-400 hover:text-[#C8102E] transition-colors p-2 rounded-full hover:bg-red-50"
-                                            title="Delete User"
+                                            title={t("deleteUser")}
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -219,20 +222,20 @@ export default function UserManagementTable() {
                                     : "bg-gray-50 text-gray-600 border-gray-200"
                                     }`}
                             >
-                                <option value="USER">USER</option>
-                                <option value="ADMIN">ADMIN</option>
+                                <option value="USER">{t("roleUser")}</option>
+                                <option value="ADMIN">{t("roleAdmin")}</option>
                             </select>
                         </div>
 
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-3">
                             <span className="text-xs text-gray-500">
-                                Joined {new Date(user.createdAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}
+                                {t("joined")} {new Date(user.createdAt).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
                             <button
                                 onClick={() => handleDelete(user.id, user.email)}
                                 className="text-red-600 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors"
                             >
-                                Delete
+                                {t("delete")}
                             </button>
                         </div>
                     </div>
@@ -246,7 +249,7 @@ export default function UserManagementTable() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>
                     </div>
-                    <p className="text-gray-500 font-medium text-sm">No users found</p>
+                    <p className="text-gray-500 font-medium text-sm">{t("noUsersFound")}</p>
                 </div>
             )}
         </div>

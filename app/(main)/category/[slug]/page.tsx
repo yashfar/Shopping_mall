@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 interface CategoryPageProps {
     params: Promise<{ slug: string }>;
@@ -9,6 +10,7 @@ interface CategoryPageProps {
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
+    const t = await getTranslations("catalog");
     const { slug } = await params;
     const { sort } = await searchParams;
     const categoryName = decodeURIComponent(slug);
@@ -51,8 +53,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             initialProducts={sortedProducts}
             categories={categories}
             queryParams={{ category: categoryName, sort }}
-            title={category.name} // Use the actual DB name for consistent casing
-            description={`Browse all ${category.name} products`}
+            title={category.name}
+            description={t("browseCategory", { category: category.name })}
         />
     );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
     Select,
     SelectContent,
@@ -38,15 +39,10 @@ function getPathFromUrl(url: string) {
 
 export default function NewBannerPage() {
     const router = useRouter();
+    const t = useTranslations("adminBanners");
     const [imageUrl, setImageUrl] = useState("");
-    const [imagePath, setImagePath] = useState(""); // Store path for deletion
-
-    // NOTE: imageFile state was unused in original code except for upload logic? 
-    // actually it was used to clear file input, but we can do that better.
-    // I'll keep it if needed, but mainly we need imageUrl and imagePath.
-
+    const [imagePath, setImagePath] = useState("");
     const [imagePreview, setImagePreview] = useState("");
-
     const [title, setTitle] = useState("");
     const [subtitle, setSubtitle] = useState("");
     const [active, setActive] = useState(true);
@@ -64,21 +60,18 @@ export default function NewBannerPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
         if (!allowedTypes.includes(file.type)) {
-            toast.error("Invalid file type. Only JPEG, PNG, and WebP are allowed");
+            toast.error(t("invalidFileType"));
             return;
         }
 
-        // Validate file size (max 10MB)
         const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
-            toast.error("File too large. Maximum size is 10MB");
+            toast.error(t("fileTooLarge"));
             return;
         }
 
-        // Preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
@@ -91,7 +84,6 @@ export default function NewBannerPage() {
             const formData = new FormData();
             formData.append("file", file);
 
-            // Use new Supabase upload
             const response = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
@@ -99,19 +91,18 @@ export default function NewBannerPage() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to upload image");
+                throw new Error(data.error || t("failedToUploadImage"));
             }
 
             const data = await response.json();
             setImageUrl(data.url);
             setImagePath(data.path);
-            toast.success("Image uploaded successfully");
+            toast.success(t("imageUploaded"));
         } catch (err: any) {
-            toast.error(err.message || "Failed to upload image");
+            toast.error(err.message || t("failedToUploadImage"));
             setImagePreview("");
         } finally {
             setUploading(false);
-            // Reset input?
             e.target.value = "";
         }
     };
@@ -130,12 +121,12 @@ export default function NewBannerPage() {
 
                 if (!response.ok) {
                     console.error("Failed to delete from storage");
-                    toast.warning("Removed provided image but failed to delete from storage");
+                    toast.warning(t("imageRemovedStorageFailed"));
                 } else {
-                    toast.success("Image removed");
+                    toast.success(t("imageRemoved"));
                 }
             } else {
-                toast.success("Image removed");
+                toast.success(t("imageRemoved"));
             }
 
             setImageUrl("");
@@ -145,7 +136,7 @@ export default function NewBannerPage() {
 
         } catch (error: any) {
             console.error(error);
-            toast.error("Failed to remove image");
+            toast.error(t("failedToRemoveImage"));
         } finally {
             setIsDeleting(false);
         }
@@ -158,15 +149,14 @@ export default function NewBannerPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation
         if (!imageUrl) {
-            toast.error("Please upload a banner image");
+            toast.error(t("pleaseUploadBannerImage"));
             return;
         }
 
         const orderNumber = parseInt(order);
         if (isNaN(orderNumber) || orderNumber < 0) {
-            toast.error("Please enter a valid order number (0 or greater)");
+            toast.error(t("invalidOrderNumber"));
             return;
         }
 
@@ -180,8 +170,6 @@ export default function NewBannerPage() {
                 },
                 body: JSON.stringify({
                     imageUrl,
-                    // We don't necessarily send path to DB as schema doesn't support it, 
-                    // but we used it for transient state.
                     title: title.trim() || null,
                     subtitle: subtitle.trim() || null,
                     active,
@@ -193,15 +181,15 @@ export default function NewBannerPage() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create banner");
+                throw new Error(data.error || t("failedToCreateBanner"));
             }
 
-            toast.success("Banner created successfully! Redirecting...");
+            toast.success(t("bannerCreated"));
             setTimeout(() => {
                 router.push("/admin/banners");
             }, 1500);
         } catch (err: any) {
-            toast.error(err.message || "Failed to create banner");
+            toast.error(err.message || t("failedToCreateBanner"));
             setSubmitting(false);
         }
     };
@@ -215,20 +203,20 @@ export default function NewBannerPage() {
                     disabled={submitting}
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    Back
+                    {t("back")}
                 </button>
                 <h1 className="text-4xl font-black text-[#1A1A1A] tracking-tight">
-                    Add New Banner
+                    {t("addNewBanner")}
                 </h1>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-8">
                     <h2 className="text-2xl font-bold text-[#1A1A1A] mb-2">
-                        Banner Image
+                        {t("bannerImage")}
                     </h2>
                     <p className="text-[#A9A9A9] mb-6">
-                        Upload a high-quality banner image for the homepage carousel (Supabase Storage).
+                        {t("bannerImageDesc")}
                     </p>
 
                     {!imagePreview && !imageUrl ? (
@@ -251,10 +239,10 @@ export default function NewBannerPage() {
                                     <Upload className="w-16 h-16 text-[#A9A9A9] mb-4" />
                                 )}
                                 <span className="text-lg font-bold text-[#1A1A1A] mb-2">
-                                    {uploading ? "Uploading..." : "Click to upload banner image"}
+                                    {uploading ? t("uploading") : t("clickToUpload")}
                                 </span>
                                 <span className="text-sm text-[#A9A9A9]">
-                                    JPEG, PNG, or WebP (Max 10MB)
+                                    {t("imageHint")}
                                 </span>
                             </label>
                         </div>
@@ -275,7 +263,7 @@ export default function NewBannerPage() {
                                 className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-[#C8102E] text-[#C8102E] font-bold rounded-xl hover:bg-[#C8102E] hover:text-white transition-all duration-200"
                             >
                                 <Trash2 className="w-5 h-5" />
-                                Remove Image
+                                {t("removeImage")}
                             </button>
                         </div>
                     )}
@@ -283,19 +271,19 @@ export default function NewBannerPage() {
 
                 <div className="bg-white border-2 border-[#E5E5E5] rounded-2xl p-8 space-y-6">
                     <h2 className="text-2xl font-bold text-[#1A1A1A] mb-4">
-                        Banner Details
+                        {t("bannerDetails")}
                     </h2>
 
                     <div>
                         <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                            Title <span className="text-[#A9A9A9] font-normal">(Optional)</span>
+                            {t("titleLabel")} <span className="text-[#A9A9A9] font-normal">{t("optional")}</span>
                         </label>
                         <input
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             className="w-full px-4 py-3 border-2 border-[#E5E5E5] rounded-xl focus:border-[#C8102E] focus:outline-none transition-colors font-medium"
-                            placeholder="Enter banner title"
+                            placeholder={t("titlePlaceholder")}
                             disabled={submitting}
                             maxLength={200}
                         />
@@ -303,14 +291,14 @@ export default function NewBannerPage() {
 
                     <div>
                         <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                            Subtitle <span className="text-[#A9A9A9] font-normal">(Optional)</span>
+                            {t("subtitleLabel")} <span className="text-[#A9A9A9] font-normal">{t("optional")}</span>
                         </label>
                         <input
                             type="text"
                             value={subtitle}
                             onChange={(e) => setSubtitle(e.target.value)}
                             className="w-full px-4 py-3 border-2 border-[#E5E5E5] rounded-xl focus:border-[#C8102E] focus:outline-none transition-colors font-medium"
-                            placeholder="Enter banner subtitle"
+                            placeholder={t("subtitlePlaceholder")}
                             disabled={submitting}
                             maxLength={200}
                         />
@@ -318,40 +306,40 @@ export default function NewBannerPage() {
 
                     <div>
                         <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                            Image Resize Mode
+                            {t("imageResizeMode")}
                         </label>
                         <Select value={displayMode} onValueChange={setDisplayMode} disabled={submitting}>
                             <SelectTrigger className="w-full px-4 py-3 border-2 border-[#E5E5E5] rounded-xl focus:border-[#C8102E] focus:outline-none transition-colors font-medium bg-white">
-                                <SelectValue placeholder="Select resize mode" />
+                                <SelectValue placeholder={t("selectResizeMode")} />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-2 border-[#E5E5E5] rounded-xl shadow-lg">
-                                <SelectItem value="cover">Cover (recommended)</SelectItem>
-                                <SelectItem value="contain">Contain (fit inside)</SelectItem>
-                                <SelectItem value="fill">Fill (stretch)</SelectItem>
-                                <SelectItem value="scale-down">Scale Down</SelectItem>
-                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="cover">{t("coverOption")}</SelectItem>
+                                <SelectItem value="contain">{t("containOption")}</SelectItem>
+                                <SelectItem value="fill">{t("fillOption")}</SelectItem>
+                                <SelectItem value="scale-down">{t("scaleDownOption")}</SelectItem>
+                                <SelectItem value="none">{t("noneOption")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                            Image Focal Point
+                            {t("imageFocalPoint")}
                         </label>
                         <Select value={alignment} onValueChange={setAlignment} disabled={submitting}>
                             <SelectTrigger className="w-full px-4 py-3 border-2 border-[#E5E5E5] rounded-xl focus:border-[#C8102E] focus:outline-none transition-colors font-medium bg-white">
-                                <SelectValue placeholder="Select focal point" />
+                                <SelectValue placeholder={t("selectFocalPoint")} />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-2 border-[#E5E5E5] rounded-xl shadow-lg">
-                                <SelectItem value="center">Center</SelectItem>
-                                <SelectItem value="top">Top</SelectItem>
-                                <SelectItem value="bottom">Bottom</SelectItem>
-                                <SelectItem value="left">Left</SelectItem>
-                                <SelectItem value="right">Right</SelectItem>
-                                <SelectItem value="top left">Top Left</SelectItem>
-                                <SelectItem value="top right">Top Right</SelectItem>
-                                <SelectItem value="bottom left">Bottom Left</SelectItem>
-                                <SelectItem value="bottom right">Bottom Right</SelectItem>
+                                <SelectItem value="center">{t("center")}</SelectItem>
+                                <SelectItem value="top">{t("top")}</SelectItem>
+                                <SelectItem value="bottom">{t("bottom")}</SelectItem>
+                                <SelectItem value="left">{t("left")}</SelectItem>
+                                <SelectItem value="right">{t("right")}</SelectItem>
+                                <SelectItem value="top left">{t("topLeft")}</SelectItem>
+                                <SelectItem value="top right">{t("topRight")}</SelectItem>
+                                <SelectItem value="bottom left">{t("bottomLeft")}</SelectItem>
+                                <SelectItem value="bottom right">{t("bottomRight")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -359,7 +347,7 @@ export default function NewBannerPage() {
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                                Display Order
+                                {t("displayOrder")}
                             </label>
                             <input
                                 type="number"
@@ -374,7 +362,7 @@ export default function NewBannerPage() {
 
                         <div>
                             <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
-                                Status
+                                {t("status")}
                             </label>
                             <div className="flex items-center gap-3 h-[50px]">
                                 <button
@@ -386,7 +374,7 @@ export default function NewBannerPage() {
                                     <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${active ? "translate-x-7" : "translate-x-1"}`} />
                                 </button>
                                 <span className="text-sm font-bold text-[#1A1A1A]">
-                                    {active ? "Active" : "Inactive"}
+                                    {active ? t("active") : t("inactive")}
                                 </span>
                             </div>
                         </div>
@@ -400,7 +388,7 @@ export default function NewBannerPage() {
                         className="px-8 py-3 bg-white border-2 border-[#A9A9A9] text-[#1A1A1A] font-bold rounded-xl hover:bg-[#FAFAFA] transition-all duration-200"
                         disabled={submitting}
                     >
-                        Cancel
+                        {t("cancel")}
                     </button>
                     <button
                         type="submit"
@@ -410,12 +398,12 @@ export default function NewBannerPage() {
                         {submitting ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                Creating Banner...
+                                {t("creatingBanner")}
                             </>
                         ) : (
                             <>
                                 <Check className="w-5 h-5" />
-                                Create Banner
+                                {t("createBanner")}
                             </>
                         )}
                     </button>
@@ -425,13 +413,13 @@ export default function NewBannerPage() {
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("removeImageDialogTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will remove the uploaded image from storage.
+                            {t("removeImageDialogDesc")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeleting}>{t("cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => {
                                 e.preventDefault();
@@ -440,7 +428,7 @@ export default function NewBannerPage() {
                             disabled={isDeleting}
                             className="bg-red-600 hover:bg-red-700 text-white"
                         >
-                            {isDeleting ? "Deleting..." : "Delete"}
+                            {isDeleting ? t("deleting") : t("delete")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

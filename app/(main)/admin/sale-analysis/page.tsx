@@ -2,6 +2,7 @@ import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import SaleAnalysisDashboard from "./SaleAnalysisDashboard";
+import { getTranslations } from "next-intl/server";
 
 export default async function SaleAnalysisPage() {
     const session = await auth();
@@ -90,11 +91,13 @@ export default async function SaleAnalysisPage() {
         visitors: Math.floor(Math.random() * 150) + 50
     }));
 
+    const t = await getTranslations("saleAnalysis");
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="mb-8">
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Sale Analysis</h1>
-                <p className="text-gray-500 mt-1 font-medium">Performance metrics and analytics.</p>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("title")}</h1>
+                <p className="text-gray-500 mt-1 font-medium">{t("subtitle")}</p>
             </div>
 
             <SaleAnalysisDashboard
@@ -107,6 +110,27 @@ export default async function SaleAnalysisPage() {
                 lowStockCount={lowStockCount}
                 monthlySalesData={monthlySalesData}
                 visitorsData={visitorsData}
+                labels={{
+                    todayOrders: t("todayOrders"),
+                    fromYesterday: t("fromYesterday"),
+                    pendingShipments: t("pendingShipments"),
+                    ordersReady: t("ordersReady"),
+                    todayRevenue: t("todayRevenue"),
+                    dailyEarnings: t("dailyEarnings"),
+                    monthlyRevenue: t("monthlyRevenue"),
+                    currentMonthTotal: t("currentMonthTotal"),
+                    estProfit: t("estProfit"),
+                    basedOnMargin: t("basedOnMargin"),
+                    estTax: t("estTax"),
+                    includedInRevenue: t("includedInRevenue"),
+                    lowStockItems: t("lowStockItems"),
+                    lowStockDesc: t("lowStockDesc"),
+                    monthlySalesTitle: t("monthlySalesTitle"),
+                    monthlySalesDesc: t("monthlySalesDesc"),
+                    visitorsTitle: t("visitorsTitle"),
+                    visitorsDesc: t("visitorsDesc"),
+                    revenueLabel: t("revenueLabel"),
+                }}
             />
         </div>
     );

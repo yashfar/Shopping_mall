@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Pencil, Trash2, Check, X, Loader2, Tag } from "lucide-react";
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface Category {
     id: string;
@@ -13,19 +14,17 @@ interface Category {
 }
 
 export default function CategoriesPage() {
+    const t = useTranslations("adminCategories");
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // New category
     const [newName, setNewName] = useState("");
     const [adding, setAdding] = useState(false);
 
-    // Edit state
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState("");
     const [saving, setSaving] = useState(false);
 
-    // Delete state
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const fetchCategories = useCallback(async () => {
@@ -35,7 +34,7 @@ export default function CategoriesPage() {
             const data = await res.json();
             setCategories(data);
         } catch {
-            toast.error("Failed to load categories");
+            toast.error(t("failedToLoad"));
         } finally {
             setLoading(false);
         }
@@ -59,9 +58,9 @@ export default function CategoriesPage() {
             if (!res.ok) throw new Error(data.error);
             setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
             setNewName("");
-            toast.success(`"${data.name}" added`);
+            toast.success(t("categoryAdded", { name: data.name }));
         } catch (err: any) {
-            toast.error(err.message || "Failed to add category");
+            toast.error(err.message || t("failedToAdd"));
         } finally {
             setAdding(false);
         }
@@ -92,9 +91,9 @@ export default function CategoriesPage() {
                 prev.map((c) => (c.id === id ? data : c)).sort((a, b) => a.name.localeCompare(b.name))
             );
             setEditingId(null);
-            toast.success("Category updated");
+            toast.success(t("categoryUpdated"));
         } catch (err: any) {
-            toast.error(err.message || "Failed to update category");
+            toast.error(err.message || t("failedToUpdate"));
         } finally {
             setSaving(false);
         }
@@ -107,9 +106,9 @@ export default function CategoriesPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-            toast.success(`"${cat.name}" deleted`);
+            toast.success(t("categoryDeleted", { name: cat.name }));
         } catch (err: any) {
-            toast.error(err.message || "Failed to delete category");
+            toast.error(err.message || t("failedToDelete"));
         } finally {
             setDeletingId(null);
         }
@@ -125,8 +124,8 @@ export default function CategoriesPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold text-[#1A1A1A]">Categories</h1>
-                    <p className="text-sm text-[#A9A9A9] mt-0.5">Add, rename or delete product categories</p>
+                    <h1 className="text-2xl font-bold text-[#1A1A1A]">{t("pageTitle")}</h1>
+                    <p className="text-sm text-[#A9A9A9] mt-0.5">{t("pageDesc")}</p>
                 </div>
             </div>
 
@@ -136,7 +135,7 @@ export default function CategoriesPage() {
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="New category name..."
+                    placeholder={t("newNamePlaceholder")}
                     maxLength={100}
                     disabled={adding}
                     className="flex-1 h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
@@ -149,7 +148,7 @@ export default function CategoriesPage() {
                     {adding ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                        <><Plus className="h-4 w-4 mr-1" /> Add</>
+                        <><Plus className="h-4 w-4 mr-1" /> {t("add")}</>
                     )}
                 </Button>
             </form>
@@ -163,8 +162,8 @@ export default function CategoriesPage() {
                 ) : categories.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                         <Tag className="h-10 w-10 mb-3 opacity-30" />
-                        <p className="text-sm font-medium">No categories yet</p>
-                        <p className="text-xs mt-1">Add your first category above</p>
+                        <p className="text-sm font-medium">{t("noCategoriesYet")}</p>
+                        <p className="text-xs mt-1">{t("noCategoriesDesc")}</p>
                     </div>
                 ) : (
                     <ul className="divide-y divide-gray-100">
@@ -208,7 +207,9 @@ export default function CategoriesPage() {
                                         <div className="flex-1 min-w-0">
                                             <span className="text-sm font-medium text-[#1A1A1A]">{cat.name}</span>
                                             <span className="ml-2 text-xs text-[#A9A9A9]">
-                                                {cat._count.products} product{cat._count.products !== 1 ? "s" : ""}
+                                                {cat._count.products !== 1
+                                                    ? t("productCountPlural", { count: cat._count.products })
+                                                    : t("productCount", { count: cat._count.products })}
                                             </span>
                                         </div>
                                         <Button
@@ -224,7 +225,7 @@ export default function CategoriesPage() {
                                             variant="ghost"
                                             onClick={() => handleDelete(cat)}
                                             disabled={deletingId === cat.id || cat._count.products > 0}
-                                            title={cat._count.products > 0 ? "Remove all products from this category first" : "Delete"}
+                                            title={cat._count.products > 0 ? t("deleteTitleDisabled") : t("deleteTitle")}
                                             className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             {deletingId === cat.id ? (
@@ -243,7 +244,7 @@ export default function CategoriesPage() {
 
             {categories.length > 0 && (
                 <p className="text-xs text-[#A9A9A9] mt-3 text-center">
-                    Categories with products cannot be deleted. Remove all products first.
+                    {t("footerNote")}
                 </p>
             )}
         </div>

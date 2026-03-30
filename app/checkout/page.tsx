@@ -1,6 +1,7 @@
 import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import PaymentCheckoutWithAddress from "./PaymentCheckoutWithAddress";
+import { getTranslations } from "next-intl/server";
 
 export default async function CheckoutPage({
     searchParams,
@@ -21,10 +22,12 @@ export default async function CheckoutPage({
         redirect("/cart");
     }
 
+    const t = await getTranslations("paymentCheckout");
+
     return (
         <div style={{ maxWidth: "1000px", margin: "50px auto", padding: "20px" }}>
             <h1 style={{ marginBottom: "30px", textAlign: "center", fontSize: "2rem", fontWeight: "700" }}>
-                Checkout
+                {t("checkoutTitle")}
             </h1>
             <PaymentCheckoutWithAddress orderId={orderId} />
         </div>

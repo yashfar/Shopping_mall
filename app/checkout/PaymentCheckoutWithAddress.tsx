@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AddressModal from "@@/components/AddressModal";
 import "./address-selection.css";
+import { useTranslations } from "next-intl";
 
 interface Address {
     id: string;
@@ -43,6 +44,7 @@ interface BankDetails {
 }
 
 export default function PaymentCheckoutWithAddress({ orderId }: { orderId: string }) {
+    const t = useTranslations("paymentCheckout");
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -159,12 +161,12 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
 
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
         if (!allowedTypes.includes(file.type)) {
-            setUploadError("Please upload an image (JPG, PNG, WebP) or PDF file.");
+            setUploadError(t("invalidFileType"));
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setUploadError("File is too large. Maximum size is 5MB.");
+            setUploadError(t("fileTooLarge"));
             return;
         }
 
@@ -195,13 +197,13 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to upload payment proof");
+                throw new Error(data.error || t("failedToUpload"));
             }
 
             router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
             console.error("Upload error:", error);
-            setUploadError(error.message || "Failed to upload. Please try again.");
+            setUploadError(error.message || t("failedToUploadRetry"));
             setUploading(false);
         }
     };
@@ -214,7 +216,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         return (
             <div className="checkout-loading">
                 <div className="spinner"></div>
-                <p>Loading checkout...</p>
+                <p>{t("loading")}</p>
             </div>
         );
     }
@@ -238,13 +240,13 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                     </svg>
-                    <h2>No address found</h2>
-                    <p>Please add an address before checkout.</p>
+                    <h2>{t("noAddressFound")}</h2>
+                    <p>{t("noAddressDesc")}</p>
                     <button
                         className="btn-add-address-primary"
                         onClick={() => router.push("/profile/addresses")}
                     >
-                        Add Address
+                        {t("addAddress")}
                     </button>
                 </div>
             </div>
@@ -259,19 +261,19 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
             <div className="checkout-steps">
                 <div className={`step ${currentStep === "address" ? "active" : "completed"}`}>
                     <div className="step-number">1</div>
-                    <div className="step-label">Delivery Address</div>
+                    <div className="step-label">{t("deliveryAddress")}</div>
                 </div>
                 <div className="step-divider"></div>
                 <div className={`step ${currentStep === "payment" ? "active" : ""}`}>
                     <div className="step-number">2</div>
-                    <div className="step-label">Bank Transfer</div>
+                    <div className="step-label">{t("bankTransfer")}</div>
                 </div>
             </div>
 
             {/* Address Selection Step */}
             {currentStep === "address" && (
                 <div className="address-selection-step">
-                    <h2 className="section-title">Select Delivery Address</h2>
+                    <h2 className="section-title">{t("selectDeliveryAddress")}</h2>
 
                     <div className="address-cards-grid">
                         {addresses.map((address) => (
@@ -301,24 +303,24 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="edit-icon">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                             </svg>
-                                            Edit
+                                            {t("edit")}
                                         </button>
                                     </div>
                                     <div className="address-info">
                                         <div className="info-row">
-                                            <span className="info-label">Name:</span>
+                                            <span className="info-label">{t("name")}</span>
                                             <span className="info-value">{address.firstName} {address.lastName}</span>
                                         </div>
                                         <div className="info-row">
-                                            <span className="info-label">Phone:</span>
+                                            <span className="info-label">{t("phone")}</span>
                                             <span className="info-value">{maskPhone(address.phone)}</span>
                                         </div>
                                         <div className="info-row">
-                                            <span className="info-label">Location:</span>
+                                            <span className="info-label">{t("location")}</span>
                                             <span className="info-value">{address.neighborhood}, {address.district}, {address.city}</span>
                                         </div>
                                         <div className="info-row full-width">
-                                            <span className="info-label">Address:</span>
+                                            <span className="info-label">{t("address")}</span>
                                             <span className="info-value">{address.fullAddress}</span>
                                         </div>
                                     </div>
@@ -327,16 +329,25 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         ))}
                     </div>
 
+                    <div style={{ paddingTop: "0.75rem" }}>
+                        <a
+                            href="/profile/addresses"
+                            className="btn-add-address-link"
+                        >
+                            {t("addAnotherAddress")}
+                        </a>
+                    </div>
+
                     <div className="address-actions">
                         <button className="btn-secondary" onClick={() => router.push("/cart")}>
-                            &larr; Back to Cart
+                            {t("backToCart")}
                         </button>
                         <button
                             className="btn-primary"
                             onClick={handleContinueToPayment}
                             disabled={!selectedAddressId}
                         >
-                            Continue to Payment
+                            {t("continueToPayment")}
                         </button>
                     </div>
                 </div>
@@ -348,9 +359,9 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                     {/* Selected Address Summary */}
                     <div className="selected-address-summary">
                         <div className="summary-header">
-                            <h3>Delivery Address</h3>
+                            <h3>{t("deliveryAddress")}</h3>
                             <button className="btn-change" onClick={() => setCurrentStep("address")}>
-                                Change
+                                {t("change")}
                             </button>
                         </div>
                         {addresses.find((a) => a.id === selectedAddressId) && (
@@ -383,27 +394,26 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                             border: "1px solid #fecaca",
                         }}>
                             <p style={{ margin: 0, fontSize: "14px", color: "#991b1b" }}>
-                                <strong>Payment Rejected:</strong> Your previous payment proof was not approved.
-                                Please upload a new receipt below.
+                                <strong>{t("paymentRejected")}</strong> {t("paymentRejectedDesc")}
                             </p>
                         </div>
                     )}
 
                     {/* Order Summary */}
                     <div className="order-summary-card">
-                        <h2>Order Summary</h2>
+                        <h2>{t("orderSummary")}</h2>
 
                         <div className="order-id">
-                            <span className="label">Order ID:</span>
+                            <span className="label">{t("orderId")}</span>
                             <span className="value">{order.id}</span>
                         </div>
 
                         <table className="order-table">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
+                                    <th>{t("product")}</th>
+                                    <th>{t("qty")}</th>
+                                    <th>{t("price")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -416,10 +426,26 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                 ))}
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <td colSpan={2}>Total:</td>
-                                    <td className="total-amount">${(order.total / 100).toFixed(2)}</td>
-                                </tr>
+                                {(() => {
+                                    const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                                    const shipping = order.total - subtotal;
+                                    return (
+                                        <>
+                                            <tr>
+                                                <td colSpan={2}>{t("subtotal")}</td>
+                                                <td>${(subtotal / 100).toFixed(2)}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={2}>{t("shipping")}</td>
+                                                <td>{shipping > 0 ? `$${(shipping / 100).toFixed(2)}` : t("free")}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={2}>{t("total")}</td>
+                                                <td className="total-amount">${(order.total / 100).toFixed(2)}</td>
+                                            </tr>
+                                        </>
+                                    );
+                                })()}
                             </tfoot>
                         </table>
                     </div>
@@ -434,7 +460,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                             border: "1px solid #bae6fd",
                         }}>
                             <h3 style={{ margin: "0 0 12px 0", color: "#0369a1", fontSize: "16px" }}>
-                                Bank Transfer Details
+                                {t("bankTransferDetails")}
                             </h3>
                             <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
                                 Please transfer <strong>${(order.total / 100).toFixed(2)}</strong> to the
@@ -445,28 +471,28 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                 {bankDetails.bankName && (
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                         <div>
-                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Bank Name</div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("bankName")}</div>
                                             <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.bankName)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>Copy</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.bankName)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                                 {bankDetails.accountHolder && (
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                         <div>
-                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Account Holder</div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("accountHolder")}</div>
                                             <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.accountHolder)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>Copy</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.accountHolder)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                                 {bankDetails.iban && (
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
                                         <div>
-                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>IBAN</div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("iban")}</div>
                                             <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>Copy</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                             </div>
@@ -487,9 +513,9 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         border: "1px solid #e5e7eb",
                         marginBottom: "16px",
                     }}>
-                        <h3 style={{ margin: "0 0 12px 0", fontSize: "16px" }}>Upload Payment Proof</h3>
+                        <h3 style={{ margin: "0 0 12px 0", fontSize: "16px" }}>{t("uploadPaymentProof")}</h3>
                         <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "#555" }}>
-                            Upload a screenshot or photo of your payment receipt. Accepted: JPG, PNG, WebP, PDF (max 5MB).
+                            {t("uploadInstruction")}
                         </p>
 
                         <input
@@ -515,17 +541,17 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                 <div>
                                     <img src={previewUrl} alt="Preview" style={{ maxWidth: "250px", maxHeight: "150px", borderRadius: "4px", marginBottom: "8px" }} />
                                     <p style={{ margin: 0, fontSize: "13px", color: "#16a34a", fontWeight: 600 }}>{selectedFile?.name}</p>
-                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>Click to change</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>{t("clickToChange")}</p>
                                 </div>
                             ) : selectedFile ? (
                                 <div>
                                     <p style={{ margin: 0, fontSize: "13px", color: "#16a34a", fontWeight: 600 }}>{selectedFile.name}</p>
-                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>Click to change</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>{t("clickToChange")}</p>
                                 </div>
                             ) : (
                                 <div>
-                                    <p style={{ margin: 0, fontSize: "15px", color: "#999" }}>Click to select your payment receipt</p>
-                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#bbb" }}>JPG, PNG, WebP, or PDF (max 5MB)</p>
+                                    <p style={{ margin: 0, fontSize: "15px", color: "#999" }}>{t("clickToSelect")}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#bbb" }}>{t("acceptedFormats")}</p>
                                 </div>
                             )}
                         </div>
@@ -542,14 +568,14 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                             onClick={() => setCurrentStep("address")}
                             disabled={uploading}
                         >
-                            &larr; Back
+                            {t("back")}
                         </button>
                         <button
                             className="btn-pay"
                             onClick={handleUpload}
                             disabled={uploading || !selectedFile}
                         >
-                            {uploading ? "Uploading..." : "Submit Payment Proof"}
+                            {uploading ? t("uploading") : t("submitPaymentProof")}
                         </button>
                     </div>
                 </div>

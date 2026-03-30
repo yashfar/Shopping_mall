@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, RefreshCw, Trash2, Mail, MailOpen } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type Message = {
     id: string;
@@ -17,6 +18,7 @@ type Message = {
 };
 
 export default function MessagesPage() {
+    const t = useTranslations("adminMessages");
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function MessagesPage() {
             const data = await res.json();
             setMessages(data.messages || []);
         } catch {
-            toast.error("Failed to load messages");
+            toast.error(t("failedToLoad"));
         } finally {
             setLoading(false);
         }
@@ -51,7 +53,7 @@ export default function MessagesPage() {
                 prev.map((m) => (m.id === id ? { ...m, isRead: !currentRead } : m))
             );
         } catch {
-            toast.error("Failed to update");
+            toast.error(t("failedToUpdate"));
         } finally {
             setProcessingId(null);
         }
@@ -62,10 +64,10 @@ export default function MessagesPage() {
         try {
             await fetch(`/api/admin/messages/${id}`, { method: "DELETE" });
             setMessages((prev) => prev.filter((m) => m.id !== id));
-            toast.success("Message deleted");
+            toast.success(t("deleted"));
             if (expandedId === id) setExpandedId(null);
         } catch {
-            toast.error("Failed to delete");
+            toast.error(t("failedToDelete"));
         } finally {
             setProcessingId(null);
         }
@@ -77,7 +79,6 @@ export default function MessagesPage() {
             return;
         }
         setExpandedId(msg.id);
-        // Auto mark as read
         if (!msg.isRead) {
             toggleRead(msg.id, false);
         }
@@ -89,11 +90,11 @@ export default function MessagesPage() {
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-10">
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Contact Messages</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t("pageTitle")}</h1>
                     <p className="text-gray-500 mt-2">
                         {unreadCount > 0
-                            ? <span><span className="font-bold text-[#C8102E]">{unreadCount}</span> unread message{unreadCount !== 1 ? "s" : ""}</span>
-                            : "All messages read"
+                            ? <span><span className="font-bold text-[#C8102E]">{unreadCount}</span> {unreadCount !== 1 ? t("unreadLabelPlural") : t("unreadLabel")}</span>
+                            : t("allRead")
                         }
                     </p>
                 </div>
@@ -103,7 +104,7 @@ export default function MessagesPage() {
                     </Button>
                     <Link href="/admin" className="flex items-center text-sm font-medium text-gray-500 hover:text-[#C8102E] transition-colors group">
                         <ArrowLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
-                        Back to Admin
+                        {t("backToAdmin")}
                     </Link>
                 </div>
             </div>
@@ -117,8 +118,8 @@ export default function MessagesPage() {
                     <div className="bg-gray-50 p-4 rounded-full inline-flex mb-4">
                         <Mail className="w-8 h-8 text-gray-300" />
                     </div>
-                    <p className="text-lg font-bold text-gray-900 mb-1">No messages yet</p>
-                    <p className="text-sm text-gray-400">Messages from the contact form will appear here.</p>
+                    <p className="text-lg font-bold text-gray-900 mb-1">{t("noMessagesYet")}</p>
+                    <p className="text-sm text-gray-400">{t("noMessagesDesc")}</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -178,7 +179,7 @@ export default function MessagesPage() {
                                         <a href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}>
                                             <Button size="sm" className="bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold gap-1.5">
                                                 <Mail className="w-3.5 h-3.5" />
-                                                Reply
+                                                {t("reply")}
                                             </Button>
                                         </a>
                                         <Button
@@ -188,7 +189,7 @@ export default function MessagesPage() {
                                             className="gap-1.5 font-bold"
                                         >
                                             {msg.isRead ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
-                                            {msg.isRead ? "Mark Unread" : "Mark Read"}
+                                            {msg.isRead ? t("markUnread") : t("markRead")}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -197,7 +198,7 @@ export default function MessagesPage() {
                                             className="gap-1.5 font-bold text-red-500 hover:bg-red-50 hover:border-red-200 ml-auto"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
-                                            Delete
+                                            {t("delete")}
                                         </Button>
                                     </div>
                                 </div>

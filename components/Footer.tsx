@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 export default function Footer() {
     const t = useTranslations("footer");
@@ -21,19 +22,19 @@ export default function Footer() {
                         <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("quickLinks")}</h4>
                         <ul className="list-none p-0 m-0 flex flex-col gap-3">
                             <li>
-                                <a href="/products" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/products" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("products")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/orders" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/orders" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("orders")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/cart" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/cart" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("cart")}
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </div>
@@ -43,19 +44,19 @@ export default function Footer() {
                         <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("support")}</h4>
                         <ul className="list-none p-0 m-0 flex flex-col gap-3">
                             <li>
-                                <a href="/contact" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/contact" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("contactUs")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/faq" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/faq" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("faq")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/shipping" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/shipping" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("shippingInfo")}
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </div>
@@ -65,19 +66,19 @@ export default function Footer() {
                         <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("legal")}</h4>
                         <ul className="list-none p-0 m-0 flex flex-col gap-3">
                             <li>
-                                <a href="/privacy" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/privacy" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("privacyPolicy")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/terms" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/terms" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("termsOfService")}
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="/returns" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                <Link href="/returns" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("returns")}
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </div>

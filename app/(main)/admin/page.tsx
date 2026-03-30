@@ -74,7 +74,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3.75h3.75M12 15.75h3.75M12 7.5V3.75m0 3.75H8.25m3.75 0H3.75m3.75 0V1.5m0 2.25h-2.25" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("manage")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("products")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("productsDescription")}</p>
@@ -92,7 +92,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">View</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("view")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("orders")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("ordersDescription")}</p>
@@ -105,7 +105,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Edit</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("edit")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("banners")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("bannersDescription")}</p>
@@ -118,7 +118,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Configure</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("configure")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("paymentSettings")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("paymentSettingsDescription")}</p>
@@ -131,7 +131,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185zM9.75 9h.008v.008H9.75V9zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 4.5h.008v.008h-.008V13.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("manage")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("coupons")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("couponsDescription")}</p>
@@ -145,7 +145,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("manage")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("categories")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("categoriesDescription")}</p>
@@ -158,7 +158,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M6 16.5h2.25m-2.25 0V9m2.25 7.5V9m2.25-6v13.5c0 .414.336.75.75.75h3.75a.75.75 0 00.75-.75V3" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Analyze</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("analyze")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("saleAnalysis")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("saleAnalysisDescription")}</p>
@@ -176,7 +176,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Review</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("review")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("returns")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("returnsDescription")}</p>
@@ -194,7 +194,7 @@ export default async function AdminPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                             </svg>
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">View</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("view")}</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-900">{t("messages")}</h3>
                     <p className="text-sm text-gray-500 mt-1">{t("messagesDescription")}</p>
