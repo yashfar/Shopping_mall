@@ -315,6 +315,117 @@ function getReturnResultTemplate(data: ReturnResultData): string {
 }
 
 // ---------------------------------------------------------------------------
+// Stock Alert Email
+// ---------------------------------------------------------------------------
+
+export interface StockAlertData {
+    productTitle: string;
+    productUrl: string;
+    thumbnail?: string | null;
+    firstName?: string | null;
+}
+
+export async function sendStockAlertEmail(
+    email: string,
+    data: StockAlertData
+) {
+    try {
+        const { data: result, error } = await resend.emails.send({
+            from: "My Store <onboarding@resend.dev>",
+            to: email,
+            subject: `Back in Stock: ${data.productTitle} - My Store`,
+            html: getStockAlertTemplate(data),
+        });
+
+        if (error) {
+            console.error("Error sending stock alert email:", error);
+            return { success: false, error };
+        }
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Error sending stock alert email:", error);
+        return { success: false, error };
+    }
+}
+
+function getStockAlertTemplate(data: StockAlertData): string {
+    const { productTitle, productUrl, thumbnail, firstName } = data;
+    const greeting = firstName ? `Hello ${firstName},` : "Hello,";
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Back in Stock</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#C8102E 0%,#8b0000 100%);padding:40px;text-align:center;border-radius:8px 8px 0 0;">
+              <p style="margin:0 0 8px 0;color:rgba(255,255,255,0.85);font-size:14px;letter-spacing:1px;text-transform:uppercase;">My Store</p>
+              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Back in Stock!</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 20px 0;color:#374151;font-size:16px;line-height:1.6;">${greeting}</p>
+              <p style="margin:0 0 24px 0;color:#374151;font-size:16px;line-height:1.6;">
+                Great news! An item you were waiting for is now back in stock:
+              </p>
+
+              <!-- Product Card -->
+              <div style="margin:0 0 28px 0;padding:20px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;text-align:center;">
+                ${thumbnail ? `<img src="${thumbnail}" alt="${productTitle}" width="120" height="120" style="border-radius:8px;object-fit:cover;margin-bottom:12px;" />` : ''}
+                <p style="margin:0;color:#1a1a1a;font-size:18px;font-weight:700;">${productTitle}</p>
+              </div>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${productUrl}"
+                       style="display:inline-block;background:linear-gradient(135deg,#C8102E 0%,#8b0000 100%);color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:600;font-size:16px;box-shadow:0 4px 12px rgba(200,16,46,0.3);">
+                      Shop Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
+                Hurry — popular items sell out fast!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px;background-color:#f9fafb;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+                You received this because you requested a stock alert.<br />
+                &copy; ${new Date().getFullYear()} My Store. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// ---------------------------------------------------------------------------
 // Password Reset Email
 // ---------------------------------------------------------------------------
 

@@ -60,6 +60,7 @@ type Order = {
     user?: User | null;
     items?: OrderItem[];
     returnRequest?: ReturnRequest | null;
+    trackingNumber?: string | null;
 };
 
 const STATUS_MAP: Record<string, string> = {
@@ -88,6 +89,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [downloading, setDownloading] = useState<"invoice" | "label" | null>(null);
     const [processingReturn, setProcessingReturn] = useState(false);
     const [returnAdminNote, setReturnAdminNote] = useState("");
+    const [trackingNumber, setTrackingNumber] = useState("");
 
     useEffect(() => {
         fetchOrder();
@@ -101,6 +103,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             setOrder(data.order);
             setAddress(data.address);
             setSelectedStatus(REVERSE_STATUS_MAP[data.order.status] || "pending");
+            setTrackingNumber(data.order.trackingNumber || "");
         } catch (err: any) {
             setError(err.message || "Failed to load order");
         } finally {
@@ -116,7 +119,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             const response = await fetch(`/api/admin/orders/${orderId}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: STATUS_MAP[selectedStatus] }),
+                body: JSON.stringify({ status: STATUS_MAP[selectedStatus], trackingNumber }),
             });
 
             if (!response.ok) {
@@ -407,9 +410,20 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             </SelectContent>
                         </Select>
 
+                        <div>
+                            <label className="text-xs font-bold text-gray-900 block mb-2">Tracking Number</label>
+                            <input
+                                type="text"
+                                value={trackingNumber}
+                                onChange={(e) => setTrackingNumber(e.target.value)}
+                                placeholder="Enter tracking number..."
+                                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                            />
+                        </div>
+
                         <Button
                             onClick={handleStatusUpdate}
-                            disabled={updating || selectedStatus === REVERSE_STATUS_MAP[order.status]}
+                            disabled={updating || (selectedStatus === REVERSE_STATUS_MAP[order.status] && trackingNumber === (order.trackingNumber || ""))}
                             className="w-full bg-[#1A1A1A] hover:bg-[#333] text-white font-bold rounded-xl py-6 transition-all active:scale-95"
                         >
                             {updating ? "Updating..." : "Update Status"}

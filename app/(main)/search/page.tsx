@@ -10,6 +10,8 @@ interface SearchPageProps {
         max?: string;
         rating?: string;
         sort?: string;
+        inStock?: string;
+        onSale?: string;
     }>;
 }
 
@@ -21,6 +23,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined;
     const minRating = params.rating ? parseInt(params.rating) : undefined;
     const sort = params.sort;
+    const inStockOnly = params.inStock === "true";
+    const onSaleOnly = params.onSale === "true";
 
     const whereClause: any = { isActive: true };
 
@@ -39,6 +43,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         whereClause.price = {};
         if (minPrice !== undefined) whereClause.price.gte = minPrice;
         if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+    }
+
+    if (inStockOnly) {
+        whereClause.stock = { gt: 0 };
+    }
+
+    if (onSaleOnly) {
+        whereClause.salePrice = { not: null };
     }
 
     const products = await prisma.product.findMany({
@@ -85,6 +97,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 max: params.max,
                 rating: params.rating,
                 sort,
+                inStock: params.inStock,
+                onSale: params.onSale,
             }}
             title={query ? `Results for "${query}"` : "Search Results"}
             description={query ? `Found ${filteredProducts.length} results` : "Search our collection"}

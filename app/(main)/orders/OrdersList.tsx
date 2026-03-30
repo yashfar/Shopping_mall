@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
+import { Search, X } from "lucide-react";
 
 type Order = {
     id: string;
@@ -20,9 +21,22 @@ type Order = {
     }[];
 };
 
+const STATUS_OPTIONS = [
+    { value: "", label: "All" },
+    { value: "PENDING", label: "Pending" },
+    { value: "PAID", label: "Paid" },
+    { value: "SHIPPED", label: "Shipped" },
+    { value: "COMPLETED", label: "Completed" },
+    { value: "CANCELED", label: "Canceled" },
+    { value: "RETURN_REQUESTED", label: "Return Requested" },
+    { value: "RETURNED", label: "Returned" },
+];
+
 export default function OrdersList() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -117,8 +131,99 @@ export default function OrdersList() {
         );
     }
 
+    const statusCounts = orders.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const filteredOrders = orders.filter((order) => {
+        const matchesSearch = searchTerm
+            ? (order.orderNumber || order.id).toLowerCase().includes(searchTerm.toLowerCase())
+            : true;
+        const matchesStatus = statusFilter ? order.status === statusFilter : true;
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Search & Filter */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 p-5 space-y-4">
+                {/* Search Input */}
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search by order number..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-11 pr-10 py-3 border border-gray-100 rounded-2xl bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm font-medium placeholder:text-gray-400"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            <X className="h-3.5 w-3.5 text-gray-400" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Status Pills */}
+                <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
+                    {STATUS_OPTIONS.map((opt) => {
+                        const count = opt.value ? (statusCounts[opt.value] || 0) : orders.length;
+                        if (opt.value && count === 0) return null;
+                        const isActive = statusFilter === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                onClick={() => setStatusFilter(isActive ? "" : opt.value)}
+                                className={`group flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 border ${
+                                    isActive
+                                        ? "bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-lg shadow-gray-900/10"
+                                        : "bg-white text-gray-500 border-gray-200 hover:border-[#C8102E] hover:text-[#C8102E] hover:shadow-sm"
+                                }`}
+                            >
+                                {opt.label}
+                                <span className={`inline-flex items-center justify-center min-w-4.5 h-4.5 rounded-full text-[10px] font-black leading-none ${
+                                    isActive
+                                        ? "bg-white/20 text-white/80"
+                                        : "bg-gray-100 text-gray-400 group-hover:bg-red-50 group-hover:text-[#C8102E]"
+                                }`}>
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Active filter info */}
+            {(searchTerm || statusFilter) && (
+                <div className="flex items-center justify-between px-1">
+                    <p className="text-sm text-gray-500 font-medium">
+                        <span className="font-black text-gray-900">{filteredOrders.length}</span> order{filteredOrders.length !== 1 ? "s" : ""} found
+                    </p>
+                    <button
+                        onClick={() => { setSearchTerm(""); setStatusFilter(""); }}
+                        className="text-xs font-bold text-[#C8102E] hover:text-[#A90D27] transition-colors"
+                    >
+                        Clear all
+                    </button>
+                </div>
+            )}
+
+            {/* Empty filter state */}
+            {filteredOrders.length === 0 && (searchTerm || statusFilter) && (
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                    <div className="bg-gray-50 p-4 rounded-full mb-4">
+                        <Search className="w-6 h-6 text-gray-300" />
+                    </div>
+                    <p className="text-base font-bold text-gray-900 mb-1">No matching orders</p>
+                    <p className="text-sm text-gray-400">Try a different search or filter</p>
+                </div>
+            )}
+
             {/* Desktop Table View */}
             <div className="hidden md:block bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden">
                 <table className="w-full text-left">
@@ -132,7 +237,7 @@ export default function OrdersList() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {orders.map((order) => (
+                        {filteredOrders.map((order) => (
                             <tr key={order.id} className="group hover:bg-gray-50/50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex flex-col">

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import StarRating from "@@/components/StarRating";
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus, Heart } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus, Heart, Bell } from "lucide-react";
 
 interface ProductImage {
     id: string;
@@ -64,6 +64,40 @@ export default function ProductDetailClient({
     const [submitting, setSubmitting] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const [stockAlertSubscribed, setStockAlertSubscribed] = useState(false);
+    const [stockAlertLoading, setStockAlertLoading] = useState(false);
+
+    // Check stock alert status for out-of-stock products
+    useEffect(() => {
+        if (product.stock === 0 && isAuthenticated) {
+            fetch(`/api/stock-alert?productId=${product.id}`)
+                .then((res) => res.json())
+                .then((data) => setStockAlertSubscribed(data.subscribed))
+                .catch(() => {});
+        }
+    }, [product.id, product.stock, isAuthenticated]);
+
+    const toggleStockAlert = async () => {
+        if (!isAuthenticated) {
+            router.push("/register");
+            return;
+        }
+        setStockAlertLoading(true);
+        try {
+            const res = await fetch("/api/stock-alert", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productId: product.id }),
+            });
+            const data = await res.json();
+            setStockAlertSubscribed(data.subscribed);
+            toast.success(data.subscribed ? "You'll be notified when this item is back in stock" : "Stock alert removed");
+        } catch {
+            toast.error("Failed to update stock alert");
+        } finally {
+            setStockAlertLoading(false);
+        }
+    };
 
     // Use product images or fallback to thumbnail
     const displayImages =
@@ -357,6 +391,18 @@ export default function ProductDetailClient({
                                 >
                                     <Heart className={`w-5 h-5 ${wishlisted ? "fill-[#C8102E]" : ""}`} />
                                     {wishlisted ? "Saved to Wishlist" : "Save to Wishlist"}
+                                </button>
+                                <button
+                                    onClick={toggleStockAlert}
+                                    disabled={stockAlertLoading}
+                                    className={`w-full py-3 rounded-xl border-2 font-semibold flex items-center justify-center gap-2 transition-all ${
+                                        stockAlertSubscribed
+                                            ? "border-amber-400 bg-amber-50 text-amber-600"
+                                            : "border-gray-200 bg-white text-gray-500 hover:border-amber-400 hover:text-amber-600"
+                                    }`}
+                                >
+                                    <Bell className={`w-5 h-5 ${stockAlertSubscribed ? "fill-amber-400" : ""}`} />
+                                    {stockAlertLoading ? "..." : stockAlertSubscribed ? "You'll Be Notified" : "Notify Me When Available"}
                                 </button>
                             </div>
                         )}

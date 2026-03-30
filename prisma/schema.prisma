@@ -34,6 +34,7 @@ model User {
   reviews       Review[]
   couponUsages  CouponUsage[]
   wishlistItems Wishlist[]
+  stockAlerts   StockAlert[]
 }
 
 enum Role {
@@ -80,6 +81,7 @@ model Product {
   orderItems    OrderItem[]
   carouselItems CarouselItem[]
   wishlistItems Wishlist[]
+  stockAlerts   StockAlert[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -140,6 +142,7 @@ model Order {
   couponId       String?
   coupon         Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
   discountAmount Int?
+  trackingNumber String?
   couponUsage    CouponUsage?
   returnRequest  ReturnRequest?
 
@@ -210,6 +213,22 @@ model Wishlist {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ============================================================================
+// Stock Alert (Notify when back in stock)
+// ============================================================================
+
+model StockAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  notified  Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])

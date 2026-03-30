@@ -24,6 +24,7 @@ type Order = {
     status: string;
     createdAt: string;
     items: OrderItem[];
+    trackingNumber?: string | null;
 };
 
 export default function OrderDetails({ orderId }: { orderId: string }) {
@@ -295,6 +296,29 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                             </svg>
                         </div>
                     </div>
+
+                    {order.trackingNumber && (
+                        <div className="mt-4 space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tracking Number</label>
+                            <div className="bg-sky-50 rounded-xl p-3 text-sm text-sky-900 font-mono font-bold border border-sky-100 flex items-center justify-between group cursor-pointer hover:bg-sky-100 transition-colors"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(order.trackingNumber!);
+                                    toast.success("Tracking number copied");
+                                }}
+                                title="Click to copy"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-sky-500">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                                    </svg>
+                                    {order.trackingNumber}
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-sky-400 group-hover:text-sky-700">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                </svg>
+                            </div>
+                        </div>
+                    )}
 
                     {order.status === "PENDING" && (
                         <div className="mt-6 pt-4 border-t border-gray-100">

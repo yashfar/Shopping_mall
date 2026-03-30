@@ -9,7 +9,9 @@
       "Bash(ls -la /c/My-Store/online_shop/app/\\\\\\(main\\\\\\)/)",
       "Bash(ls -la /c/My-Store/online_shop/app/\\\\\\(main\\\\\\)/admin/)",
       "Bash(xargs cat:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(rm -rf .next)",
+      "Bash(rm -rf node_modules/.cache)"
     ]
   }
 }

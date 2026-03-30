@@ -18,6 +18,8 @@ export default function Filters({ categories }: FiltersProps) {
     const currentCategory = searchParams.get("category") || "";
     const currentRating = searchParams.get("rating") || "";
     const currentQuery = searchParams.get("q") || "";
+    const inStockOnly = searchParams.get("inStock") === "true";
+    const onSaleOnly = searchParams.get("onSale") === "true";
 
     const updateFilters = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -88,6 +90,28 @@ export default function Filters({ categories }: FiltersProps) {
                         Clear All
                     </button>
                 )}
+            </div>
+
+            {/* Quick Toggles */}
+            <div className="border-t border-[#A9A9A9]/20 pt-4 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">In Stock Only</span>
+                    <button
+                        onClick={() => updateFilters("inStock", inStockOnly ? "" : "true")}
+                        className={`relative w-10 h-6 rounded-full transition-colors ${inStockOnly ? "bg-[#C8102E]" : "bg-gray-200"}`}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${inStockOnly ? "translate-x-4" : ""}`} />
+                    </button>
+                </label>
+                <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">On Sale</span>
+                    <button
+                        onClick={() => updateFilters("onSale", onSaleOnly ? "" : "true")}
+                        className={`relative w-10 h-6 rounded-full transition-colors ${onSaleOnly ? "bg-[#C8102E]" : "bg-gray-200"}`}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${onSaleOnly ? "translate-x-4" : ""}`} />
+                    </button>
+                </label>
             </div>
 
             {/* Category Filter */}
