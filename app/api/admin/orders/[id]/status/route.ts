@@ -20,7 +20,7 @@ export async function PATCH(
 
     try {
         const body = await req.json();
-        const { status } = body;
+        const { status, trackingNumber } = body;
 
         // Validate status
         const validStatuses = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
@@ -31,10 +31,15 @@ export async function PATCH(
             );
         }
 
-        // Update order status
+        // Update order status and tracking number
+        const updateData: any = { status };
+        if (trackingNumber !== undefined) {
+            updateData.trackingNumber = trackingNumber.trim() || null;
+        }
+
         const order = await prisma.order.update({
             where: { id },
-            data: { status },
+            data: updateData,
         });
 
         return NextResponse.json({ order, message: "Order status updated successfully" });

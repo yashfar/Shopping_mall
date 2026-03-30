@@ -10,6 +10,8 @@ interface ProductsPageProps {
         max?: string;
         rating?: string;
         sort?: string;
+        inStock?: string;
+        onSale?: string;
     }>;
 }
 
@@ -21,6 +23,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined; // Convert to cents
     const minRating = params.rating ? parseInt(params.rating) : undefined;
     const sort = params.sort;
+    const inStockOnly = params.inStock === "true";
+    const onSaleOnly = params.onSale === "true";
 
     // Build Prisma where clause
     const whereClause: any = {
@@ -50,6 +54,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         whereClause.price = {};
         if (minPrice !== undefined) whereClause.price.gte = minPrice;
         if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+    }
+
+    // In stock filter
+    if (inStockOnly) {
+        whereClause.stock = { gt: 0 };
+    }
+
+    // On sale filter
+    if (onSaleOnly) {
+        whereClause.salePrice = { not: null };
     }
 
     // Fetch initial page of products (12 items)
@@ -100,6 +114,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 max: params.max,
                 rating: params.rating,
                 sort,
+                inStock: params.inStock,
+                onSale: params.onSale,
             }}
             title="All Products"
             description="Explore our complete catalog of quality items"

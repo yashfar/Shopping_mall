@@ -24,6 +24,8 @@ interface ProductCatalogProps {
         max?: string;
         rating?: string;
         sort?: string;
+        inStock?: string;
+        onSale?: string;
     };
     title?: string;
     description?: string;
@@ -130,7 +132,7 @@ export default function ProductCatalog({
             <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
                 <main className="w-full">
                     {/* Active Filter Badges */}
-                    {(queryParams.category || queryParams.min || queryParams.max || queryParams.rating) && (
+                    {(queryParams.category || queryParams.min || queryParams.max || queryParams.rating || queryParams.inStock || queryParams.onSale) && (
                         <div className="mb-8 flex flex-wrap gap-2.5 items-center">
                             <span className="text-xs font-black text-[#A9A9A9] uppercase tracking-wider mr-1">Active:</span>
                             {queryParams.category && (
@@ -147,6 +149,16 @@ export default function ProductCatalog({
                             {queryParams.rating && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
                                     {queryParams.rating}+ Stars
+                                </span>
+                            )}
+                            {queryParams.inStock === "true" && (
+                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100 shadow-sm">
+                                    In Stock
+                                </span>
+                            )}
+                            {queryParams.onSale === "true" && (
+                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
+                                    On Sale
                                 </span>
                             )}
                             <button
