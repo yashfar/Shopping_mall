@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import AvatarUpload from "./AvatarUpload";
 import "./profile-content.css";
 
@@ -31,6 +32,7 @@ export default function ProfileContent() {
         text: string;
     } | null>(null);
     const router = useRouter();
+    const t = useTranslations("profile");
 
     useEffect(() => {
         fetchProfile();
@@ -47,11 +49,11 @@ export default function ProfileContent() {
                 setPhone(data.user.phone || "");
                 setBirthdate(data.user.birthdate ? data.user.birthdate.split('T')[0] : "");
             } else {
-                setMessage({ type: "error", text: "Failed to load profile" });
+                setMessage({ type: "error", text: t("failedToLoadShort") });
             }
         } catch (error) {
             console.error("Error fetching profile:", error);
-            setMessage({ type: "error", text: "Failed to load profile" });
+            setMessage({ type: "error", text: t("failedToLoadShort") });
         } finally {
             setIsLoading(false);
         }
@@ -80,17 +82,17 @@ export default function ProfileContent() {
 
             if (response.ok) {
                 setUser(data.user);
-                setMessage({ type: "success", text: "Profile updated successfully!" });
+                setMessage({ type: "success", text: t("updatedSuccess") });
                 router.refresh();
             } else {
                 setMessage({
                     type: "error",
-                    text: data.error || "Failed to update profile",
+                    text: data.error || t("failedToUpdate"),
                 });
             }
         } catch (error) {
             console.error("Error updating profile:", error);
-            setMessage({ type: "error", text: "Failed to update profile" });
+            setMessage({ type: "error", text: t("failedToUpdate") });
         } finally {
             setIsSaving(false);
         }
@@ -110,7 +112,7 @@ export default function ProfileContent() {
         return (
             <div className="profile-loading">
                 <div className="spinner"></div>
-                <p>Loading profile...</p>
+                <p>{t("loading")}</p>
             </div>
         );
     }
@@ -118,7 +120,7 @@ export default function ProfileContent() {
     if (!user) {
         return (
             <div className="profile-error">
-                <p>Failed to load profile. Please try again.</p>
+                <p>{t("failedToLoad")}</p>
             </div>
         );
     }
@@ -166,11 +168,11 @@ export default function ProfileContent() {
 
             <form onSubmit={handleSubmit} className="profile-form">
                 <div className="form-section">
-                    <h3 className="section-title">Personal Information</h3>
+                    <h3 className="section-title">{t("personalInfo")}</h3>
 
                     <div className="form-group">
                         <label htmlFor="email" className="form-label">
-                            Email Address
+                            {t("emailAddress")}
                         </label>
                         <input
                             type="email"
@@ -179,13 +181,13 @@ export default function ProfileContent() {
                             disabled
                             className="form-input input-disabled"
                         />
-                        <p className="form-hint">Email cannot be changed</p>
+                        <p className="form-hint">{t("emailCannotChange")}</p>
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
                             <label htmlFor="firstName" className="form-label">
-                                First Name <span className="required">*</span>
+                                {t("firstName")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -195,13 +197,13 @@ export default function ProfileContent() {
                                 required
                                 maxLength={50}
                                 className="form-input"
-                                placeholder="Enter your first name"
+                                placeholder={t("firstNamePlaceholder")}
                             />
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="lastName" className="form-label">
-                                Last Name <span className="required">*</span>
+                                {t("lastName")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -211,7 +213,7 @@ export default function ProfileContent() {
                                 required
                                 maxLength={50}
                                 className="form-input"
-                                placeholder="Enter your last name"
+                                placeholder={t("lastNamePlaceholder")}
                             />
                         </div>
                     </div>
@@ -219,7 +221,7 @@ export default function ProfileContent() {
                     <div className="form-row">
                         <div className="form-group">
                             <label htmlFor="phone" className="form-label">
-                                Phone Number
+                                {t("phoneNumber")}
                             </label>
                             <input
                                 type="tel"
@@ -228,13 +230,13 @@ export default function ProfileContent() {
                                 onChange={(e) => setPhone(e.target.value)}
                                 maxLength={20}
                                 className="form-input"
-                                placeholder="e.g., +90 555 123 4567"
+                                placeholder={t("phonePlaceholder")}
                             />
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="birthdate" className="form-label">
-                                Birthdate
+                                {t("birthdate")}
                             </label>
                             <input
                                 type="date"
@@ -255,16 +257,16 @@ export default function ProfileContent() {
                         className="btn-secondary"
                         disabled={isSaving}
                     >
-                        Cancel
+                        {t("cancel")}
                     </button>
                     <button type="submit" className="btn-primary" disabled={isSaving}>
                         {isSaving ? (
                             <>
                                 <span className="btn-spinner"></span>
-                                Saving...
+                                {t("saving")}
                             </>
                         ) : (
-                            "Save Changes"
+                            t("saveChanges")
                         )}
                     </button>
                 </div>

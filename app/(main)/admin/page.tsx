@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import UserManagementTable from "./UserManagementTable";
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 
 export default async function AdminPage() {
+    const t = await getTranslations("admin");
     const session = await auth();
 
     // Check if user is logged in
@@ -54,8 +56,8 @@ export default async function AdminPage() {
         <div className="max-w-7xl mx-auto px-6 py-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
-                    <p className="text-gray-500 mt-2">Overview of your store&apos;s performance and settings.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t("dashboard")}</h1>
+                    <p className="text-gray-500 mt-2">{t("dashboardSubtitle")}</p>
                 </div>
                 <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -74,8 +76,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Products</h3>
-                    <p className="text-sm text-gray-500 mt-1">Add, edit, or remove products from your catalog.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("products")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("productsDescription")}</p>
                 </Link>
 
                 <Link href="/admin/orders" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
@@ -92,8 +94,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">View</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Orders</h3>
-                    <p className="text-sm text-gray-500 mt-1">Track and manage customer orders.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("orders")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("ordersDescription")}</p>
                 </Link>
 
                 <Link href="/admin/banners" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
@@ -105,8 +107,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Edit</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Banners</h3>
-                    <p className="text-sm text-gray-500 mt-1">Update promotional banners and sliders.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("banners")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("bannersDescription")}</p>
                 </Link>
 
                 <Link href="/admin/payment-management" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
@@ -118,8 +120,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Configure</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Payment Settings</h3>
-                    <p className="text-sm text-gray-500 mt-1">Configure taxes, shipping fees, and thresholds.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("paymentSettings")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("paymentSettingsDescription")}</p>
                 </Link>
 
                 <Link href="/admin/coupons" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
@@ -131,8 +133,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Coupons</h3>
-                    <p className="text-sm text-gray-500 mt-1">Create and manage discount codes.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("coupons")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("couponsDescription")}</p>
                 </Link>
 
                 <Link href="/admin/categories" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
@@ -145,8 +147,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Manage</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Categories</h3>
-                    <p className="text-sm text-gray-500 mt-1">Add, rename or delete product categories.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("categories")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("categoriesDescription")}</p>
                 </Link>
 
                 <Link href="/admin/sale-analysis" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
@@ -158,8 +160,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Analyze</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Sale Analysis</h3>
-                    <p className="text-sm text-gray-500 mt-1">View sales performance, revenue, and key metrics.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("saleAnalysis")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("saleAnalysisDescription")}</p>
                 </Link>
 
                 <Link href="/admin/returns" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
@@ -176,8 +178,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">Review</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Returns</h3>
-                    <p className="text-sm text-gray-500 mt-1">Review and process return requests.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("returns")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("returnsDescription")}</p>
                 </Link>
 
                 <Link href="/admin/messages" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
@@ -194,8 +196,8 @@ export default async function AdminPage() {
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">View</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Messages</h3>
-                    <p className="text-sm text-gray-500 mt-1">View and reply to contact form messages.</p>
+                    <h3 className="text-lg font-bold text-gray-900">{t("messages")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("messagesDescription")}</p>
                 </Link>
             </div>
 
@@ -210,15 +212,15 @@ export default async function AdminPage() {
                                 </svg>
                             </div>
                             <div>
-                                <h2 className="text-base font-bold text-amber-900">Low Stock Alert</h2>
+                                <h2 className="text-base font-bold text-amber-900">{t("lowStockAlert")}</h2>
                                 <p className="text-xs text-amber-600">
-                                    {lowStockProducts.length} product{lowStockProducts.length !== 1 ? "s" : ""} running low
-                                    {outOfStockCount > 0 && <span className="text-red-600 font-bold"> &middot; {outOfStockCount} out of stock</span>}
+                                    {t("productsRunningLow", { count: lowStockProducts.length })}
+                                    {outOfStockCount > 0 && <span className="text-red-600 font-bold"> &middot; {t("outOfStockCount", { count: outOfStockCount })}</span>}
                                 </p>
                             </div>
                         </div>
                         <Link href="/admin/products" className="text-xs font-semibold text-amber-700 hover:text-[#C8102E] transition-colors">
-                            View All Products &rarr;
+                            {t("viewAllProducts")} &rarr;
                         </Link>
                     </div>
                     <div className="divide-y divide-gray-100">
@@ -243,7 +245,7 @@ export default async function AdminPage() {
                                         ? "bg-red-50 text-red-600 border border-red-100"
                                         : "bg-amber-50 text-amber-600 border border-amber-100"
                                 }`}>
-                                    <span>{product.stock} left</span>
+                                    <span>{t("itemsLeft", { count: product.stock })}</span>
                                 </div>
                             </a>
                         ))}
@@ -253,8 +255,8 @@ export default async function AdminPage() {
 
             {/* Section Header */}
             <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-900">System Users</h2>
-                <p className="text-sm text-gray-500">Manage access and permissions.</p>
+                <h2 className="text-xl font-bold text-gray-900">{t("systemUsers")}</h2>
+                <p className="text-sm text-gray-500">{t("manageAccess")}</p>
             </div>
 
             <UserManagementTable />

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 interface FiltersProps {
     categories: string[];
@@ -10,6 +11,7 @@ interface FiltersProps {
 export default function Filters({ categories }: FiltersProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const t = useTranslations("filters");
 
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
@@ -81,13 +83,13 @@ export default function Filters({ categories }: FiltersProps) {
         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-extrabold text-[#1A1A1A]">Filters</h2>
+                <h2 className="text-xl font-extrabold text-[#1A1A1A]">{t("title")}</h2>
                 {hasActiveFilters && (
                     <button
                         onClick={clearAllFilters}
                         className="text-sm text-[#C8102E] hover:text-[#A90D27] font-bold"
                     >
-                        Clear All
+                        {t("clearAll")}
                     </button>
                 )}
             </div>
@@ -95,7 +97,7 @@ export default function Filters({ categories }: FiltersProps) {
             {/* Quick Toggles */}
             <div className="border-t border-[#A9A9A9]/20 pt-4 space-y-3">
                 <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">In Stock Only</span>
+                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">{t("inStockOnly")}</span>
                     <button
                         onClick={() => updateFilters("inStock", inStockOnly ? "" : "true")}
                         className={`relative w-10 h-6 rounded-full transition-colors ${inStockOnly ? "bg-[#C8102E]" : "bg-gray-200"}`}
@@ -104,7 +106,7 @@ export default function Filters({ categories }: FiltersProps) {
                     </button>
                 </label>
                 <label className="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">On Sale</span>
+                    <span className="text-sm font-semibold text-[#1A1A1A] group-hover:text-[#C8102E] transition-colors">{t("onSale")}</span>
                     <button
                         onClick={() => updateFilters("onSale", onSaleOnly ? "" : "true")}
                         className={`relative w-10 h-6 rounded-full transition-colors ${onSaleOnly ? "bg-[#C8102E]" : "bg-gray-200"}`}
@@ -117,7 +119,7 @@ export default function Filters({ categories }: FiltersProps) {
             {/* Category Filter */}
             {categories.length > 0 && (
                 <div className="border-t border-[#A9A9A9]/20 pt-4">
-                    <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Category</h3>
+                    <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">{t("category")}</h3>
                     <div className="space-y-2">
                         {categories.map((category) => (
                             <label
@@ -141,11 +143,11 @@ export default function Filters({ categories }: FiltersProps) {
 
             {/* Price Filter */}
             <div className="border-t border-[#A9A9A9]/20 pt-4">
-                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Price Range</h3>
+                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">{t("priceRange")}</h3>
                 <div className="space-y-4">
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">Min ($)</label>
+                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">{t("minPrice")}</label>
                             <input
                                 type="number"
                                 value={minPrice}
@@ -156,12 +158,12 @@ export default function Filters({ categories }: FiltersProps) {
                             />
                         </div>
                         <div className="flex-1">
-                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">Max ($)</label>
+                            <label className="text-xs font-bold text-[#A9A9A9] mb-1.5 block">{t("maxPrice")}</label>
                             <input
                                 type="number"
                                 value={maxPrice}
                                 onChange={(e) => setMaxPrice(e.target.value)}
-                                placeholder="Any"
+                                placeholder={t("maxPlaceholder")}
                                 min="0"
                                 className="w-full px-4 py-2 border border-[#A9A9A9] rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E] font-medium"
                             />
@@ -171,14 +173,14 @@ export default function Filters({ categories }: FiltersProps) {
                         onClick={handlePriceFilter}
                         className="w-full px-4 py-2.5 bg-[#C8102E] text-white rounded-lg hover:bg-[#A90D27] transition-all duration-300 text-sm font-bold shadow-md active:scale-95"
                     >
-                        Apply Price Filter
+                        {t("applyPriceFilter")}
                     </button>
                 </div>
             </div>
 
             {/* Rating Filter */}
             <div className="border-t border-[#A9A9A9]/20 pt-4">
-                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">Customer Rating</h3>
+                <h3 className="text-sm font-bold text-[#1A1A1A] mb-4">{t("customerRating")}</h3>
                 <div className="space-y-2">
                     {["4", "3", "2", "1"].map((rating) => (
                         <button
@@ -208,7 +210,7 @@ export default function Filters({ categories }: FiltersProps) {
                                         />
                                     </svg>
                                 ))}
-                                <span className={`ml-2 text-sm font-bold ${currentRating === rating ? "text-[#C8102E]" : "text-[#A9A9A9]"}`}>& up</span>
+                                <span className={`ml-2 text-sm font-bold ${currentRating === rating ? "text-[#C8102E]" : "text-[#A9A9A9]"}`}>{t("andUp")}</span>
                             </div>
                         </button>
                     ))}

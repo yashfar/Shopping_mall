@@ -2,17 +2,19 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-
-const sortOptions = [
-    { value: "price_asc", label: "Price: Low to High" },
-    { value: "price_desc", label: "Price: High to Low" },
-    { value: "newest", label: "Newest First" },
-    { value: "oldest", label: "Oldest First" },
-    { value: "rating_desc", label: "Highest Rating" },
-    { value: "reviews_desc", label: "Most Reviewed" },
-];
+import { useTranslations } from "next-intl";
 
 export default function SortMenu() {
+    const t = useTranslations("sort");
+
+    const sortOptions = [
+        { value: "price_asc", label: t("priceLowToHigh") },
+        { value: "price_desc", label: t("priceHighToLow") },
+        { value: "newest", label: t("newestFirst") },
+        { value: "oldest", label: t("oldestFirst") },
+        { value: "rating_desc", label: t("highestRating") },
+        { value: "reviews_desc", label: t("mostReviewed") },
+    ];
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +65,7 @@ export default function SortMenu() {
                         />
                     </svg>
                 </span>
-                <span className="hidden sm:inline text-gray-400 font-medium whitespace-nowrap">Sort by:</span>
+                <span className="hidden sm:inline text-gray-400 font-medium whitespace-nowrap">{t("sortBy")}</span>
                 <span className="whitespace-nowrap">{currentLabel}</span>
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

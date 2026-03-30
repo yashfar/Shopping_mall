@@ -2,6 +2,7 @@
 
 import ProductCard from "./ProductCard";
 import { useInfiniteProducts } from "@@/hooks/useInfiniteProducts";
+import { useTranslations } from "next-intl";
 
 interface Product {
     id: string;
@@ -31,9 +32,10 @@ interface ProductInfiniteListProps {
 export default function ProductInfiniteList({
     initialProducts,
     queryParams,
-    emptyMessage = "No products found",
-    emptyDescription = "Try adjusting your search or filters",
+    emptyMessage,
+    emptyDescription,
 }: ProductInfiniteListProps) {
+    const t = useTranslations("productList");
     const { products, loading, hasMore, loadMoreRef } = useInfiniteProducts({
         initialProducts,
         queryParams,
@@ -58,10 +60,10 @@ export default function ProductInfiniteList({
                     />
                 </svg>
                 <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-                    {emptyMessage}
+                    {emptyMessage || t("noProductsFound")}
                 </h2>
                 <p className="text-gray-500 text-center max-w-md">
-                    {emptyDescription}
+                    {emptyDescription || t("noProductsDescription")}
                 </p>
             </div>
         );
@@ -91,7 +93,7 @@ export default function ProductInfiniteList({
                     ref={loadMoreRef}
                     className="h-20 flex items-center justify-center"
                 >
-                    <span className="text-sm text-gray-400">Loading more...</span>
+                    <span className="text-sm text-gray-400">{t("loadingMore")}</span>
                 </div>
             )}
 
@@ -99,7 +101,7 @@ export default function ProductInfiniteList({
             {!hasMore && products.length > 0 && (
                 <div className="flex justify-center items-center py-8">
                     <p className="text-gray-500 text-sm">
-                        You've reached the end of the list
+                        {t("endOfList")}
                     </p>
                 </div>
             )}

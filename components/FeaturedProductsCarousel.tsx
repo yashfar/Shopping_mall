@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
@@ -25,8 +26,9 @@ export default function FeaturedProductsCarousel({
     title,
     products,
     linkHref,
-    linkText = "View All",
+    linkText,
 }: FeaturedProductsCarouselProps) {
+    const t = useTranslations("featuredCarousel");
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -80,7 +82,7 @@ export default function FeaturedProductsCarousel({
                                 href={linkHref}
                                 className="hidden sm:block text-sm font-bold text-[#A9A9A9] hover:text-[#C8102E] transition-colors h-fit"
                             >
-                                {linkText}
+                                {linkText || t("viewAll")}
                             </Link>
                         )}
                         <div className="flex gap-2">
@@ -130,7 +132,7 @@ export default function FeaturedProductsCarousel({
                                 {product.stock <= 0 && (
                                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
                                         <span className="bg-black text-white px-3 py-1 rounded-full text-xs font-bold">
-                                            Out of Stock
+                                            {t("outOfStock")}
                                         </span>
                                     </div>
                                 )}
@@ -163,7 +165,7 @@ export default function FeaturedProductsCarousel({
                             href={linkHref}
                             className="flex-shrink-0 w-[140px] md:w-[160px] snap-start flex flex-col items-center justify-center gap-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#C8102E] hover:text-[#C8102E] transition-all"
                         >
-                            <span className="font-bold">View All</span>
+                            <span className="font-bold">{t("viewAll")}</span>
                             <div className="w-8 h-8 rounded-full bg-current flex items-center justify-center text-white">
                                 <ChevronRight className="w-5 h-5" />
                             </div>

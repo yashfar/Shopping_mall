@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type Order = {
     id: string;
@@ -21,18 +22,19 @@ type Order = {
     }[];
 };
 
-const STATUS_OPTIONS = [
-    { value: "", label: "All" },
-    { value: "PENDING", label: "Pending" },
-    { value: "PAID", label: "Paid" },
-    { value: "SHIPPED", label: "Shipped" },
-    { value: "COMPLETED", label: "Completed" },
-    { value: "CANCELED", label: "Canceled" },
-    { value: "RETURN_REQUESTED", label: "Return Requested" },
-    { value: "RETURNED", label: "Returned" },
-];
-
 export default function OrdersList() {
+    const t = useTranslations("orders");
+
+    const STATUS_OPTIONS = [
+        { value: "", label: t("all") },
+        { value: "PENDING", label: t("pending") },
+        { value: "PAID", label: t("paid") },
+        { value: "SHIPPED", label: t("shipped") },
+        { value: "COMPLETED", label: t("completed") },
+        { value: "CANCELED", label: t("canceled") },
+        { value: "RETURN_REQUESTED", label: t("returnRequested") },
+        { value: "RETURNED", label: t("returned") },
+    ];
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -86,14 +88,14 @@ export default function OrdersList() {
         if (order.returnRequest.status === "REJECTED") {
             return (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-500 border border-red-100 ml-1.5">
-                    Return Rejected
+                    {t("returnRejected")}
                 </span>
             );
         }
         if (order.returnRequest.status === "APPROVED") {
             return (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-500 border border-emerald-100 ml-1.5">
-                    Refunded
+                    {t("refunded")}
                 </span>
             );
         }
@@ -107,7 +109,7 @@ export default function OrdersList() {
                     <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-[#C8102E] rounded-full border-t-transparent animate-spin"></div>
                 </div>
-                <p className="text-gray-400 font-medium animate-pulse">Loading orders...</p>
+                <p className="text-gray-400 font-medium animate-pulse">{t("loadingOrders")}</p>
             </div>
         );
     }
@@ -120,11 +122,11 @@ export default function OrdersList() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                     </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No orders found</h3>
-                <p className="text-gray-500 max-w-sm mb-8">You haven't placed any orders yet. Start shopping to see your orders here.</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t("noOrders")}</h3>
+                <p className="text-gray-500 max-w-sm mb-8">{t("noOrdersDescription")}</p>
                 <Link href="/products">
                     <Button className="bg-[#C8102E] hover:bg-[#A00C24] text-white px-8 h-12 rounded-xl font-bold shadow-lg shadow-[#C8102E]/20 transition-all hover:scale-105 active:scale-95">
-                        Start Shopping
+                        {t("startShopping")}
                     </Button>
                 </Link>
             </div>
@@ -153,7 +155,7 @@ export default function OrdersList() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search by order number..."
+                        placeholder={t("searchPlaceholder")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-11 pr-10 py-3 border border-gray-100 rounded-2xl bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm font-medium placeholder:text-gray-400"
@@ -202,13 +204,13 @@ export default function OrdersList() {
             {(searchTerm || statusFilter) && (
                 <div className="flex items-center justify-between px-1">
                     <p className="text-sm text-gray-500 font-medium">
-                        <span className="font-black text-gray-900">{filteredOrders.length}</span> order{filteredOrders.length !== 1 ? "s" : ""} found
+                        <span className="font-black text-gray-900">{filteredOrders.length}</span> {t("ordersFound", { count: filteredOrders.length })}
                     </p>
                     <button
                         onClick={() => { setSearchTerm(""); setStatusFilter(""); }}
                         className="text-xs font-bold text-[#C8102E] hover:text-[#A90D27] transition-colors"
                     >
-                        Clear all
+                        {t("clearAll")}
                     </button>
                 </div>
             )}
@@ -219,8 +221,8 @@ export default function OrdersList() {
                     <div className="bg-gray-50 p-4 rounded-full mb-4">
                         <Search className="w-6 h-6 text-gray-300" />
                     </div>
-                    <p className="text-base font-bold text-gray-900 mb-1">No matching orders</p>
-                    <p className="text-sm text-gray-400">Try a different search or filter</p>
+                    <p className="text-base font-bold text-gray-900 mb-1">{t("noMatchingOrders")}</p>
+                    <p className="text-sm text-gray-400">{t("tryDifferent")}</p>
                 </div>
             )}
 
@@ -229,11 +231,11 @@ export default function OrdersList() {
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-gray-50/50 border-b border-gray-100">
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Order #</th>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Date</th>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">{t("orderNumber")}</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">{t("date")}</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">{t("status")}</th>
                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">{t("action")}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -268,7 +270,7 @@ export default function OrdersList() {
                                 <td className="px-6 py-4 text-right">
                                     <Link href={`/orders/${order.id}`}>
                                         <Button variant="ghost" size="sm" className="font-bold text-gray-500 hover:text-[#C8102E] hover:bg-red-50">
-                                            View Details
+                                            {t("viewDetails")}
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 ml-2">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                             </svg>
@@ -304,14 +306,14 @@ export default function OrdersList() {
 
                         <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Order #</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{t("orderNumber")}</span>
                                 <span className="font-bold text-gray-900 font-mono text-sm">
                                     {order.orderNumber || order.id.substring(0, 8).toUpperCase()}
                                 </span>
                             </div>
                             <Link href={`/orders/${order.id}`}>
                                 <Button size="sm" className="bg-[#1A1A1A] text-white rounded-lg font-bold text-xs px-4 h-9">
-                                    View
+                                    {t("view")}
                                 </Button>
                             </Link>
                         </div>

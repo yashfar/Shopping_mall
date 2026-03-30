@@ -6,6 +6,7 @@ import { useCart } from "@@/context/CartContext";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { calculateCartTotals } from "@@/lib/payment-utils";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -29,6 +30,8 @@ type Cart = {
 export default function CartContent() {
     const router = useRouter();
     const { refreshCart } = useCart();
+    const t = useTranslations("cart");
+    const tc = useTranslations("common");
     const [cart, setCart] = useState<Cart | null>(null);
     const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
     const [loading, setLoading] = useState(true);
@@ -86,10 +89,10 @@ export default function CartContent() {
             const data = await response.json();
             setCart(data.cart);
             await refreshCart(); // Sync navbar
-            toast.success("Cart updated");
+            toast.success(t("cartUpdated"));
         } catch (error) {
             console.error("Error updating cart:", error);
-            toast.error("Failed to update cart");
+            toast.error(t("failedToUpdateCart"));
         } finally {
             setUpdating(null);
         }
@@ -111,10 +114,10 @@ export default function CartContent() {
             const data = await response.json();
             setCart(data.cart);
             await refreshCart();
-            toast.success("Item removed from cart");
+            toast.success(t("itemRemoved"));
         } catch (error) {
             console.error("Error removing item:", error);
-            toast.error("Failed to remove item");
+            toast.error(t("failedToRemoveItem"));
         } finally {
             setUpdating(null);
             setConfirmRemove({ open: false, productId: "" });
@@ -134,7 +137,7 @@ export default function CartContent() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
-                <p className="text-[#A9A9A9] font-semibold">Loading your cart...</p>
+                <p className="text-[#A9A9A9] font-semibold">{t("loadingCart")}</p>
             </div>
         );
     }
@@ -159,9 +162,9 @@ export default function CartContent() {
                     </div>
                 </div>
 
-                <h2 className="text-3xl font-black text-[#1A1A1A] mb-4 tracking-tight text-center">Your cart feels a bit light</h2>
+                <h2 className="text-3xl font-black text-[#1A1A1A] mb-4 tracking-tight text-center">{t("emptyTitle")}</h2>
                 <p className="text-gray-500 mb-10 max-w-md text-center text-lg leading-relaxed">
-                    There's nothing in your bag yet. Explore our collection and find something that speaks to you.
+                    {t("emptyDescription")}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -171,7 +174,7 @@ export default function CartContent() {
                     >
                         <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine" />
                         <span className="relative flex items-center gap-2">
-                            Start Shopping
+                            {t("startShopping")}
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 group-hover:translate-x-1 transition-transform">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                             </svg>
@@ -189,11 +192,11 @@ export default function CartContent() {
             <ConfirmDialog
                 open={confirmRemove.open}
                 onOpenChange={(open) => setConfirmRemove(prev => ({ ...prev, open }))}
-                title="Remove Item"
-                description="Are you sure you want to remove this item from your cart?"
+                title={t("removeItem")}
+                description={t("removeItemConfirm")}
                 onConfirm={handleRemoveItem}
                 variant="destructive"
-                confirmText="Remove"
+                confirmText={tc("remove")}
             />
 
             {/* Mobile Card View */}
@@ -235,9 +238,9 @@ export default function CartContent() {
                                     </Link>
                                     <div className="text-xs font-bold uppercase tracking-wider mt-1">
                                         {item.product.stock > 0 ? (
-                                            <span className="text-emerald-600">In stock</span>
+                                            <span className="text-emerald-600">{tc("inStock")}</span>
                                         ) : (
-                                            <span className="text-[#C8102E]">Out of stock</span>
+                                            <span className="text-[#C8102E]">{tc("outOfStock")}</span>
                                         )}
                                     </div>
                                 </div>
@@ -245,7 +248,7 @@ export default function CartContent() {
 
                             {/* Price */}
                             <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-[#A9A9A9]">Price</span>
+                                <span className="text-sm font-semibold text-[#A9A9A9]">{tc("price")}</span>
                                 <span className="text-lg font-bold text-[#1A1A1A]">
                                     ${(item.product.price / 100).toFixed(2)}
                                 </span>
@@ -253,7 +256,7 @@ export default function CartContent() {
 
                             {/* Quantity Controls */}
                             <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-[#A9A9A9]">Quantity</span>
+                                <span className="text-sm font-semibold text-[#A9A9A9]">{tc("quantity")}</span>
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
@@ -277,7 +280,7 @@ export default function CartContent() {
 
                             {/* Subtotal */}
                             <div className="flex items-center justify-between pt-3 border-t border-[#A9A9A9]/20">
-                                <span className="text-sm font-semibold text-[#A9A9A9]">Subtotal</span>
+                                <span className="text-sm font-semibold text-[#A9A9A9]">{tc("subtotal")}</span>
                                 <span className="text-xl font-extrabold text-[#C8102E]">
                                     ${((item.product.price * item.quantity) / 100).toFixed(2)}
                                 </span>
@@ -292,7 +295,7 @@ export default function CartContent() {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                 </svg>
-                                Remove from Cart
+                                {t("removeFromCart")}
                             </button>
                         </div>
                     </div>
@@ -305,11 +308,11 @@ export default function CartContent() {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-[#FAFAFA] border-bottom-1 border-gray-200">
-                                <th className="px-6 py-4 text-left text-sm font-bold text-[#1A1A1A]">PRODUCT</th>
-                                <th className="px-6 py-4 text-right text-sm font-bold text-[#1A1A1A]">PRICE</th>
-                                <th className="px-6 py-4 text-center text-sm font-bold text-[#1A1A1A]">QUANTITY</th>
-                                <th className="px-6 py-4 text-right text-sm font-bold text-[#1A1A1A]">SUBTOTAL</th>
-                                <th className="px-6 py-4 text-center text-sm font-bold text-[#1A1A1A]">ACTIONS</th>
+                                <th className="px-6 py-4 text-left text-sm font-bold text-[#1A1A1A]">{t("product")}</th>
+                                <th className="px-6 py-4 text-right text-sm font-bold text-[#1A1A1A]">{t("price")}</th>
+                                <th className="px-6 py-4 text-center text-sm font-bold text-[#1A1A1A]">{t("quantity")}</th>
+                                <th className="px-6 py-4 text-right text-sm font-bold text-[#1A1A1A]">{t("subtotal")}</th>
+                                <th className="px-6 py-4 text-center text-sm font-bold text-[#1A1A1A]">{t("actions")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#A9A9A9]/20">
@@ -347,9 +350,9 @@ export default function CartContent() {
                                                 </Link>
                                                 <div className="text-xs font-bold uppercase tracking-wider">
                                                     {item.product.stock > 0 ? (
-                                                        <span className="text-emerald-600">In stock</span>
+                                                        <span className="text-emerald-600">{tc("inStock")}</span>
                                                     ) : (
-                                                        <span className="text-[#C8102E]">Out of stock</span>
+                                                        <span className="text-[#C8102E]">{tc("outOfStock")}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -391,7 +394,7 @@ export default function CartContent() {
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                             </svg>
-                                            Remove
+                                            {tc("remove")}
                                         </button>
                                     </td>
                                 </tr>
@@ -408,46 +411,46 @@ export default function CartContent() {
 
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 h-fit space-y-8 sticky top-24">
                     <h2 className="text-2xl font-black text-[#1A1A1A]">
-                        Order Summary
+                        {t("orderSummary")}
                     </h2>
 
                     {totals && config ? (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center text-gray-500 font-medium">
-                                <span>Subtotal (Tax included)</span>
+                                <span>{t("subtotalTaxIncluded")}</span>
                                 <span className="text-[#1A1A1A] font-bold">${(totals.subtotal / 100).toFixed(2)}</span>
                             </div>
 
                             <div className="flex justify-between items-center text-gray-500 font-medium">
-                                <span>Shipping</span>
+                                <span>{t("shipping")}</span>
                                 {totals.shippingAmount === 0 ? (
-                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">FREE</span>
+                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">{tc("free")}</span>
                                 ) : (
                                     <span className="text-[#1A1A1A] font-bold">${(totals.shippingAmount / 100).toFixed(2)}</span>
                                 )}
                             </div>
 
                             <div className="flex justify-between items-center text-gray-400 text-sm">
-                                <span>Estimated Tax (Included)</span>
+                                <span>{t("estimatedTaxIncluded")}</span>
                                 <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
                             </div>
 
                             <div className="h-px bg-gray-100 my-4" />
 
                             <div className="flex justify-between items-center">
-                                <span className="text-lg font-bold text-[#1A1A1A]">Order Total</span>
+                                <span className="text-lg font-bold text-[#1A1A1A]">{t("orderTotal")}</span>
                                 <div className="text-right">
                                     <span className="text-2xl font-black text-[#C8102E] block">
                                         ${(totals.total / 100).toFixed(2)}
                                     </span>
                                     {totals.shippingAmount === 0 && config.freeShippingThreshold > 0 && (
-                                        <p className="text-xs text-emerald-600 font-bold mt-1">Free Shipping Applied!</p>
+                                        <p className="text-xs text-emerald-600 font-bold mt-1">{t("freeShippingApplied")}</p>
                                     )}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="py-4 text-center text-gray-400">Loading summary...</div>
+                        <div className="py-4 text-center text-gray-400">{t("loadingSummary")}</div>
                     )}
 
                     <div className="space-y-4 pt-2">
@@ -457,13 +460,13 @@ export default function CartContent() {
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 flex-shrink-0">
                                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                                     </svg>
-                                    <div className="text-sm font-bold">Please add a shipping address to proceed.</div>
+                                    <div className="text-sm font-bold">{t("addAddressWarning")}</div>
                                 </div>
                                 <button
                                     onClick={() => router.push("/profile/addresses")}
                                     className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold transition-all hover:bg-[#333] active:scale-95 shadow-lg group relative overflow-hidden"
                                 >
-                                    Add Address
+                                    {t("addAddress")}
                                 </button>
                             </div>
                         ) : (
@@ -472,7 +475,7 @@ export default function CartContent() {
                                 className="w-full py-4 bg-[#C8102E] text-white rounded-full font-black text-lg transition-all hover:bg-[#A90D27] hover:shadow-[0_8px_30px_rgba(200,16,46,0.25)] active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden"
                             >
                                 <span className="relative z-10 flex items-center gap-2">
-                                    Proceed to Checkout
+                                    {t("proceedToCheckout")}
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 transition-transform group-hover:translate-x-1">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                     </svg>
@@ -487,7 +490,7 @@ export default function CartContent() {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                             </svg>
-                            Continue Shopping
+                            {t("continueShopping")}
                         </a>
                     </div>
                 </div>

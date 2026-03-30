@@ -3,6 +3,7 @@ import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import BannerCarousel from "@@/components/BannerCarousel";
 import FeaturedProductsCarousel from "@@/components/FeaturedProductsCarousel";
+import { getTranslations } from "next-intl/server";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -16,6 +17,7 @@ interface HomeProps {
 }
 
 export default async function Home({ searchParams }: HomeProps) {
+  const t = await getTranslations("catalog");
   const params = await searchParams;
   const query = params.q || "";
   const category = params.category || "";
@@ -165,7 +167,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <>
           {bestSellers.length > 0 && (
             <FeaturedProductsCarousel
-              title="Best Sellers"
+              title={t("bestSellers")}
               products={bestSellers}
               linkHref="/search?sort=popular"
             />
@@ -173,7 +175,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
           {newProducts.length > 0 && (
             <FeaturedProductsCarousel
-              title="New Arrivals"
+              title={t("newArrivals")}
               products={newProducts}
               linkHref="/search?sort=newest"
             />
@@ -193,8 +195,8 @@ export default async function Home({ searchParams }: HomeProps) {
           sort,
         }}
         // Update title logic to show "All Products" below carousels
-        title={query ? `Results for "${query}"` : "All Products"}
-        description={query ? undefined : "Browse our full collection below."}
+        title={query ? t("resultsFor", { query }) : t("allProducts")}
+        description={query ? undefined : t("browseCollection")}
       />
     </>
   );

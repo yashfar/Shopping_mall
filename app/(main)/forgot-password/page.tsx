@@ -2,9 +2,11 @@
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import "./forgot-password.css";
 
 export default function ForgotPasswordPage() {
+    const t = useTranslations("forgotPassword");
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{
@@ -37,14 +39,14 @@ export default function ForgotPasswordPage() {
             } else {
                 setMessage({
                     type: "error",
-                    text: data.error || "Failed to send reset email",
+                    text: data.error || t("failedToSend"),
                 });
             }
         } catch (error) {
             console.error("Error:", error);
             setMessage({
                 type: "error",
-                text: "An error occurred. Please try again.",
+                text: t("genericError"),
             });
         } finally {
             setLoading(false);
@@ -55,10 +57,9 @@ export default function ForgotPasswordPage() {
         <div className="forgot-password-container">
             <div className="forgot-password-card">
                 <div className="forgot-password-header">
-                    <h1 className="forgot-password-title">Forgot Password?</h1>
+                    <h1 className="forgot-password-title">{t("title")}</h1>
                     <p className="forgot-password-subtitle">
-                        Enter your email address and we'll send you a link to reset your
-                        password.
+                        {t("subtitle")}
                     </p>
                 </div>
 
@@ -71,7 +72,7 @@ export default function ForgotPasswordPage() {
                 <form onSubmit={handleSubmit} className="forgot-password-form">
                     <div className="form-group">
                         <label htmlFor="email" className="form-label">
-                            Email Address
+                            {t("emailLabel")}
                         </label>
                         <input
                             id="email"
@@ -81,7 +82,7 @@ export default function ForgotPasswordPage() {
                             required
                             disabled={loading}
                             className="form-input"
-                            placeholder="you@example.com"
+                            placeholder={t("emailPlaceholder")}
                         />
                     </div>
 
@@ -93,17 +94,17 @@ export default function ForgotPasswordPage() {
                         {loading ? (
                             <>
                                 <span className="spinner"></span>
-                                Sending...
+                                {t("sending")}
                             </>
                         ) : (
-                            "Send Reset Link"
+                            t("sendResetLink")
                         )}
                     </button>
                 </form>
 
                 <div className="forgot-password-footer">
                     <Link href="/login" className="link">
-                        ← Back to Login
+                        ← {t("backToLogin")}
                     </Link>
                 </div>
             </div>

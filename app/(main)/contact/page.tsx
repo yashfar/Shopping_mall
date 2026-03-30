@@ -4,8 +4,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
 import { Send, Loader2, Mail, MessageSquare, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function ContactPage() {
+    const t = useTranslations("contact");
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [subject, setSubject] = useState("");
@@ -17,7 +19,7 @@ export default function ContactPage() {
         e.preventDefault();
 
         if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
-            toast.error("Please fill in all fields");
+            toast.error(t("fillAllFields"));
             return;
         }
 
@@ -31,13 +33,13 @@ export default function ContactPage() {
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.error || "Failed to send message");
+                throw new Error(data.error || t("failedToSend"));
             }
 
             setSent(true);
-            toast.success("Message sent successfully!");
+            toast.success(t("messageSentToast"));
         } catch (err: any) {
-            toast.error(err.message || "Failed to send message");
+            toast.error(err.message || t("failedToSend"));
         } finally {
             setSubmitting(false);
         }
@@ -52,16 +54,16 @@ export default function ContactPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-black text-gray-900 mb-3">Message Sent!</h2>
+                    <h2 className="text-2xl font-black text-gray-900 mb-3">{t("messageSent")}</h2>
                     <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-                        Thank you for reaching out. We&apos;ll get back to you as soon as possible.
+                        {t("thankYou")}
                     </p>
                     <Button
                         onClick={() => { setSent(false); setName(""); setEmail(""); setSubject(""); setMessage(""); }}
                         variant="outline"
                         className="font-bold"
                     >
-                        Send Another Message
+                        {t("sendAnother")}
                     </Button>
                 </div>
             </div>
@@ -74,9 +76,9 @@ export default function ContactPage() {
                 {/* Left — Info */}
                 <div className="lg:col-span-2 space-y-8">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">Get in Touch</h1>
+                        <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">{t("title")}</h1>
                         <p className="text-gray-500 mt-3 leading-relaxed">
-                            Have a question about your order, a product, or anything else? Send us a message and we&apos;ll get back to you shortly.
+                            {t("subtitle")}
                         </p>
                     </div>
 
@@ -86,8 +88,8 @@ export default function ContactPage() {
                                 <Mail className="w-5 h-5 text-[#C8102E]" />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-gray-900">Email Us</p>
-                                <p className="text-sm text-gray-500 mt-0.5">support@mystore.com</p>
+                                <p className="text-sm font-black text-gray-900">{t("emailUs")}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{t("emailAddress")}</p>
                             </div>
                         </div>
 
@@ -96,17 +98,17 @@ export default function ContactPage() {
                                 <MessageSquare className="w-5 h-5 text-[#C8102E]" />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-gray-900">Response Time</p>
-                                <p className="text-sm text-gray-500 mt-0.5">We usually respond within 24 hours</p>
+                                <p className="text-sm font-black text-gray-900">{t("responseTime")}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{t("responseTimeDescription")}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Decorative Card */}
                     <div className="hidden lg:block bg-[#1A1A1A] rounded-3xl p-6 text-white">
-                        <p className="text-sm font-bold mb-2">Need quick help?</p>
+                        <p className="text-sm font-bold mb-2">{t("quickHelp")}</p>
                         <p className="text-xs text-gray-400 leading-relaxed">
-                            Check your order status anytime from your account. For returns and refunds, visit your order details page.
+                            {t("quickHelpDescription")}
                         </p>
                     </div>
                 </div>
@@ -117,7 +119,7 @@ export default function ContactPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
                                 <label htmlFor="name" className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">
-                                    Your Name
+                                    {t("yourName")}
                                 </label>
                                 <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -126,7 +128,7 @@ export default function ContactPage() {
                                         id="name"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        placeholder="John Doe"
+                                        placeholder={t("namePlaceholder")}
                                         required
                                         disabled={submitting}
                                         className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm font-medium"
@@ -135,7 +137,7 @@ export default function ContactPage() {
                             </div>
                             <div>
                                 <label htmlFor="email" className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">
-                                    Email Address
+                                    {t("emailLabel")}
                                 </label>
                                 <div className="relative">
                                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -144,7 +146,7 @@ export default function ContactPage() {
                                         id="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="john@example.com"
+                                        placeholder={t("emailPlaceholder")}
                                         required
                                         disabled={submitting}
                                         className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm font-medium"
@@ -155,14 +157,14 @@ export default function ContactPage() {
 
                         <div>
                             <label htmlFor="subject" className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">
-                                Subject
+                                {t("subject")}
                             </label>
                             <input
                                 type="text"
                                 id="subject"
                                 value={subject}
                                 onChange={(e) => setSubject(e.target.value)}
-                                placeholder="How can we help?"
+                                placeholder={t("subjectPlaceholder")}
                                 required
                                 disabled={submitting}
                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm font-medium"
@@ -171,13 +173,13 @@ export default function ContactPage() {
 
                         <div>
                             <label htmlFor="message" className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">
-                                Message
+                                {t("message")}
                             </label>
                             <textarea
                                 id="message"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                placeholder="Tell us more about your question or concern..."
+                                placeholder={t("messagePlaceholder")}
                                 rows={5}
                                 required
                                 disabled={submitting}
@@ -193,12 +195,12 @@ export default function ContactPage() {
                             {submitting ? (
                                 <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    Sending...
+                                    {t("sending")}
                                 </>
                             ) : (
                                 <>
                                     <Send className="w-5 h-5 mr-2" />
-                                    Send Message
+                                    {t("sendMessage")}
                                 </>
                             )}
                         </Button>

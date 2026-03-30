@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
 import SearchBar from "./SearchBar";
+import { useTranslations } from "next-intl";
 
 interface NavbarClientProps {
     user: {
@@ -19,6 +20,7 @@ interface NavbarClientProps {
 }
 
 export default function NavbarClient({ user }: NavbarClientProps) {
+    const t = useTranslations("userMenu");
     const { cartCount, isAnimating } = useCart();
     useWishlist(); // keeps wishlist state alive globally
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -125,7 +127,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                             {user.avatar && !imageError ? (
                                 <img
                                     src={user.avatar}
-                                    alt="User avatar"
+                                    alt={t("profile")}
                                     className="w-full h-full object-cover"
                                     onError={() => setImageError(true)}
                                 />
@@ -165,7 +167,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                         d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
                                     />
                                 </svg>
-                                Profile
+                                {t("profile")}
                             </Link>
 
                             <Link
@@ -176,7 +178,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
                                 </svg>
-                                Wishlist
+                                {t("wishlist")}
                             </Link>
 
                             <Link
@@ -198,7 +200,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                         d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                                     />
                                 </svg>
-                                Orders
+                                {t("orders")}
                             </Link>
 
                             <Link
@@ -225,7 +227,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                         d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                                     />
                                 </svg>
-                                Your Addresses
+                                {t("addresses")}
                             </Link>
 
                             {/* Admin Only - Add Product */}
@@ -250,7 +252,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                                 d="M12 4.5v15m7.5-7.5h-15"
                                             />
                                         </svg>
-                                        Add Product
+                                        {t("addProduct")}
                                     </Link>
 
                                     <Link
@@ -272,7 +274,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                                 d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                                             />
                                         </svg>
-                                        Banners
+                                        {t("banners")}
                                     </Link>
                                 </>
                             )}
@@ -298,7 +300,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                                         d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
                                     />
                                 </svg>
-                                {isLoggingOut ? "Logging out..." : "Logout"}
+                                {isLoggingOut ? t("loggingOut") : t("logout")}
                             </button>
                         </div>
                     )}
