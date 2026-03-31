@@ -7,8 +7,11 @@ import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import FilishopLogoLight from "@@/public/logo/Filishop-logo-light.png";
 import AdminNavbarLink from "@@/components/AdminNavbarLink";
+import LanguageSwitcher from "@@/components/LanguageSwitcher";
+import { getTranslations } from "next-intl/server";
 
 export default async function Navbar() {
+    const t = await getTranslations("navbar");
     const session = await auth();
     const categories = await prisma.category.findMany({
         orderBy: { name: "asc" },
@@ -21,7 +24,7 @@ export default async function Navbar() {
                 <Link href="/" className="no-underline text-[#1A1A1A] font-bold text-xl md:text-2xl flex items-center gap-3 transition-all duration-200 hover:opacity-80">
                     <Image
                         src={FilishopLogoLight}
-                        alt="My Store Logo"
+                        alt={t("logoAlt")}
                         width={120}
                         height={40}
                         className="object-contain"
@@ -31,7 +34,7 @@ export default async function Navbar() {
                 {/* Navigation Links */}
                 <div className="hidden md:flex gap-8 flex-1 ml-8 items-center">
                     <Link href="/products" className="no-underline text-[#1A1A1A] font-semibold text-[0.95rem] transition-all duration-200 hover:text-[#C8102E] relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C8102E] after:transition-all after:duration-300 hover:after:w-full">
-                        Products
+                        {t("products")}
                     </Link>
                     <CategoryDropdown categories={categories} />
                     {session?.user?.role === "ADMIN" && (
@@ -41,14 +44,19 @@ export default async function Navbar() {
 
                 {/* Right Side - Auth & Cart */}
                 <div className="flex items-center gap-4 md:gap-6">
+                    {/* Language Switcher - Desktop */}
+                    <div className="hidden md:flex items-center">
+                        <LanguageSwitcher />
+                    </div>
+
                     {!session ? (
                         // Not authenticated - show Login/Register (Desktop only)
                         <div className="hidden md:flex items-center gap-6">
                             <Link href="/login" className="no-underline text-[#1A1A1A] font-semibold text-[0.95rem] transition-all duration-200 hover:text-[#C8102E]">
-                                Login
+                                {t("login")}
                             </Link>
                             <Link href="/register" className="no-underline bg-[#C8102E] text-white px-6 py-2.5 rounded-lg font-bold text-[0.95rem] transition-all duration-300 hover:bg-[#A90D27] hover:shadow-[0_4px_12px_rgba(200,16,46,0.3)] hover:-translate-y-0.5">
-                                Register
+                                {t("register")}
                             </Link>
                         </div>
                     ) : (

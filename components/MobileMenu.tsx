@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, User, LogIn, LayoutDashboard, Package, FolderTree, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Menu, ShoppingBag, User, LogIn, LayoutDashboard, Package, FolderTree, ChevronDown, Heart } from "lucide-react";
+import LanguageSwitcher from "@@/components/LanguageSwitcher";
 import { Button } from "@@/components/ui/button";
 import {
     Sheet,
@@ -31,6 +33,7 @@ interface MobileMenuProps {
 }
 
 export default function MobileMenu({ categories, user }: MobileMenuProps) {
+    const t = useTranslations("mobileMenu");
     const [open, setOpen] = useState(false);
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
     const pathname = usePathname();
@@ -52,7 +55,10 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-white">
                 <SheetHeader className="p-4 border-b border-gray-100 bg-gray-50/30">
-                    <SheetTitle className="text-left font-bold text-lg text-[#1A1A1A]">Menu</SheetTitle>
+                    <div className="flex items-center justify-between">
+                        <SheetTitle className="text-left font-bold text-lg text-[#1A1A1A]">{t("menu")}</SheetTitle>
+                        <LanguageSwitcher compact />
+                    </div>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto py-4">
@@ -64,14 +70,14 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/" ? "bg-[#C8102E]/10 text-[#C8102E]" : "text-[#1A1A1A] hover:bg-gray-100"
                                     }`}
                             >
-                                Home
+                                {t("home")}
                             </Link>
                             <Link
                                 href="/products"
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/products" ? "bg-[#C8102E]/10 text-[#C8102E]" : "text-[#1A1A1A] hover:bg-gray-100"
                                     }`}
                             >
-                                Products
+                                {t("products")}
                             </Link>
                         </div>
 
@@ -81,7 +87,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                                 onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
                                 className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-[#1A1A1A] hover:bg-gray-100 rounded-md transition-colors group"
                             >
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-[#1A1A1A] transition-colors">Categories</span>
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-[#1A1A1A] transition-colors">{t("categories")}</span>
                                 <ChevronDown
                                     className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isCategoriesOpen ? "rotate-180 text-[#C8102E]" : ""
                                         }`}
@@ -103,13 +109,27 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                             </div>
                         </div>
 
+                        {/* User Links */}
+                        {user && (
+                            <div className="space-y-1">
+                                <div className="my-2 border-t border-gray-100" />
+                                <Link
+                                    href="/wishlist"
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/wishlist" ? "bg-[#C8102E]/10 text-[#C8102E]" : "text-[#1A1A1A] hover:bg-gray-100"}`}
+                                >
+                                    <Heart className="w-4 h-4" />
+                                    {t("wishlist")}
+                                </Link>
+                            </div>
+                        )}
+
                         {/* Admin Navigation */}
                         {isAdmin && (
                             <>
                                 <div className="my-2 border-t border-gray-100" />
                                 <div className="space-y-1">
                                     <p className="px-3 text-xs font-semibold text-[#C8102E] uppercase tracking-wider mb-2">
-                                        Admin Panel
+                                        {t("adminPanel")}
                                     </p>
                                     <Link
                                         href="/admin"
@@ -117,7 +137,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                                             }`}
                                     >
                                         <LayoutDashboard className="w-4 h-4" />
-                                        Admin
+                                        {t("admin")}
                                     </Link>
                                     <Link
                                         href="/admin/products"
@@ -125,7 +145,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                                             }`}
                                     >
                                         <Package className="w-4 h-4" />
-                                        Products
+                                        {t("products")}
                                     </Link>
                                 </div>
                             </>
@@ -139,13 +159,13 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                         <Link href="/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200">
                             <div className="w-10 h-10 rounded-full bg-[#C8102E]/10 flex items-center justify-center text-[#C8102E] overflow-hidden">
                                 {user.image ? (
-                                    <img src={user.image} alt={user.name || "User"} className="w-full h-full object-cover" />
+                                    <img src={user.image} alt={user.name || t("user")} className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="font-bold text-sm">{(user.name || user.email || "U").charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm text-[#1A1A1A] truncate">{user.name || "User"}</p>
+                                <p className="font-medium text-sm text-[#1A1A1A] truncate">{user.name || t("user")}</p>
                                 <p className="text-xs text-gray-500 truncate">{user.email}</p>
                             </div>
                         </Link>
@@ -154,11 +174,11 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                             <Button asChild className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
                                 <Link href="/login">
                                     <LogIn className="w-4 h-4 mr-2" />
-                                    Sign In
+                                    {t("signIn")}
                                 </Link>
                             </Button>
                             <Button asChild variant="outline" className="w-full">
-                                <Link href="/register">Create Account</Link>
+                                <Link href="/register">{t("createAccount")}</Link>
                             </Button>
                         </div>
                     )}

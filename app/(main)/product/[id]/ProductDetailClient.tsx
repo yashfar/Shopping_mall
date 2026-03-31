@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import StarRating from "@@/components/StarRating";
 import { useCart } from "@@/context/CartContext";
+import { useWishlist } from "@@/context/WishlistContext";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ShoppingCart, User, Loader2, Star, Minus, Plus, Heart, Bell } from "lucide-react";
 
 interface ProductImage {
     id: string;
@@ -32,6 +35,7 @@ interface Product {
     title: string;
     description: string | null;
     price: number;
+    salePrice?: number | null;
     category: { name: string } | null;
     stock: number;
     thumbnail: string | null;
@@ -53,13 +57,51 @@ export default function ProductDetailClient({
     isAuthenticated,
 }: ProductDetailClientProps) {
     const { addToCart } = useCart();
+    const { toggle, isWishlisted } = useWishlist();
+    const { formatPrice } = useCurrency();
     const router = useRouter();
+    const t = useTranslations("productDetail");
+    const wishlisted = isWishlisted(product.id);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const [stockAlertSubscribed, setStockAlertSubscribed] = useState(false);
+    const [stockAlertLoading, setStockAlertLoading] = useState(false);
+
+    // Check stock alert status for out-of-stock products
+    useEffect(() => {
+        if (product.stock === 0 && isAuthenticated) {
+            fetch(`/api/stock-alert?productId=${product.id}`)
+                .then((res) => res.json())
+                .then((data) => setStockAlertSubscribed(data.subscribed))
+                .catch(() => {});
+        }
+    }, [product.id, product.stock, isAuthenticated]);
+
+    const toggleStockAlert = async () => {
+        if (!isAuthenticated) {
+            router.push("/register");
+            return;
+        }
+        setStockAlertLoading(true);
+        try {
+            const res = await fetch("/api/stock-alert", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productId: product.id }),
+            });
+            const data = await res.json();
+            setStockAlertSubscribed(data.subscribed);
+            toast.success(data.subscribed ? t("notifyMessage") : t("alertRemoved"));
+        } catch {
+            toast.error(t("failedToUpdateAlert"));
+        } finally {
+            setStockAlertLoading(false);
+        }
+    };
 
     // Use product images or fallback to thumbnail
     const displayImages =
@@ -197,7 +239,7 @@ export default function ProductDetailClient({
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                                             </svg>
                                         </div>
-                                        <p className="text-sm font-medium">No image available</p>
+                                        <p className="text-sm font-medium">{t("noImageAvailable")}</p>
                                     </div>
                                 )}
                             </div>
@@ -245,12 +287,12 @@ export default function ProductDetailClient({
                                 <div className="flex items-center gap-1">
                                     <StarRating rating={averageRating} size="md" />
                                     <span className="text-lg font-bold text-[#1A1A1A] ml-2">
-                                        {averageRating > 0 ? averageRating.toFixed(1) : "New"}
+                                        {averageRating > 0 ? averageRating.toFixed(1) : t("new")}
                                     </span>
                                 </div>
                                 <span className="w-1 h-1 bg-gray-300 rounded-full" />
                                 <a href="#reviews" className="text-sm font-medium text-[#A9A9A9] hover:text-[#C8102E] underline underline-offset-4 transition-colors">
-                                    {product.reviews.length} {product.reviews.length === 1 ? "review" : "reviews"}
+                                    {product.reviews.length} {product.reviews.length === 1 ? t("review") : t("reviews")}
                                 </a>
                             </div>
                         </div>
@@ -258,11 +300,25 @@ export default function ProductDetailClient({
                         {/* Price */}
                         <div className="mb-8 p-6 bg-white border border-[#A9A9A9]/20 rounded-2xl shadow-sm">
                             <div className="flex flex-col gap-2">
-                                <span className="text-sm font-medium text-[#A9A9A9] uppercase tracking-wide">Total Price</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black text-[#1A1A1A]">
-                                        ${(product.price / 100).toFixed(2)}
-                                    </span>
+                                <span className="text-sm font-medium text-[#A9A9A9] uppercase tracking-wide">{t("totalPrice")}</span>
+                                <div className="flex items-baseline gap-3 flex-wrap">
+                                    {product.salePrice ? (
+                                        <>
+                                            <span className="text-4xl font-black text-[#C8102E]">
+                                                {formatPrice(product.salePrice)}
+                                            </span>
+                                            <span className="text-xl font-medium text-gray-400 line-through">
+                                                {formatPrice(product.price)}
+                                            </span>
+                                            <span className="text-sm font-bold text-white bg-[#C8102E] px-2 py-0.5 rounded-full">
+                                                -{Math.round((1 - product.salePrice / product.price) * 100)}%
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-black text-[#1A1A1A]">
+                                            {formatPrice(product.price)}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -291,35 +347,74 @@ export default function ProductDetailClient({
                                     </div>
                                     <div className="text-sm font-medium text-emerald-600 flex items-center gap-1.5">
                                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                        In Stock ({product.stock} available)
+                                        {t("inStockAvailable", { count: product.stock })}
                                     </div>
                                 </div>
 
-                                {/* Add to Cart Button */}
-                                <button
-                                    onClick={handleAddToCart}
-                                    disabled={isAddingToCart}
-                                    className="w-full py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                                >
-                                    {isAddingToCart ? (
-                                        <Loader2 className="w-6 h-6 animate-spin" />
-                                    ) : (
-                                        <ShoppingCart className="w-6 h-6" />
-                                    )}
-                                    {isAddingToCart ? "Adding..." : "Add to Cart"}
-                                </button>
+                                {/* Add to Cart + Wishlist */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleAddToCart}
+                                        disabled={isAddingToCart}
+                                        className="flex-1 py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                    >
+                                        {isAddingToCart ? (
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                        ) : (
+                                            <ShoppingCart className="w-6 h-6" />
+                                        )}
+                                        {isAddingToCart ? t("adding") : t("addToCart")}
+                                    </button>
+
+                                    <button
+                                        onClick={() => toggle(product.id)}
+                                        title={wishlisted ? t("removeFromWishlist") : t("addToWishlist")}
+                                        className={`w-14 rounded-xl border-2 flex items-center justify-center transition-all hover:-translate-y-0.5 active:translate-y-0 ${
+                                            wishlisted
+                                                ? "border-[#C8102E] bg-red-50 text-[#C8102E]"
+                                                : "border-gray-200 bg-white text-gray-400 hover:border-[#C8102E] hover:text-[#C8102E]"
+                                        }`}
+                                    >
+                                        <Heart className={`w-6 h-6 ${wishlisted ? "fill-[#C8102E]" : ""}`} />
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
-                                <User className="w-5 h-5" />
-                                Currently Out of Stock
+                            <div className="space-y-3">
+                                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
+                                    <User className="w-5 h-5" />
+                                    {t("currentlyOutOfStock")}
+                                </div>
+                                <button
+                                    onClick={() => toggle(product.id)}
+                                    className={`w-full py-3 rounded-xl border-2 font-semibold flex items-center justify-center gap-2 transition-all ${
+                                        wishlisted
+                                            ? "border-[#C8102E] bg-red-50 text-[#C8102E]"
+                                            : "border-gray-200 bg-white text-gray-500 hover:border-[#C8102E] hover:text-[#C8102E]"
+                                    }`}
+                                >
+                                    <Heart className={`w-5 h-5 ${wishlisted ? "fill-[#C8102E]" : ""}`} />
+                                    {wishlisted ? t("savedToWishlist") : t("saveToWishlist")}
+                                </button>
+                                <button
+                                    onClick={toggleStockAlert}
+                                    disabled={stockAlertLoading}
+                                    className={`w-full py-3 rounded-xl border-2 font-semibold flex items-center justify-center gap-2 transition-all ${
+                                        stockAlertSubscribed
+                                            ? "border-amber-400 bg-amber-50 text-amber-600"
+                                            : "border-gray-200 bg-white text-gray-500 hover:border-amber-400 hover:text-amber-600"
+                                    }`}
+                                >
+                                    <Bell className={`w-5 h-5 ${stockAlertSubscribed ? "fill-amber-400" : ""}`} />
+                                    {stockAlertLoading ? "..." : stockAlertSubscribed ? t("youllBeNotified") : t("notifyWhenAvailable")}
+                                </button>
                             </div>
                         )}
 
                         {/* Description */}
                         {product.description && (
                             <div className="mt-10 pt-10 border-t border-[#A9A9A9]/20">
-                                <h3 className="text-lg font-bold text-[#1A1A1A] mb-4">Description</h3>
+                                <h3 className="text-lg font-bold text-[#1A1A1A] mb-4">{t("description")}</h3>
                                 <div className="prose prose-sm md:prose-base text-gray-600 leading-relaxed max-w-none">
                                     <p className="whitespace-pre-line">{product.description}</p>
                                 </div>
@@ -336,13 +431,13 @@ export default function ProductDetailClient({
                         <div className="lg:col-span-4 space-y-10">
                             {/* Summary Header */}
                             <div>
-                                <h2 className="text-3xl font-black text-[#1A1A1A] mb-2 tracking-tight">Customer Reviews</h2>
+                                <h2 className="text-3xl font-black text-[#1A1A1A] mb-2 tracking-tight">{t("customerReviews")}</h2>
                                 <div className="flex items-baseline gap-4 mb-6">
                                     <div className="text-4xl font-black text-[#1A1A1A]">{averageRating.toFixed(1)}</div>
                                     <div className="flex flex-col">
                                         <StarRating rating={averageRating} size="md" />
                                         <span className="text-sm font-medium text-gray-400 mt-1">
-                                            Based on {product.reviews.length} reviews
+                                            {t("basedOnReviews", { count: product.reviews.length })}
                                         </span>
                                     </div>
                                 </div>
@@ -378,18 +473,18 @@ export default function ProductDetailClient({
                                             <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                                                 <Check className="w-4 h-4 text-emerald-600" />
                                             </div>
-                                            Review Submitted
+                                            {t("reviewSubmitted")}
                                         </div>
                                         <p className="text-sm text-emerald-700/80 leading-relaxed font-medium">
-                                            Thank you! Your feedback helps others make better decisions.
+                                            {t("reviewThankYou")}
                                         </p>
                                     </div>
                                 ) : (
                                     <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] ring-4 ring-gray-50/50">
-                                        <h3 className="font-bold text-xl text-[#1A1A1A] mb-6">Share your thoughts</h3>
+                                        <h3 className="font-bold text-xl text-[#1A1A1A] mb-6">{t("shareThoughts")}</h3>
                                         <form onSubmit={handleSubmitReview} className="space-y-6">
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rating</label>
+                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("rating")}</label>
                                                 <div className="flex justify-center py-4 bg-gray-50 rounded-xl">
                                                     <StarRating
                                                         rating={rating}
@@ -402,14 +497,14 @@ export default function ProductDetailClient({
 
                                             <div className="space-y-2">
                                                 <label htmlFor="comment" className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                                    Review
+                                                    {t("reviewLabel")}
                                                 </label>
                                                 <textarea
                                                     id="comment"
                                                     value={comment}
                                                     onChange={(e) => setComment(e.target.value)}
                                                     className="w-full p-4 rounded-xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-[#1A1A1A] outline-none transition-all resize-none text-sm font-medium min-h-[120px]"
-                                                    placeholder="What did you like or dislike?"
+                                                    placeholder={t("reviewPlaceholder")}
                                                     disabled={submitting}
                                                 />
                                             </div>
@@ -419,7 +514,7 @@ export default function ProductDetailClient({
                                                 disabled={submitting}
                                                 className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold hover:bg-[#C8102E] transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
                                             >
-                                                {submitting ? "Posting..." : "Post Review"}
+                                                {submitting ? t("posting") : t("postReview")}
                                             </button>
                                         </form>
                                     </div>
@@ -430,14 +525,14 @@ export default function ProductDetailClient({
                                         <User className="w-8 h-8 text-[#1A1A1A]" />
                                     </div>
                                     <div>
-                                        <p className="font-bold text-lg text-[#1A1A1A]">Have this product?</p>
-                                        <p className="text-sm text-gray-500">Sign in to share your experience with the community.</p>
+                                        <p className="font-bold text-lg text-[#1A1A1A]">{t("haveThisProduct")}</p>
+                                        <p className="text-sm text-gray-500">{t("signInToReview")}</p>
                                     </div>
                                     <button
                                         onClick={() => router.push("/login")}
                                         className="w-full py-3 bg-white border-2 border-gray-200 text-[#1A1A1A] font-bold rounded-xl hover:border-[#1A1A1A] transition-all"
                                     >
-                                        Log in to Review
+                                        {t("logInToReview")}
                                     </button>
                                 </div>
                             )}
@@ -472,7 +567,7 @@ export default function ProductDetailClient({
                                                     <p className="text-gray-600 leading-relaxed text-lg font-medium">"{review.comment}"</p>
                                                 </div>
                                             ) : (
-                                                <p className="text-gray-400 italic">No written review</p>
+                                                <p className="text-gray-400 italic">{t("noWrittenReview")}</p>
                                             )}
                                         </div>
                                     ))
@@ -481,9 +576,9 @@ export default function ProductDetailClient({
                                         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
                                             <Star className="w-10 h-10 text-gray-300" />
                                         </div>
-                                        <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">No reviews yet</h3>
+                                        <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">{t("noReviews")}</h3>
                                         <p className="text-gray-500 max-w-sm mx-auto">
-                                            Be the first to share your thoughts on this product. Your feedback matters!
+                                            {t("noReviewsDescription")}
                                         </p>
                                     </div>
                                 )}

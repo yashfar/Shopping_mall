@@ -2,6 +2,7 @@ import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminOrdersList from "./AdminOrdersList";
+import { getTranslations } from "next-intl/server";
 
 type SearchParams = {
     status?: string;
@@ -12,6 +13,7 @@ type PageProps = {
 };
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
+    const t = await getTranslations("adminOrders");
     const session = await auth();
 
     if (!session) {
@@ -32,10 +34,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
-                    Back to Admin Panel
+                    {t("backToAdminPanel")}
                 </Link>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Order Management</h1>
-                <p className="text-gray-500 mt-1 font-medium">Manage and track all store orders in one place.</p>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("orderManagement")}</h1>
+                <p className="text-gray-500 mt-1 font-medium">{t("orderManagementDesc")}</p>
             </div>
 
             <AdminOrdersList initialStatus={searchParams.status} />

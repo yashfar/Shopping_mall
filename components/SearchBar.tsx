@@ -2,9 +2,11 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function SearchBar() {
     const router = useRouter();
+    const t = useTranslations("common");
     const [query, setQuery] = useState("");
 
     const handleSubmit = (e: FormEvent) => {
@@ -21,7 +23,7 @@ export default function SearchBar() {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search..."
+                    placeholder={t("search")}
                     className="w-full px-4 py-2 pl-10 pr-4 text-[#1A1A1A] bg-[#FAFAFA] border border-[#A9A9A9]/20 rounded-lg transition-all duration-300 focus:outline-none focus:bg-white focus:border-[#C8102E] focus:ring-4 focus:ring-[#C8102E]/5 font-medium placeholder:text-[#A9A9A9]/60 text-sm"
                 />
                 <svg

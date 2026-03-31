@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { sendOrderShippedEmail } from "@@/lib/mail";
 
 /**
  * PATCH /api/admin/orders/[id]/status
@@ -20,10 +21,10 @@ export async function PATCH(
 
     try {
         const body = await req.json();
-        const { status } = body;
+        const { status, trackingNumber } = body;
 
         // Validate status
-        const validStatuses = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
+        const validStatuses = ["PENDING", "PAYMENT_UPLOADED", "PAYMENT_REJECTED", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
         if (!status || !validStatuses.includes(status)) {
             return NextResponse.json(
                 { error: "Invalid status. Must be one of: " + validStatuses.join(", ") },
@@ -31,11 +32,40 @@ export async function PATCH(
             );
         }
 
-        // Update order status
+        // Update order status and tracking number
+        const updateData: any = { status };
+        if (trackingNumber !== undefined) {
+            updateData.trackingNumber = trackingNumber.trim() || null;
+        }
+
         const order = await prisma.order.update({
             where: { id },
-            data: { status },
+            data: updateData,
         });
+
+        // Send shipped notification email
+        if (status === "SHIPPED") {
+            (async () => {
+                try {
+                    const fullOrder = await prisma.order.findUnique({
+                        where: { id },
+                        include: {
+                            user: { select: { email: true, firstName: true } },
+                        },
+                    });
+
+                    if (fullOrder?.user) {
+                        await sendOrderShippedEmail(fullOrder.user.email, {
+                            orderNumber: fullOrder.orderNumber || id.substring(0, 8),
+                            firstName: fullOrder.user.firstName,
+                            trackingNumber: fullOrder.trackingNumber,
+                        });
+                    }
+                } catch (emailErr) {
+                    console.error("Failed to send shipped email:", emailErr);
+                }
+            })();
+        }
 
         return NextResponse.json({ order, message: "Order status updated successfully" });
     } catch (error) {

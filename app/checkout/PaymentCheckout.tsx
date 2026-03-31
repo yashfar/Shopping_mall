@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type OrderItem = {
     id: string;
@@ -17,74 +19,153 @@ type Order = {
     total: number;
     status: string;
     items: OrderItem[];
+    paymentProofUrl?: string | null;
+};
+
+type BankDetails = {
+    bankName: string;
+    accountHolder: string;
+    iban: string;
+    bankTransferNote: string;
 };
 
 export default function PaymentCheckout({ orderId }: { orderId: string }) {
+    const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
+    const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [paying, setPaying] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const fetchOrder = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                if (!response.ok) throw new Error("Failed to fetch order");
-                const data = await response.json();
-                setOrder(data.order);
+                const [orderRes, bankRes] = await Promise.all([
+                    fetch(`/api/orders/${orderId}`),
+                    fetch("/api/bank-details"),
+                ]);
 
-                // If order is not pending, redirect
-                if (data.order.status !== "PENDING") {
+                if (!orderRes.ok) throw new Error("Failed to fetch order");
+                const orderData = await orderRes.json();
+                setOrder(orderData.order);
+
+                // If order already has proof uploaded or is paid, redirect
+                if (orderData.order.status === "PAYMENT_UPLOADED") {
+                    router.push(`/checkout/success?orderId=${orderId}`);
+                    return;
+                }
+                if (!["PENDING", "PAYMENT_REJECTED"].includes(orderData.order.status)) {
                     router.push(`/orders/${orderId}`);
+                    return;
+                }
+
+                if (bankRes.ok) {
+                    const bankData = await bankRes.json();
+                    setBankDetails(bankData);
                 }
             } catch (error) {
-                console.error("Error fetching order:", error);
+                console.error("Error fetching data:", error);
                 router.push("/orders");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchOrder();
+        fetchData();
     }, [orderId, router]);
 
-    const handlePayment = async () => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUploadError("");
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+        if (!allowedTypes.includes(file.type)) {
+            setUploadError(t("invalidFileType"));
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setUploadError(t("fileTooLarge"));
+            return;
+        }
+
+        setSelectedFile(file);
+
+        if (file.type.startsWith("image/")) {
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        } else {
+            setPreviewUrl(null);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) return;
+
+        setUploading(true);
+        setUploadError("");
+
         try {
-            setPaying(true);
-            const response = await fetch("/api/checkout", {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const response = await fetch(`/api/orders/${orderId}/upload-payment`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId }),
+                body: formData,
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create checkout session");
+                throw new Error(data.error || t("failedToUpload"));
             }
 
-            const data = await response.json();
-
-            // Redirect to Stripe Checkout
-            if (data.url) {
-                window.location.href = data.url;
-            }
+            router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
-            console.error("Error creating checkout session:", error);
-            alert(error.message || "Failed to proceed to payment");
-            setPaying(false);
+            console.error("Upload error:", error);
+            setUploadError(error.message || t("failedToUploadRetry"));
+            setUploading(false);
         }
     };
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    };
+
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return <div style={{ textAlign: "center", padding: "40px" }}>{t("loadingOrder")}</div>;
     }
 
     if (!order) {
         return null;
     }
 
+    const isRejected = order.status === "PAYMENT_REJECTED";
+
     return (
         <div>
+            {/* Rejection Notice */}
+            {isRejected && (
+                <div
+                    style={{
+                        backgroundColor: "#fef2f2",
+                        padding: "16px 20px",
+                        borderRadius: "8px",
+                        marginBottom: "24px",
+                        border: "1px solid #fecaca",
+                    }}
+                >
+                    <p style={{ margin: 0, fontSize: "14px", color: "#991b1b" }}>
+                        <strong>{t("paymentRejected")}</strong> {t("paymentRejectedDesc")}
+                    </p>
+                </div>
+            )}
+
             {/* Order Summary */}
             <div
                 style={{
@@ -95,19 +176,19 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     marginBottom: "24px",
                 }}
             >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Summary</h2>
+                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>{t("orderSummary")}</h2>
 
                 <div style={{ marginBottom: "20px" }}>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>Order ID</div>
+                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>{t("orderId")}</div>
                     <div style={{ fontFamily: "monospace", fontSize: "14px" }}>{order.id}</div>
                 </div>
 
                 <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "20px" }}>
                     <thead>
                         <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
-                            <th style={{ padding: "12px", textAlign: "left" }}>Product</th>
-                            <th style={{ padding: "12px", textAlign: "center" }}>Qty</th>
-                            <th style={{ padding: "12px", textAlign: "right" }}>Price</th>
+                            <th style={{ padding: "12px", textAlign: "left" }}>{t("product")}</th>
+                            <th style={{ padding: "12px", textAlign: "center" }}>{t("qty")}</th>
+                            <th style={{ padding: "12px", textAlign: "right" }}>{t("price")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -116,7 +197,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                 <td style={{ padding: "12px" }}>{item.product.title}</td>
                                 <td style={{ padding: "12px", textAlign: "center" }}>{item.quantity}</td>
                                 <td style={{ padding: "12px", textAlign: "right" }}>
-                                    ${((item.price * item.quantity) / 100).toFixed(2)}
+                                    {formatPrice(item.price * item.quantity)}
                                 </td>
                             </tr>
                         ))}
@@ -124,7 +205,7 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                     <tfoot>
                         <tr style={{ borderTop: "2px solid #ddd" }}>
                             <td colSpan={2} style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
-                                Total:
+                                {t("total")}
                             </td>
                             <td
                                 style={{
@@ -135,34 +216,169 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                                     color: "#0070f3",
                                 }}
                             >
-                                ${(order.total / 100).toFixed(2)}
+                                {formatPrice(order.total)}
                             </td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
 
-            {/* Payment Info */}
+            {/* Bank Transfer Details */}
+            {bankDetails && (bankDetails.bankName || bankDetails.iban) && (
+                <div
+                    style={{
+                        backgroundColor: "#f0f9ff",
+                        padding: "24px",
+                        borderRadius: "8px",
+                        marginBottom: "24px",
+                        border: "1px solid #bae6fd",
+                    }}
+                >
+                    <h3 style={{ margin: "0 0 16px 0", color: "#0369a1" }}>
+                        {t("bankTransferDetails")}
+                    </h3>
+                    <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
+                        Please transfer <strong>{formatPrice(order.total)}</strong> to the
+                        following bank account, then upload your payment receipt below.
+                    </p>
+
+                    <div style={{ display: "grid", gap: "12px" }}>
+                        {bankDetails.bankName && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("bankName")}</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.bankName)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    {t("copy")}
+                                </button>
+                            </div>
+                        )}
+
+                        {bankDetails.accountHolder && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("accountHolder")}</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.accountHolder)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    {t("copy")}
+                                </button>
+                            </div>
+                        )}
+
+                        {bankDetails.iban && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("iban")}</div>
+                                    <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(bankDetails.iban)}
+                                    style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}
+                                >
+                                    {t("copy")}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {bankDetails.bankTransferNote && (
+                        <p style={{ margin: "16px 0 0 0", fontSize: "13px", color: "#6b7280", fontStyle: "italic" }}>
+                            {bankDetails.bankTransferNote}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Upload Payment Proof */}
             <div
                 style={{
-                    backgroundColor: "#e3f2fd",
-                    padding: "20px",
+                    backgroundColor: "white",
                     borderRadius: "8px",
+                    padding: "24px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                     marginBottom: "24px",
-                    border: "1px solid #2196f3",
                 }}
             >
-                <p style={{ margin: 0, fontSize: "14px" }}>
-                    🔒 <strong>Secure Payment:</strong> You will be redirected to Stripe's secure payment page.
-                    We accept all major credit cards.
+                <h3 style={{ margin: "0 0 16px 0" }}>{t("uploadPaymentProof")}</h3>
+                <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
+                    {t("uploadInstructionLong")}
                 </p>
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={handleFileChange}
+                    style={{ display: "none" }}
+                />
+
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                        border: "2px dashed #ccc",
+                        borderRadius: "8px",
+                        padding: "32px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: selectedFile ? "#f0fdf4" : "#fafafa",
+                        transition: "all 0.2s",
+                    }}
+                >
+                    {previewUrl ? (
+                        <div>
+                            <img
+                                src={previewUrl}
+                                alt="Payment proof preview"
+                                style={{ maxWidth: "300px", maxHeight: "200px", borderRadius: "4px", marginBottom: "8px" }}
+                            />
+                            <p style={{ margin: 0, fontSize: "14px", color: "#16a34a", fontWeight: 600 }}>
+                                {selectedFile?.name}
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
+                                {t("clickToChangeFile")}
+                            </p>
+                        </div>
+                    ) : selectedFile ? (
+                        <div>
+                            <p style={{ margin: 0, fontSize: "14px", color: "#16a34a", fontWeight: 600 }}>
+                                {selectedFile.name}
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#666" }}>
+                                {t("clickToChangeFile")}
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <p style={{ margin: 0, fontSize: "16px", color: "#999" }}>
+                                {t("clickToSelect")}
+                            </p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#bbb" }}>
+                                {t("acceptedFormats")}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {uploadError && (
+                    <p style={{ margin: "12px 0 0 0", color: "#dc2626", fontSize: "14px" }}>
+                        {uploadError}
+                    </p>
+                )}
             </div>
 
             {/* Action Buttons */}
             <div style={{ display: "flex", gap: "12px" }}>
                 <button
                     onClick={() => router.push("/orders")}
-                    disabled={paying}
+                    disabled={uploading}
                     style={{
                         flex: 1,
                         padding: "14px",
@@ -170,30 +386,30 @@ export default function PaymentCheckout({ orderId }: { orderId: string }) {
                         color: "#333",
                         border: "1px solid #ccc",
                         borderRadius: "6px",
-                        cursor: paying ? "not-allowed" : "pointer",
+                        cursor: uploading ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
-                        opacity: paying ? 0.5 : 1,
+                        opacity: uploading ? 0.5 : 1,
                     }}
                 >
-                    Cancel
+                    {t("cancel")}
                 </button>
                 <button
-                    onClick={handlePayment}
-                    disabled={paying}
+                    onClick={handleUpload}
+                    disabled={uploading || !selectedFile}
                     style={{
                         flex: 2,
                         padding: "14px",
-                        backgroundColor: paying ? "#ccc" : "#10b981",
+                        backgroundColor: uploading || !selectedFile ? "#ccc" : "#10b981",
                         color: "white",
                         border: "none",
                         borderRadius: "6px",
-                        cursor: paying ? "not-allowed" : "pointer",
+                        cursor: uploading || !selectedFile ? "not-allowed" : "pointer",
                         fontWeight: "600",
                         fontSize: "16px",
                     }}
                 >
-                    {paying ? "Redirecting to Payment..." : "Pay Now"}
+                    {uploading ? t("uploading") : t("submitPaymentProof")}
                 </button>
             </div>
         </div>

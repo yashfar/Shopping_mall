@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AddressModal from "@@/components/AddressModal";
 import "./address-selection.css";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Address {
     id: string;
@@ -35,17 +37,33 @@ interface Order {
     items: OrderItem[];
 }
 
+interface BankDetails {
+    bankName: string;
+    accountHolder: string;
+    iban: string;
+    bankTransferNote: string;
+}
+
 export default function PaymentCheckoutWithAddress({ orderId }: { orderId: string }) {
+    const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadingAddresses, setLoadingAddresses] = useState(true);
-    const [paying, setPaying] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [currentStep, setCurrentStep] = useState<"address" | "payment">("address");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+
+    // Bank transfer state
+    const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -55,8 +73,11 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                 const data = await response.json();
                 setOrder(data.order);
 
-                // If order is not pending, redirect
-                if (data.order.status !== "PENDING") {
+                if (data.order.status === "PAYMENT_UPLOADED") {
+                    router.push(`/checkout/success?orderId=${orderId}`);
+                    return;
+                }
+                if (!["PENDING", "PAYMENT_REJECTED"].includes(data.order.status)) {
                     router.push(`/orders/${orderId}`);
                 }
             } catch (error) {
@@ -82,8 +103,21 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
             }
         };
 
+        const fetchBankDetails = async () => {
+            try {
+                const response = await fetch("/api/bank-details");
+                if (response.ok) {
+                    const data = await response.json();
+                    setBankDetails(data);
+                }
+            } catch (error) {
+                console.error("Error fetching bank details:", error);
+            }
+        };
+
         fetchOrder();
         fetchAddresses();
+        fetchBankDetails();
     }, [orderId, router]);
 
     const maskPhone = (phone: string) => {
@@ -107,13 +141,13 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
     };
 
     const handleEditAddress = (address: Address, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card selection when clicking edit
+        e.stopPropagation();
         setEditingAddress(address);
         setIsEditModalOpen(true);
     };
 
     const handleModalSuccess = () => {
-        fetchAddresses(); // Refresh addresses after edit
+        fetchAddresses();
     };
 
     const handleContinueToPayment = () => {
@@ -122,46 +156,69 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         }
     };
 
-    const handlePayment = async () => {
-        if (!selectedAddressId) {
-            alert("Please select a delivery address");
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUploadError("");
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+        if (!allowedTypes.includes(file.type)) {
+            setUploadError(t("invalidFileType"));
             return;
         }
 
+        if (file.size > 5 * 1024 * 1024) {
+            setUploadError(t("fileTooLarge"));
+            return;
+        }
+
+        setSelectedFile(file);
+
+        if (file.type.startsWith("image/")) {
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        } else {
+            setPreviewUrl(null);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile || !selectedAddressId) return;
+
+        setUploading(true);
+        setUploadError("");
+
         try {
-            setPaying(true);
-            const response = await fetch("/api/checkout", {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const response = await fetch(`/api/orders/${orderId}/upload-payment`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    orderId,
-                    addressId: selectedAddressId
-                }),
+                body: formData,
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create checkout session");
+                throw new Error(data.error || t("failedToUpload"));
             }
 
-            const data = await response.json();
-
-            // Redirect to Stripe Checkout
-            if (data.url) {
-                window.location.href = data.url;
-            }
+            router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
-            console.error("Error creating checkout session:", error);
-            alert(error.message || "Failed to proceed to payment");
-            setPaying(false);
+            console.error("Upload error:", error);
+            setUploadError(error.message || t("failedToUploadRetry"));
+            setUploading(false);
         }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
 
     if (loading || loadingAddresses) {
         return (
             <div className="checkout-loading">
                 <div className="spinner"></div>
-                <p>Loading checkout...</p>
+                <p>{t("loading")}</p>
             </div>
         );
     }
@@ -170,7 +227,6 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         return null;
     }
 
-    // No addresses - Block checkout
     if (addresses.length === 0) {
         return (
             <div className="no-address-container">
@@ -183,29 +239,23 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         stroke="currentColor"
                         className="no-address-icon"
                     >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                     </svg>
-                    <h2>No address found</h2>
-                    <p>Please add an address before checkout.</p>
+                    <h2>{t("noAddressFound")}</h2>
+                    <p>{t("noAddressDesc")}</p>
                     <button
                         className="btn-add-address-primary"
                         onClick={() => router.push("/profile/addresses")}
                     >
-                        Add Address
+                        {t("addAddress")}
                     </button>
                 </div>
             </div>
         );
     }
+
+    const isRejected = order.status === "PAYMENT_REJECTED";
 
     return (
         <div className="payment-checkout-container">
@@ -213,26 +263,25 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
             <div className="checkout-steps">
                 <div className={`step ${currentStep === "address" ? "active" : "completed"}`}>
                     <div className="step-number">1</div>
-                    <div className="step-label">Delivery Address</div>
+                    <div className="step-label">{t("deliveryAddress")}</div>
                 </div>
                 <div className="step-divider"></div>
                 <div className={`step ${currentStep === "payment" ? "active" : ""}`}>
                     <div className="step-number">2</div>
-                    <div className="step-label">Payment</div>
+                    <div className="step-label">{t("bankTransfer")}</div>
                 </div>
             </div>
 
             {/* Address Selection Step */}
             {currentStep === "address" && (
                 <div className="address-selection-step">
-                    <h2 className="section-title">Select Delivery Address</h2>
+                    <h2 className="section-title">{t("selectDeliveryAddress")}</h2>
 
                     <div className="address-cards-grid">
                         {addresses.map((address) => (
                             <div
                                 key={address.id}
-                                className={`address-selection-card ${selectedAddressId === address.id ? "selected" : ""
-                                    }`}
+                                className={`address-selection-card ${selectedAddressId === address.id ? "selected" : ""}`}
                                 onClick={() => setSelectedAddressId(address.id)}
                             >
                                 <div className="radio-container">
@@ -253,42 +302,27 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                             onClick={(e) => handleEditAddress(address, e)}
                                             title="Edit address"
                                         >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={1.5}
-                                                stroke="currentColor"
-                                                className="edit-icon"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                                                />
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="edit-icon">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                             </svg>
-                                            Edit
+                                            {t("edit")}
                                         </button>
                                     </div>
                                     <div className="address-info">
                                         <div className="info-row">
-                                            <span className="info-label">Name:</span>
-                                            <span className="info-value">
-                                                {address.firstName} {address.lastName}
-                                            </span>
+                                            <span className="info-label">{t("name")}</span>
+                                            <span className="info-value">{address.firstName} {address.lastName}</span>
                                         </div>
                                         <div className="info-row">
-                                            <span className="info-label">Phone:</span>
+                                            <span className="info-label">{t("phone")}</span>
                                             <span className="info-value">{maskPhone(address.phone)}</span>
                                         </div>
                                         <div className="info-row">
-                                            <span className="info-label">Location:</span>
-                                            <span className="info-value">
-                                                {address.neighborhood}, {address.district}, {address.city}
-                                            </span>
+                                            <span className="info-label">{t("location")}</span>
+                                            <span className="info-value">{address.neighborhood}, {address.district}, {address.city}</span>
                                         </div>
                                         <div className="info-row full-width">
-                                            <span className="info-label">Address:</span>
+                                            <span className="info-label">{t("address")}</span>
                                             <span className="info-value">{address.fullAddress}</span>
                                         </div>
                                     </div>
@@ -297,36 +331,39 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         ))}
                     </div>
 
-                    <div className="address-actions">
-                        <button
-                            className="btn-secondary"
-                            onClick={() => router.push("/cart")}
+                    <div style={{ paddingTop: "0.75rem" }}>
+                        <a
+                            href="/profile/addresses"
+                            className="btn-add-address-link"
                         >
-                            ← Back to Cart
+                            {t("addAnotherAddress")}
+                        </a>
+                    </div>
+
+                    <div className="address-actions">
+                        <button className="btn-secondary" onClick={() => router.push("/cart")}>
+                            {t("backToCart")}
                         </button>
                         <button
                             className="btn-primary"
                             onClick={handleContinueToPayment}
                             disabled={!selectedAddressId}
                         >
-                            Continue to Payment
+                            {t("continueToPayment")}
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* Payment Step */}
+            {/* Payment Step - Bank Transfer */}
             {currentStep === "payment" && (
                 <div className="payment-step">
                     {/* Selected Address Summary */}
                     <div className="selected-address-summary">
                         <div className="summary-header">
-                            <h3>Delivery Address</h3>
-                            <button
-                                className="btn-change"
-                                onClick={() => setCurrentStep("address")}
-                            >
-                                Change
+                            <h3>{t("deliveryAddress")}</h3>
+                            <button className="btn-change" onClick={() => setCurrentStep("address")}>
+                                {t("change")}
                             </button>
                         </div>
                         {addresses.find((a) => a.id === selectedAddressId) && (
@@ -349,21 +386,36 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         )}
                     </div>
 
+                    {/* Rejection Notice */}
+                    {isRejected && (
+                        <div style={{
+                            backgroundColor: "#fef2f2",
+                            padding: "16px 20px",
+                            borderRadius: "8px",
+                            marginBottom: "16px",
+                            border: "1px solid #fecaca",
+                        }}>
+                            <p style={{ margin: 0, fontSize: "14px", color: "#991b1b" }}>
+                                <strong>{t("paymentRejected")}</strong> {t("paymentRejectedDesc")}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Order Summary */}
                     <div className="order-summary-card">
-                        <h2>Order Summary</h2>
+                        <h2>{t("orderSummary")}</h2>
 
                         <div className="order-id">
-                            <span className="label">Order ID:</span>
+                            <span className="label">{t("orderId")}</span>
                             <span className="value">{order.id}</span>
                         </div>
 
                         <table className="order-table">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
+                                    <th>{t("product")}</th>
+                                    <th>{t("qty")}</th>
+                                    <th>{t("price")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -371,25 +423,144 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                     <tr key={item.id}>
                                         <td>{item.product.title}</td>
                                         <td>{item.quantity}</td>
-                                        <td>${((item.price * item.quantity) / 100).toFixed(2)}</td>
+                                        <td>{formatPrice(item.price * item.quantity)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <td colSpan={2}>Total:</td>
-                                    <td className="total-amount">${(order.total / 100).toFixed(2)}</td>
-                                </tr>
+                                {(() => {
+                                    const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                                    const shipping = order.total - subtotal;
+                                    return (
+                                        <>
+                                            <tr>
+                                                <td colSpan={2}>{t("subtotal")}</td>
+                                                <td>{formatPrice(subtotal)}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={2}>{t("shipping")}</td>
+                                                <td>{shipping > 0 ? formatPrice(shipping) : t("free")}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={2}>{t("total")}</td>
+                                                <td className="total-amount">{formatPrice(order.total)}</td>
+                                            </tr>
+                                        </>
+                                    );
+                                })()}
                             </tfoot>
                         </table>
                     </div>
 
-                    {/* Payment Info */}
-                    <div className="payment-info-box">
-                        <p>
-                            🔒 <strong>Secure Payment:</strong> You will be redirected to Stripe's secure payment page.
-                            We accept all major credit cards.
+                    {/* Bank Transfer Details */}
+                    {bankDetails && (bankDetails.bankName || bankDetails.iban) && (
+                        <div style={{
+                            backgroundColor: "#f0f9ff",
+                            padding: "24px",
+                            borderRadius: "8px",
+                            marginBottom: "16px",
+                            border: "1px solid #bae6fd",
+                        }}>
+                            <h3 style={{ margin: "0 0 12px 0", color: "#0369a1", fontSize: "16px" }}>
+                                {t("bankTransferDetails")}
+                            </h3>
+                            <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
+                                Please transfer <strong>{formatPrice(order.total)}</strong> to the
+                                following account, then upload your receipt below.
+                            </p>
+
+                            <div style={{ display: "grid", gap: "10px" }}>
+                                {bankDetails.bankName && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("bankName")}</div>
+                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(bankDetails.bankName)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                    </div>
+                                )}
+                                {bankDetails.accountHolder && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("accountHolder")}</div>
+                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(bankDetails.accountHolder)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                    </div>
+                                )}
+                                {bankDetails.iban && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("iban")}</div>
+                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {bankDetails.bankTransferNote && (
+                                <p style={{ margin: "12px 0 0 0", fontSize: "13px", color: "#6b7280", fontStyle: "italic" }}>
+                                    {bankDetails.bankTransferNote}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Upload Payment Proof */}
+                    <div style={{
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        padding: "20px",
+                        border: "1px solid #e5e7eb",
+                        marginBottom: "16px",
+                    }}>
+                        <h3 style={{ margin: "0 0 12px 0", fontSize: "16px" }}>{t("uploadPaymentProof")}</h3>
+                        <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "#555" }}>
+                            {t("uploadInstruction")}
                         </p>
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={handleFileChange}
+                            style={{ display: "none" }}
+                        />
+
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            style={{
+                                border: "2px dashed #ccc",
+                                borderRadius: "8px",
+                                padding: "24px",
+                                textAlign: "center",
+                                cursor: "pointer",
+                                backgroundColor: selectedFile ? "#f0fdf4" : "#fafafa",
+                            }}
+                        >
+                            {previewUrl ? (
+                                <div>
+                                    <img src={previewUrl} alt="Preview" style={{ maxWidth: "250px", maxHeight: "150px", borderRadius: "4px", marginBottom: "8px" }} />
+                                    <p style={{ margin: 0, fontSize: "13px", color: "#16a34a", fontWeight: 600 }}>{selectedFile?.name}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>{t("clickToChange")}</p>
+                                </div>
+                            ) : selectedFile ? (
+                                <div>
+                                    <p style={{ margin: 0, fontSize: "13px", color: "#16a34a", fontWeight: 600 }}>{selectedFile.name}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>{t("clickToChange")}</p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ margin: 0, fontSize: "15px", color: "#999" }}>{t("clickToSelect")}</p>
+                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#bbb" }}>{t("acceptedFormats")}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {uploadError && (
+                            <p style={{ margin: "10px 0 0", color: "#dc2626", fontSize: "13px" }}>{uploadError}</p>
+                        )}
                     </div>
 
                     {/* Action Buttons */}
@@ -397,16 +568,16 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                         <button
                             className="btn-secondary"
                             onClick={() => setCurrentStep("address")}
-                            disabled={paying}
+                            disabled={uploading}
                         >
-                            ← Back
+                            {t("back")}
                         </button>
                         <button
                             className="btn-pay"
-                            onClick={handlePayment}
-                            disabled={paying}
+                            onClick={handleUpload}
+                            disabled={uploading || !selectedFile}
                         >
-                            {paying ? "Redirecting to Payment..." : "Pay Now"}
+                            {uploading ? t("uploading") : t("submitPaymentProof")}
                         </button>
                     </div>
                 </div>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type CartItem = {
     id: string;
@@ -19,6 +21,8 @@ type Cart = {
 };
 
 export default function CheckoutContent() {
+    const t = useTranslations("paymentCheckout");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
@@ -72,7 +76,7 @@ export default function CheckoutContent() {
 
 
     if (loading) {
-        return <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>;
+        return <div style={{ textAlign: "center", padding: "40px" }}>{t("loadingOrder")}</div>;
     }
 
     if (!cart || cart.items.length === 0) {
@@ -96,7 +100,7 @@ export default function CheckoutContent() {
                     marginBottom: "24px",
                 }}
             >
-                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>Order Summary</h2>
+                <h2 style={{ marginTop: 0, marginBottom: "20px" }}>{t("orderSummary")}</h2>
 
                 <div style={{ borderBottom: "1px solid #eee", paddingBottom: "16px", marginBottom: "16px" }}>
                     {cart.items.map((item) => (
@@ -112,11 +116,11 @@ export default function CheckoutContent() {
                             <div>
                                 <div style={{ fontWeight: "600" }}>{item.product.title}</div>
                                 <div style={{ fontSize: "14px", color: "#666" }}>
-                                    Quantity: {item.quantity}
+                                    {t("quantity", { count: item.quantity })}
                                 </div>
                             </div>
                             <div style={{ fontWeight: "600" }}>
-                                ${((item.product.price * item.quantity) / 100).toFixed(2)}
+                                {formatPrice(item.product.price * item.quantity)}
                             </div>
                         </div>
                     ))}
@@ -131,8 +135,8 @@ export default function CheckoutContent() {
                         fontWeight: "700",
                     }}
                 >
-                    <span>Total</span>
-                    <span style={{ color: "#0070f3" }}>${(total / 100).toFixed(2)}</span>
+                    <span>{t("total")}</span>
+                    <span style={{ color: "#0070f3" }}>{formatPrice(total)}</span>
                 </div>
             </div>
 
@@ -170,7 +174,7 @@ export default function CheckoutContent() {
                         opacity: creating ? 0.5 : 1,
                     }}
                 >
-                    ← Back to Cart
+                    {t("backToCartBtn")}
                 </button>
                 <button
                     onClick={createOrder}
@@ -187,7 +191,7 @@ export default function CheckoutContent() {
                         fontSize: "16px",
                     }}
                 >
-                    {creating ? "Creating Order..." : "Place Order"}
+                    {creating ? t("creatingOrder") : t("placeOrder")}
                 </button>
             </div>
         </div>

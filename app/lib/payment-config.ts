@@ -4,6 +4,10 @@ export type PaymentConfigData = {
     taxPercent: number;
     shippingFee: number;
     freeShippingThreshold: number;
+    bankName?: string;
+    accountHolder?: string;
+    iban?: string;
+    bankTransferNote?: string;
 };
 
 export type CartTotals = {
@@ -44,6 +48,12 @@ export async function updatePaymentConfig(data: PaymentConfigData) {
 /**
  * Calculates cart totals based on items and configuration.
  * All monetary values (input and output) are in CENTS.
+ *
+ * Tax model: tax is considered INCLUDED in the product price (display-only).
+ * taxAmount is returned for receipt/invoice display but is NOT added on top of
+ * the subtotal. This keeps the formula consistent with lib/payment-utils.ts:
+ *
+ *   total = subtotal + shippingAmount
  */
 export function calculateCartTotals(
     items: { product: { price: number }; quantity: number }[],
@@ -54,38 +64,20 @@ export function calculateCartTotals(
         0
     );
 
-    // Calculate Tax
-    // taxPercent is e.g. 8 for 8%. 
+    // Tax is for display / reporting only — not charged on top of subtotal
     const taxAmount = Math.round(subtotal * (config.taxPercent / 100));
 
-    // Calculate Shipping
-    // If threshold is 0, assumes no free shipping threshold? 
-    // Or if subtotal >= threshold (if threshold > 0).
-    // Usually if threshold is 0, it might mean "always free" or "never free".
-    // Let's assume if threshold > 0, logic applies. If threshold is 0, maybe it means NO free shipping? 
-    // Or the user can set threshold to a very high number to disable it.
-    // The prompt says: "if cart subtotal >= threshold → shipping = 0".
-    // If threshold is 0, 0 >= 0 is true -> Free shipping always.
-    // Ideally defaults should be set such that:
-    // shippingFee = 0 -> Free shipping always.
-    // shippingFee > 0, threshold = 0 -> Free shipping always? (0 >= 0).
-    // If I want to charge shipping, I should set threshold high.
-    // Or maybe if threshold is 0, `subtotal >= 0` is always true. 
-    // Let's stick to the prompt's logic: `subtotal >= freeShippingThreshold ? 0 : shippingFee`.
+    // Free shipping when subtotal meets or exceeds the threshold.
+    // Set freeShippingThreshold to a very high value to effectively disable free shipping.
+    const shippingAmount =
+        subtotal >= config.freeShippingThreshold ? 0 : config.shippingFee;
 
-    // There is a edge case: user might want shipping fee but NO free shipping.
-    // They can set threshold to Infinity (or max int).
-
-    const shippingAmount = subtotal >= config.freeShippingThreshold
-        ? 0
-        : config.shippingFee;
-
-    const total = subtotal + taxAmount + shippingAmount;
+    const total = subtotal + shippingAmount;
 
     return {
         subtotal,
         taxAmount,
         shippingAmount,
-        total
+        total,
     };
 }

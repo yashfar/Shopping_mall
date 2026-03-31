@@ -2,8 +2,10 @@ import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import CheckoutContent from "../CheckoutContent";
+import { getTranslations } from "next-intl/server";
 
 export default async function CheckoutReviewPage() {
+    const t = await getTranslations("checkout");
     const session = await auth();
 
     if (!session) {
@@ -21,12 +23,12 @@ export default async function CheckoutReviewPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                         </svg>
-                        Back to Cart
+                        {t("backToCart")}
                     </Link>
                 </div>
 
-                <h1 className="text-3xl md:text-4xl font-black text-[#1A1A1A] mb-2">Review Order</h1>
-                <p className="text-gray-500 font-medium mb-8">Please verify your items and shipping details before proceeding.</p>
+                <h1 className="text-3xl md:text-4xl font-black text-[#1A1A1A] mb-2">{t("reviewOrder")}</h1>
+                <p className="text-gray-500 font-medium mb-8">{t("reviewOrderDesc")}</p>
 
                 <CheckoutContent />
             </div>

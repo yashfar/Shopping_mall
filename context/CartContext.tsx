@@ -2,7 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+interface CartItem {
+    id: string;
+    quantity: number;
+    product: { id: string; price: number; title: string };
+}
 
 interface CartContextType {
     cartCount: number;
@@ -14,29 +20,31 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+    const t = useTranslations("cartContext");
     const [cartCount, setCartCount] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
-
-    // Initial fetch
-    useEffect(() => {
-        refreshCart();
-    }, []);
 
     const refreshCart = useCallback(async () => {
         try {
             const res = await fetch("/api/cart");
             if (res.ok) {
                 const data = await res.json();
-                const items = data.cart?.items || [];
-                const count = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                const items: CartItem[] = data.cart?.items ?? [];
+                const count = items.reduce((sum, item) => sum + item.quantity, 0);
                 setCartCount(count);
             }
+            // 401 is expected for unauthenticated visitors — silently ignore
         } catch (e) {
             console.error("Failed to refresh cart", e);
         }
     }, []);
 
-    const addToCart = async (productId: string, quantity: number) => {
+    // Fetch cart count on mount
+    useEffect(() => {
+        refreshCart();
+    }, [refreshCart]);
+
+    const addToCart = async (productId: string, quantity: number): Promise<boolean | "unauthorized"> => {
         try {
             const res = await fetch("/api/cart/add", {
                 method: "POST",
@@ -44,28 +52,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 body: JSON.stringify({ productId, quantity }),
             });
 
-            // Check if user is not authenticated
             if (res.status === 401) {
-                toast.error("Please sign in to add items to cart");
+                toast.error(t("signInRequired"));
                 return "unauthorized";
             }
 
             if (!res.ok) {
                 const data = await res.json();
-                console.error("Failed to add:", data.error);
-                toast.error(data.error || "Failed to add to cart");
+                toast.error(data.error || t("failedToAdd"));
                 return false;
             }
 
-            // Optimistic update after success
+            // Optimistic update on success
             setCartCount((prev) => prev + quantity);
             setIsAnimating(true);
             setTimeout(() => setIsAnimating(false), 500);
 
-            toast.success("Product added to cart");
+            toast.success(t("productAdded"));
             return true;
-        } catch (e) {
-            toast.error("Error adding to cart");
+        } catch {
+            // On network error, roll back the optimistic update by re-syncing
+            // with the server rather than leaving a stale count.
+            await refreshCart();
+            toast.error(t("errorAdding"));
             return false;
         }
     };

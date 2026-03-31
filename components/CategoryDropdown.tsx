@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -57,13 +58,14 @@ const CategoryIcon = ({ icon: Icon, className }: { icon: any, className?: string
 };
 
 export function CategoryDropdown({ categories }: { categories: Category[] }) {
+    const t = useTranslations("categoryDropdown");
     if (!categories || categories.length === 0) return null;
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger className="group flex items-center gap-1.5 px-3 py-2 text-[#1A1A1A] hover:text-[#C8102E] hover:bg-red-50 rounded-full transition-all duration-200 focus:outline-none font-semibold text-[15px]">
                 <Layers className="w-4 h-4" />
-                <span>Categories</span>
+                <span>{t("categories")}</span>
                 <ChevronDown className="h-4 w-4 text-[#A9A9A9] group-hover:text-[#C8102E] transition-colors" />
             </DropdownMenuTrigger>
 
@@ -73,7 +75,7 @@ export function CategoryDropdown({ categories }: { categories: Category[] }) {
                 sideOffset={8}
             >
                 <DropdownMenuLabel className="px-3 py-2 text-xs font-bold text-[#A9A9A9] uppercase tracking-wider">
-                    Browse by Category
+                    {t("browseByCategory")}
                 </DropdownMenuLabel>
 
                 <DropdownMenuSeparator className="bg-[#A9A9A9]/20 my-1" />
@@ -109,7 +111,7 @@ export function CategoryDropdown({ categories }: { categories: Category[] }) {
                     >
                         <span className="flex items-center gap-2">
                             <ShoppingBag className="w-4 h-4" />
-                            View All Products
+                            {t("viewAllProducts")}
                         </span>
                         <ArrowRight className="w-4 h-4" />
                     </Link>

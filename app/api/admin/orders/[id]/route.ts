@@ -21,7 +21,15 @@ export async function GET(
     try {
         const order = await prisma.order.findUnique({
             where: { id },
-            include: {
+            select: {
+                id: true,
+                orderNumber: true,
+                total: true,
+                status: true,
+                createdAt: true,
+                trackingNumber: true,
+                paymentProofUrl: true,
+                discountAmount: true,
                 user: {
                     select: {
                         id: true,
@@ -43,6 +51,7 @@ export async function GET(
                         },
                     },
                 },
+                returnRequest: true,
             },
         });
 

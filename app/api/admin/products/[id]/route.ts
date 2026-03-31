@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { sendStockAlertEmail } from "@@/lib/mail";
 
 /**
  * GET /api/admin/products/[id]
@@ -58,12 +59,13 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { title, description, price, stock, isActive, images, thumbnail, category } = await req.json();
+        const { title, description, price, salePrice, stock, isActive, images, thumbnail, category } = await req.json();
 
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (price !== undefined) updateData.price = Math.round(price);
+        if (salePrice !== undefined) updateData.salePrice = salePrice ? Math.round(salePrice) : null;
         if (category !== undefined) {
             updateData.category = {
                 connectOrCreate: {
@@ -116,6 +118,37 @@ export async function PATCH(
 
             return updated;
         });
+
+        // Send stock alert emails if stock was added (non-blocking)
+        if (stock !== undefined && stock > 0) {
+            (async () => {
+                try {
+                    const alerts = await prisma.stockAlert.findMany({
+                        where: { productId: id, notified: false },
+                        include: { user: { select: { email: true, firstName: true } } },
+                    });
+
+                    if (alerts.length > 0) {
+                        const storeUrl = process.env.NEXT_PUBLIC_URL ?? "";
+                        for (const alert of alerts) {
+                            await sendStockAlertEmail(alert.user.email, {
+                                productTitle: product.title,
+                                productUrl: `${storeUrl}/product/${id}`,
+                                thumbnail: product.thumbnail,
+                                firstName: alert.user.firstName,
+                            });
+                        }
+
+                        await prisma.stockAlert.updateMany({
+                            where: { productId: id, notified: false },
+                            data: { notified: true },
+                        });
+                    }
+                } catch (err) {
+                    console.error("Failed to send stock alerts:", err);
+                }
+            })();
+        }
 
         return NextResponse.json({ product });
     } catch (error) {

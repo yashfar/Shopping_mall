@@ -5,21 +5,50 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
-import { ArrowLeft, Upload, X, Check, Loader2, Trash2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@@/components/ui/alert-dialog";
 
 interface UploadedImage {
     url: string;
+    path?: string;
     file?: File;
+}
+
+// Helper to extract path from Supabase URL if not explicitly stored
+function getPathFromUrl(url: string) {
+    try {
+        // Expected format: .../public/products/products/filename
+        const parts = url.split('/public/products/');
+        if (parts.length > 1) {
+            return parts[1];
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
 }
 
 export default function EditProductPage() {
     const router = useRouter();
     const params = useParams();
     const id = params?.id as string;
+    const t = useTranslations("adminProductForm");
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("");
+    const [salePrice, setSalePrice] = useState("");
     const [category, setCategory] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
@@ -31,7 +60,10 @@ export default function EditProductPage() {
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+
+    // Delete state
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch product details
     useEffect(() => {
@@ -41,7 +73,7 @@ export default function EditProductPage() {
             try {
                 const response = await fetch(`/api/admin/products/${id}`);
                 if (!response.ok) {
-                    throw new Error("Failed to fetch product details");
+                    throw new Error(t("failedToLoadProduct"));
                 }
                 const data = await response.json();
                 const product = data.product;
@@ -49,19 +81,22 @@ export default function EditProductPage() {
                 setTitle(product.title);
                 setDescription(product.description || "");
                 setPrice((product.price / 100).toFixed(2));
+                setSalePrice(product.salePrice ? (product.salePrice / 100).toFixed(2) : "");
                 setCategory(product.category?.name || product.category || "");
                 setStock(product.stock.toString());
                 setThumbnail(product.thumbnail || "");
 
                 if (product.images && Array.isArray(product.images)) {
                     setImages(product.images.map((img: any) => ({
-                        url: img.url
+                        url: img.url,
+                        path: img.path || getPathFromUrl(img.url)
                     })));
                 } else {
                     setImages([]);
                 }
             } catch (err: any) {
-                setError(err.message || "Failed to load product");
+                setError(err.message || t("failedToLoadProduct"));
+                toast.error(err.message || t("failedToLoadProduct"));
             } finally {
                 setLoading(false);
             }
@@ -98,18 +133,18 @@ export default function EditProductPage() {
                 const formData = new FormData();
                 formData.append("file", file);
 
-                const response = await fetch("/api/admin/upload/product-image", {
+                const response = await fetch("/api/upload", {
                     method: "POST",
                     body: formData,
                 });
 
                 if (!response.ok) {
                     const data = await response.json();
-                    throw new Error(data.error || "Failed to upload image");
+                    throw new Error(data.error || t("failedToUploadImages"));
                 }
 
                 const data = await response.json();
-                return { url: data.url, file };
+                return { url: data.url, path: data.path, file };
             });
 
             const uploadedImages = await Promise.all(uploadPromises);
@@ -119,57 +154,113 @@ export default function EditProductPage() {
                 setThumbnail(uploadedImages[0].url);
             }
 
-            setSuccess(`${uploadedImages.length} image(s) uploaded successfully`);
-            setTimeout(() => setSuccess(""), 3000);
+            toast.success(t("imagesUploaded", { count: uploadedImages.length }));
         } catch (err: any) {
-            setError(err.message || "Failed to upload images");
+            setError(err.message || t("failedToUploadImages"));
+            toast.error(err.message);
         } finally {
             setUploading(false);
             e.target.value = "";
         }
     };
 
-    const handleRemoveImage = (urlToRemove: string) => {
-        setImages((prev) => prev.filter((img) => img.url !== urlToRemove));
-        if (thumbnail === urlToRemove) {
-            const remaining = images.filter((img) => img.url !== urlToRemove);
-            setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+    const confirmDeleteImage = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+
+        const imageIndex = images.findIndex((img) => img.url === deleteId);
+        if (imageIndex === -1) {
+            setDeleteId(null);
+            setIsDeleting(false);
+            return;
+        }
+
+        const image = images[imageIndex];
+
+        try {
+            const pathToDelete = image.path || getPathFromUrl(image.url);
+
+            if (pathToDelete) {
+                const response = await fetch("/api/upload/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: pathToDelete }),
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to delete from storage");
+                    toast.warning(t("storageDeleteWarning"));
+                } else {
+                    toast.success(t("imageRemoved"));
+                }
+            } else {
+                toast.success(t("imageRemovedFromList"));
+            }
+
+            setImages((prev) => prev.filter((img) => img.url !== deleteId));
+            if (thumbnail === deleteId) {
+                const remaining = images.filter((img) => img.url !== deleteId);
+                setThumbnail(remaining.length > 0 ? remaining[0].url : "");
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            toast.error(t("failedToRemoveImage"));
+        } finally {
+            setIsDeleting(false);
+            setDeleteId(null);
         }
     };
 
     const handleSetThumbnail = (url: string) => {
         setThumbnail(url);
+        toast.info(t("thumbnailSelected"));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setSuccess("");
 
         if (images.length === 0) {
-            setError("Please upload at least one product image");
+            setError(t("errorNoImages"));
+            toast.error(t("errorNoImages"));
             return;
         }
 
         if (!thumbnail) {
-            setError("Please select a thumbnail image");
+            setError(t("errorNoThumbnail"));
+            toast.error(t("errorNoThumbnail"));
             return;
         }
 
         if (!title.trim() || !description.trim() || !category.trim()) {
-            setError("Please fill in all required fields (Title, Description, Category)");
+            setError(t("errorRequiredFields"));
+            toast.error(t("errorRequiredFields"));
             return;
         }
 
         const priceInCents = Math.round(parseFloat(price) * 100);
         if (isNaN(priceInCents) || priceInCents <= 0) {
-            setError("Please enter a valid positive price");
+            setError(t("errorInvalidPrice"));
             return;
+        }
+
+        let salePriceInCents: number | null = null;
+        if (salePrice.trim()) {
+            salePriceInCents = Math.round(parseFloat(salePrice) * 100);
+            if (isNaN(salePriceInCents) || salePriceInCents <= 0) {
+                setError(t("errorInvalidSalePrice"));
+                return;
+            }
+            if (salePriceInCents >= priceInCents) {
+                setError(t("errorSalePriceTooHigh"));
+                return;
+            }
         }
 
         const stockNumber = parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
-            setError("Please enter a valid stock quantity");
+            setError(t("errorInvalidStock"));
             return;
         }
 
@@ -185,6 +276,7 @@ export default function EditProductPage() {
                     title: title.trim(),
                     description: description.trim(),
                     price: priceInCents,
+                    salePrice: salePriceInCents,
                     category: category.trim(),
                     stock: stockNumber,
                     images: images.map((img) => img.url),
@@ -195,15 +287,16 @@ export default function EditProductPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Failed to update product");
+                throw new Error(data.error || t("failedToUpdateProduct"));
             }
 
-            setSuccess("Product updated successfully! Redirecting...");
+            toast.success(t("productUpdated"));
             setTimeout(() => {
                 router.push("/admin/products");
             }, 1000);
         } catch (err: any) {
-            setError(err.message || "Failed to update product");
+            setError(err.message || t("failedToUpdateProduct"));
+            toast.error(err.message);
             setSubmitting(false);
         }
     };
@@ -218,7 +311,6 @@ export default function EditProductPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
                     <Link href="/admin/products">
@@ -227,13 +319,12 @@ export default function EditProductPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
-                        <p className="text-sm text-gray-500">Update product information and images</p>
+                        <h1 className="text-2xl font-bold text-gray-900">{t("editProduct")}</h1>
+                        <p className="text-sm text-gray-500">{t("editProductDesc")}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Alerts */}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
                     <X className="h-5 w-5 shrink-0" />
@@ -241,24 +332,15 @@ export default function EditProductPage() {
                 </div>
             )}
 
-            {success && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
-                    <Check className="h-5 w-5 shrink-0" />
-                    <p className="text-sm font-medium">{success}</p>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column: Images */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("productImages")}</h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                Upload product images. Select the star icon to set the thumbnail.
+                                {t("imagesDescEdit")}
                             </p>
 
-                            {/* Image Upload Area */}
                             <div className="relative mb-6">
                                 <input
                                     type="file"
@@ -282,13 +364,12 @@ export default function EditProductPage() {
                                         <Upload className="h-8 w-8 text-gray-400 mb-2" />
                                     )}
                                     <span className="text-sm font-medium text-gray-700">
-                                        {uploading ? "Uploading..." : "Click to upload"}
+                                        {uploading ? t("uploading") : t("clickToUpload")}
                                     </span>
-                                    <span className="text-xs text-gray-500 mt-1">MAX 5MB per file</span>
+                                    <span className="text-xs text-gray-500 mt-1">{t("maxFileSize")}</span>
                                 </label>
                             </div>
 
-                            {/* Image Grid */}
                             <div className="grid grid-cols-2 gap-4 max-h-[320px] overflow-y-auto">
                                 {images.map((img) => (
                                     <div
@@ -305,10 +386,8 @@ export default function EditProductPage() {
                                             className="object-cover"
                                         />
 
-                                        {/* Actions: Desktop Overlay / Mobile Icons */}
                                         {thumbnail !== img.url && (
                                             <>
-                                                {/* Desktop: Centered Overlay Button */}
                                                 <div className="hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                                                     <Button
                                                         type="button"
@@ -317,36 +396,33 @@ export default function EditProductPage() {
                                                         className="bg-white/90 hover:bg-white text-gray-900 shadow-sm backdrop-blur-[2px]"
                                                         onClick={() => handleSetThumbnail(img.url)}
                                                     >
-                                                        Set Thumbnail
+                                                        {t("setThumbnail")}
                                                     </Button>
                                                 </div>
-
-                                                {/* Mobile: Small Pill Button next to Remove */}
                                                 <Button
                                                     type="button"
                                                     size="sm"
                                                     className="lg:hidden absolute bottom-2 right-12 h-8 px-3 rounded-full shadow-md z-20 bg-white hover:bg-yellow-50 text-yellow-600 border border-gray-200 text-xs font-medium"
                                                     onClick={() => handleSetThumbnail(img.url)}
                                                 >
-                                                    Thumbnail
+                                                    {t("thumbnailBtn")}
                                                 </Button>
                                             </>
                                         )}
 
-                                        {/* Remove Button (Bottom Right, Icon Only) */}
                                         <Button
                                             type="button"
                                             size="icon"
-                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-white hover:bg-red-600 text-red-600 hover:text-white border border-gray-200"
-                                            onClick={() => handleRemoveImage(img.url)}
+                                            variant="destructive"
+                                            className="absolute bottom-2 right-2 h-8 w-8 rounded-full shadow-md z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
+                                            onClick={() => setDeleteId(img.url)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
 
-                                        {/* Thumbnail Badge */}
                                         {thumbnail === img.url && (
                                             <div className="absolute top-2 right-2 bg-[#C8102E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-                                                MAIN
+                                                {t("main")}
                                             </div>
                                         )}
                                     </div>
@@ -355,16 +431,14 @@ export default function EditProductPage() {
                         </div>
                     </div>
 
-                    {/* Right Column: Details */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-6">Product Information</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-6">{t("productInformation")}</h2>
 
                             <div className="space-y-6">
-                                {/* Title */}
                                 <div>
                                     <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Product Title <span className="text-red-500">*</span>
+                                        {t("productTitle")} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -372,16 +446,15 @@ export default function EditProductPage() {
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder="E.g., Wireless Noise-Canceling Headphones"
+                                        placeholder={t("productTitlePlaceholder")}
                                         required
                                         disabled={submitting}
                                     />
                                 </div>
 
-                                {/* Description */}
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description <span className="text-red-500">*</span>
+                                        {t("description")} <span className="text-red-500">*</span>
                                     </label>
                                     <textarea
                                         id="description"
@@ -389,17 +462,17 @@ export default function EditProductPage() {
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={6}
                                         className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder="Describe the product features, specs, etc."
+                                        placeholder={t("descriptionPlaceholder")}
                                         required
                                         disabled={submitting}
                                     />
                                 </div>
 
-                                {/* Row: Price & Stock */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {/* Row: Price, Sale Price & Stock */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div>
                                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                            Price (USD) <span className="text-red-500">*</span>
+                                            {t("priceUSD")} <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -419,8 +492,28 @@ export default function EditProductPage() {
                                     </div>
 
                                     <div>
+                                        <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
+                                            {t("salePrice")} <span className="text-gray-400 font-normal">{t("optional")}</span>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                            <input
+                                                type="number"
+                                                id="salePrice"
+                                                value={salePrice}
+                                                onChange={(e) => setSalePrice(e.target.value)}
+                                                step="0.01"
+                                                min="0"
+                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                placeholder="0.00"
+                                                disabled={submitting}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
                                         <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            Stock Quantity <span className="text-red-500">*</span>
+                                            {t("stockQuantity")} <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="number"
@@ -436,10 +529,9 @@ export default function EditProductPage() {
                                     </div>
                                 </div>
 
-                                {/* Category */}
                                 <div>
                                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Category <span className="text-red-500">*</span>
+                                        {t("category")} <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
                                         <input
@@ -449,7 +541,7 @@ export default function EditProductPage() {
                                             value={category}
                                             onChange={(e) => setCategory(e.target.value)}
                                             className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder="Select or type a category..."
+                                            placeholder={t("categoryPlaceholder")}
                                             required
                                             disabled={submitting}
                                             autoComplete="off"
@@ -464,7 +556,6 @@ export default function EditProductPage() {
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="flex items-center justify-end gap-3 pt-4">
                             <Button
                                 type="button"
@@ -473,7 +564,7 @@ export default function EditProductPage() {
                                 disabled={submitting}
                                 className="w-full sm:w-auto"
                             >
-                                Cancel
+                                {t("cancel")}
                             </Button>
                             <Button
                                 type="submit"
@@ -483,16 +574,40 @@ export default function EditProductPage() {
                                 {submitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Saving...
+                                        {t("saving")}
                                     </>
                                 ) : (
-                                    "Save Changes"
+                                    t("saveChanges")
                                 )}
                             </Button>
                         </div>
                     </div>
                 </div>
             </form>
+
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t("deleteImageTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t("deleteImageDesc")}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>{t("cancel")}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmDeleteImage();
+                            }}
+                            disabled={isDeleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting ? t("deleting") : t("delete")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

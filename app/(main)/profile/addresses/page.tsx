@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import AddressModal, { Address } from "@@/components/AddressModal";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import "./addresses.css";
 
 export default function AddressesPage() {
+    const t = useTranslations("addresses");
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -27,10 +29,10 @@ export default function AddressesPage() {
                 const data = await response.json();
                 setAddresses(data.addresses);
             } else {
-                setError("Failed to load addresses");
+                setError(t("failedToLoad"));
             }
         } catch (err) {
-            setError("An error occurred while loading addresses");
+            setError(t("failedToLoadError"));
         } finally {
             setLoading(false);
         }
@@ -60,7 +62,7 @@ export default function AddressesPage() {
     };
 
     const handleModalSuccess = () => {
-        toast.success(modalMode === "add" ? "Address added successfully" : "Address updated successfully");
+        toast.success(modalMode === "add" ? t("addressAdded") : t("addressUpdated"));
         fetchAddresses();
     };
 
@@ -77,13 +79,13 @@ export default function AddressesPage() {
             });
 
             if (response.ok) {
-                toast.success("Address deleted successfully");
+                toast.success(t("addressDeleted"));
                 await fetchAddresses();
             } else {
-                toast.error("Failed to delete address");
+                toast.error(t("failedToDelete"));
             }
         } catch (err) {
-            toast.error("An error occurred while deleting the address");
+            toast.error(t("failedToDeleteError"));
         } finally {
             setDeleteId(null);
         }
@@ -95,7 +97,7 @@ export default function AddressesPage() {
                 <div className="addresses-container">
                     <div className="loading-state">
                         <div className="spinner"></div>
-                        <p>Loading addresses...</p>
+                        <p>{t("loading")}</p>
                     </div>
                 </div>
             </div>
@@ -107,16 +109,16 @@ export default function AddressesPage() {
             <ConfirmDialog
                 open={!!deleteId}
                 onOpenChange={(v) => !v && setDeleteId(null)}
-                title="Delete Address"
-                description="Are you sure you want to delete this address? This action cannot be undone."
+                title={t("deleteAddressTitle")}
+                description={t("deleteAddressDesc")}
                 onConfirm={confirmDeleteAction}
                 variant="destructive"
-                confirmText="Delete"
+                confirmText={t("delete")}
             />
 
             <div className="addresses-container">
                 <div className="addresses-header">
-                    <h1>Your Addresses</h1>
+                    <h1>{t("title")}</h1>
                     <button className="btn-add-address" onClick={openAddModal}>
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -132,7 +134,7 @@ export default function AddressesPage() {
                                 d="M12 4.5v15m7.5-7.5h-15"
                             />
                         </svg>
-                        Add New Address
+                        {t("addNewAddress")}
                     </button>
                 </div>
 
@@ -159,10 +161,10 @@ export default function AddressesPage() {
                                 d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                             />
                         </svg>
-                        <h2>No addresses yet</h2>
-                        <p>Add your first address to make checkout faster</p>
+                        <h2>{t("noAddresses")}</h2>
+                        <p>{t("noAddressesDesc")}</p>
                         <button className="btn-add-first" onClick={openAddModal}>
-                            Add Address
+                            {t("addAddress")}
                         </button>
                     </div>
                 ) : (
@@ -174,31 +176,31 @@ export default function AddressesPage() {
                                 </div>
                                 <div className="address-card-body">
                                     <div className="address-field">
-                                        <span className="field-label">Full Name</span>
+                                        <span className="field-label">{t("fullName")}</span>
                                         <span className="field-value">
                                             {address.firstName} {address.lastName}
                                         </span>
                                     </div>
                                     <div className="address-field">
-                                        <span className="field-label">Phone</span>
+                                        <span className="field-label">{t("phone")}</span>
                                         <span className="field-value">
                                             {maskPhone(address.phone)}
                                         </span>
                                     </div>
                                     <div className="address-field">
-                                        <span className="field-label">City</span>
+                                        <span className="field-label">{t("city")}</span>
                                         <span className="field-value">{address.city}</span>
                                     </div>
                                     <div className="address-field">
-                                        <span className="field-label">District</span>
+                                        <span className="field-label">{t("district")}</span>
                                         <span className="field-value">{address.district}</span>
                                     </div>
                                     <div className="address-field">
-                                        <span className="field-label">Neighborhood</span>
+                                        <span className="field-label">{t("neighborhood")}</span>
                                         <span className="field-value">{address.neighborhood}</span>
                                     </div>
                                     <div className="address-field full-width">
-                                        <span className="field-label">Full Address</span>
+                                        <span className="field-label">{t("fullAddress")}</span>
                                         <span className="field-value">{address.fullAddress}</span>
                                     </div>
                                 </div>
@@ -207,13 +209,13 @@ export default function AddressesPage() {
                                         className="btn-edit"
                                         onClick={() => openEditModal(address)}
                                     >
-                                        Edit Address
+                                        {t("editAddress")}
                                     </button>
                                     <button
                                         className="btn-delete"
                                         onClick={() => handleDeleteClick(address.id)}
                                     >
-                                        Delete
+                                        {t("delete")}
                                     </button>
                                 </div>
                             </div>

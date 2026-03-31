@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const UpdateProfileSchema = z.object({
-    firstName: z.string().min(1, "First name is required").max(50),
-    lastName: z.string().min(1, "Last name is required").max(50),
+    firstName: z.string().min(1, { error: "First name is required" }).max(50),
+    lastName: z.string().min(1, { error: "Last name is required" }).max(50),
     phone: z.string().max(20).optional().nullable(),
     birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
     avatar: z.string().url().optional().nullable(),

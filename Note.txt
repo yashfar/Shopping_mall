@@ -1,0 +1,374 @@
+Online Shop - Tam Implementation Roadmap
+FAZA 1 — Kritik Eksikler (Önce Bunlar)
+1. Sipariş Onay E-postası
+Ne yapılacak: Stripe webhook'u ödeme tamamlandığında kullanıcıya otomatik e-posta göndermeli.
+
+Adımlar:
+
+A) lib/mail.ts dosyasına yeni fonksiyon ekle:
+
+
+sendOrderConfirmationEmail(to, {
+  orderNumber,
+  items: [{ title, quantity, price }],
+  total,
+  shippingAddress
+})
+Mevcut sendResetPasswordEmail fonksiyonuyla aynı Resend pattern'i kullanacak. HTML template içinde sipariş tablosu olacak.
+
+B) app/api/stripe/webhook/route.ts dosyasını güncelle:
+Mevcut payment_intent.succeeded event handler'ına şu satırları ekle:
+
+
+- Order'dan user bilgilerini çek (prisma ile)
+- sendOrderConfirmationEmail() çağır
+Bağımlılık: Mevcut Resend kurulumu var, sadece yeni template + çağrı ekleniyor.
+
+2. Kategori Yönetimi (Admin UI)
+Ne yapılacak: Admin paneline kategori ekleme/silme/düzenleme ekranı.
+
+Adımlar:
+
+A) Yeni API rotaları oluştur:
+
+app/api/admin/categories/route.ts → GET (liste), POST (ekle)
+app/api/admin/categories/[id]/route.ts → PATCH (güncelle), DELETE (sil)
+Pattern olarak mevcut app/api/admin/banners/ route'larını baz al.
+
+B) Yeni admin sayfası:
+
+app/admin/categories/page.tsx → Server component, kategorileri listele
+components/admin/CategoryManagementCard.tsx → CRUD operasyonları için Client component
+C) Mevcut app/admin/page.tsx'e link ekle — diğer admin kartları gibi.
+
+DB değişikliği yok — Category modeli zaten Prisma schema'da mevcut.
+
+3. İndirim Kodu / Kupon Sistemi
+Ne yapılacak: Admin kupon oluşturur, kullanıcı checkout'ta girer, sepet toplamından düşer.
+
+Adımlar:
+
+A) Prisma schema'ya yeni model ekle:
+
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        CouponType  // PERCENTAGE veya FIXED_AMOUNT
+  value       Int      // % veya cent cinsinden
+  minAmount   Int?     // minimum sepet tutarı (cent)
+  maxUses     Int?     // kaç kez kullanılabilir
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  usages      CouponUsage[]
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  coupon    Coupon   @relation(...)
+  user      User     @relation(...)
+  order     Order    @relation(...)
+  createdAt DateTime @default(now())
+  @@unique([couponId, userId])  // kişi başı 1 kullanım
+}
+Ayrıca Order modeline couponId, discountAmount alanları ekle.
+
+B) Yeni API rotaları:
+
+app/api/coupon/validate/route.ts → POST, kodu doğrula + indirim hesapla
+app/api/admin/coupons/route.ts → GET/POST
+app/api/admin/coupons/[id]/route.ts → PATCH/DELETE
+C) Checkout sayfasına kupon input alanı ekle:
+
+components/CouponInput.tsx → Kod gir → Validate API çağır → İndirim göster
+app/(main)/cart/checkout/page.tsx'e CouponInput ekle
+D) Order oluşturma mantığını güncelle:
+
+app/api/orders/create/route.ts'e kupon validasyonu ekle, transaction içinde usedCount++ yap
+E) Admin kupon yönetim sayfası:
+
+app/admin/coupons/page.tsx
+4. Misafir Checkout (Hesapsız Alışveriş)
+Ne yapılacak: Kullanıcı hesap açmadan, sadece e-posta + adres girerek ödeme yapabilmeli.
+
+Adımlar:
+
+A) Prisma schema güncelle:
+Order modeline opsiyonel misafir alanları ekle:
+
+
+guestEmail     String?
+guestFirstName String?
+guestLastName  String?
+guestPhone     String?
+// userId zaten optional yap
+B) Sepet için session-based geçici cart:
+
+Misafirler için cookie/localStorage tabanlı geçici sepet
+context/GuestCartContext.tsx yeni context
+hooks/useCart.ts → hem auth hem guest cart'ı birleştirsin
+C) Checkout flow'u ikiye ayır:
+
+Auth kullanıcı → mevcut flow devam
+Misafir → form: e-posta, ad, soyad, telefon, adres
+app/(main)/cart/checkout/page.tsx güncelle
+D) Misafir order API:
+
+app/api/orders/create/route.ts'i genişlet, session yoksa guest bilgilerini kullan
+Not: Bu özellik en karmaşık olanı, diğerlerinden sonraya bırakılabilir.
+
+FAZA 2 — Kullanıcı Deneyimi
+5. Favori / İstek Listesi (Wishlist)
+Ne yapılacak: Kullanıcı ürünleri favorilere ekleyip liste sayfasında görebilmeli.
+
+Adımlar:
+
+A) Prisma schema:
+
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  user      User     @relation(...)
+  product   Product  @relation(...)
+  createdAt DateTime @default(now())
+  @@unique([userId, productId])
+}
+B) API rotaları:
+
+app/api/wishlist/toggle/route.ts → POST (ekle/çıkar toggle)
+app/api/wishlist/route.ts → GET (listeyi getir)
+C) UI güncellemeleri:
+
+components/ProductCard.tsx'e kalp ikonu ekle (Lucide Heart) — zaten var olan kartın sağ üst köşesine
+app/(main)/wishlist/page.tsx → Favoriler sayfası
+Navbar'a "Favorilerim" linki
+6. Son Görüntülenen Ürünler
+Ne yapılacak: Kullanıcının son baktığı ürünler ürün detay sayfasının altında gösterilmeli.
+
+Adımlar:
+
+A) localStorage tabanlı basit çözüm (DB gerektirmez):
+
+hooks/useRecentlyViewed.ts → ürün ID'lerini localStorage'da sakla (max 8 ürün)
+B) app/(main)/product/[id]/page.tsx güncelle:
+
+Sayfa yüklendiğinde hook'u çağır, ID'yi listeye ekle
+Sayfanın altına "Son Gezdiğiniz Ürünler" carousel bölümü ekle
+Mevcut FeaturedProductsCarousel component'ini yeniden kullan
+7. İlgili Ürünler (Recommendations)
+Ne yapılacak: Ürün detay sayfasında aynı kategoriden başka ürünler göster.
+
+Adımlar:
+
+A) app/api/products/related/route.ts:
+
+
+// GET /api/products/related?productId=X&categoryId=Y&limit=6
+// Aynı kategoriden, mevcut ürün hariç, aktif ürünler
+B) app/(main)/product/[id]/page.tsx:
+
+Server component'te ilgili ürünleri fetch et
+Sayfanın altına RelatedProducts bölümü ekle
+Mevcut ProductCard component'lerini kullan
+8. Sipariş İptali (Kullanıcı Tarafından)
+Ne yapılacak: PENDING durumundaki siparişler kullanıcı tarafından iptal edilebilmeli.
+
+Adımlar:
+
+A) app/api/orders/[id]/cancel/route.ts:
+
+
+// POST
+// Sadece kendi siparişi olduğunu kontrol et
+// Sadece PENDING siparişi iptal edilebilir
+// Status → CANCELED
+// Stokları geri yükle (her OrderItem için product.stock++)
+// Prisma transaction içinde
+B) app/(main)/orders/[id]/page.tsx güncelle:
+
+Sipariş PENDING ise "Siparişi İptal Et" butonu göster
+ConfirmDialog component'ini kullan (zaten var)
+9. Stok Bildirimi (Notify When In Stock)
+Ne yapılacak: Stokta olmayan ürünler için kullanıcı e-posta bildirimi talep edebilmeli.
+
+Adımlar:
+
+A) Prisma schema:
+
+
+model StockAlert {
+  id        String   @id @default(cuid())
+  email     String
+  product   Product  @relation(...)
+  createdAt DateTime @default(now())
+  @@unique([email, productId])
+}
+B) API:
+
+app/api/products/[id]/stock-alert/route.ts → POST (alert ekle)
+C) components/ProductDetailClient.tsx güncelle:
+
+Ürün stokta değilse "Stoka Girince Haber Ver" input + butonu göster
+E-posta input, gönderi sonrası toast
+D) Admin stok güncellemesinde trigger:
+
+app/api/admin/products/[id]/route.ts stock güncellendiğinde → StockAlert'leri kontrol et → sendStockAlertEmail() gönder
+FAZA 3 — Admin Güçlendirme
+10. İndirimli Fiyat / Kampanya Fiyatı
+Ne yapılacak: Ürünlerin "asıl fiyat / indirimli fiyat" gösterebilmesi.
+
+Adımlar:
+
+A) Prisma schema — Product modeline ekle:
+
+
+compareAtPrice Int?  // eski fiyat (cent), null ise indirim yok
+B) Admin ürün formu güncelle:
+
+app/admin/products/ sayfasına "Karşılaştırma Fiyatı" alanı ekle
+C) components/ProductCard.tsx ve ProductDetailClient.tsx güncelle:
+
+compareAtPrice varsa üstü çizili eski fiyatı göster
+İndirim yüzdesini hesapla ve badge olarak göster: -25%
+11. Düşük Stok Uyarısı (Admin)
+Ne yapılacak: Admin panelinde stoku X'in altına düşen ürünler için uyarı göster.
+
+Adımlar:
+
+A) app/api/admin/products/low-stock/route.ts:
+
+
+// GET ?threshold=10
+// stock <= threshold olan aktif ürünleri döndür
+B) app/admin/page.tsx (admin dashboard) güncelle:
+
+Dashboard'a "Düşük Stok Uyarısı" kartı ekle
+Eşik değeri ayarlanabilir (varsayılan: 10 adet)
+12. Ürün CSV İthal/İhracı
+Ne yapılacak: Admin toplu ürün yükleyebilmeli ve dışa aktarabilmeli.
+
+Adımlar:
+
+A) Export API:
+
+app/api/admin/products/export/route.ts → GET, tüm ürünleri CSV olarak döndür
+Response header: Content-Type: text/csv
+B) Import API:
+
+app/api/admin/products/import/route.ts → POST, CSV parse et, ürünleri oluştur
+CSV parsing için papaparse paketi ekle
+C) Admin products sayfasına butonlar ekle:
+
+"CSV İndir" butonu
+"CSV Yükle" file input
+13. İade Yönetimi
+Ne yapılacak: Kullanıcı iade talep eder, admin onaylar/reddeder.
+
+Adımlar:
+
+A) Prisma schema:
+
+
+model ReturnRequest {
+  id        String        @id @default(cuid())
+  order     Order         @relation(...)
+  user      User          @relation(...)
+  reason    String
+  status    ReturnStatus  // PENDING, APPROVED, REJECTED, REFUNDED
+  adminNote String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum ReturnStatus { PENDING APPROVED REJECTED REFUNDED }
+B) Kullanıcı tarafı:
+
+app/(main)/orders/[id]/page.tsx'e "İade Talebi Oluştur" butonu (COMPLETED siparişler için)
+app/api/returns/create/route.ts → POST
+C) Admin tarafı:
+
+app/admin/returns/page.tsx → İade talepleri listesi
+app/api/admin/returns/[id]/route.ts → PATCH (onayla/reddet)
+FAZA 4 — Pazarlama & SEO
+14. SEO Optimizasyonu
+Ne yapılacak: Her sayfada doğru meta tag, Open Graph, sitemap.
+
+Adımlar:
+
+A) Her sayfa için generateMetadata() ekle:
+
+
+// app/(main)/product/[id]/page.tsx
+export async function generateMetadata({ params }) {
+  const product = await getProduct(params.id);
+  return {
+    title: `${product.title} | My Store`,
+    description: product.description,
+    openGraph: {
+      images: [product.thumbnail]
+    }
+  }
+}
+B) app/sitemap.ts oluştur:
+
+Tüm ürün, kategori URL'lerini otomatik listele
+C) app/robots.ts oluştur:
+
+Arama motoru yönlendirme kuralları
+D) Ürün sayfasına JSON-LD structured data ekle:
+
+
+// Schema.org Product markup
+<script type="application/ld+json">
+15. Bülten Aboneliği
+Ne yapılacak: Kullanıcılar e-posta ile bültene abone olabilmeli.
+
+Adımlar:
+
+A) Prisma schema:
+
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+B) API:
+
+app/api/newsletter/subscribe/route.ts → POST
+app/api/admin/newsletter/route.ts → GET (tüm aboneler listesi + CSV export)
+C) components/Footer.tsx güncelle:
+
+E-posta input + "Abone Ol" butonu ekle
+FAZA 5 — Yasal Zorunluluklar
+16. KVKK / Gizlilik Politikası Sayfaları
+Ne yapılacak: Yasal sayfalar + çerez onay banner'ı.
+
+Adımlar:
+
+A) Statik sayfalar oluştur:
+
+app/(main)/privacy-policy/page.tsx
+app/(main)/terms-of-service/page.tsx
+app/(main)/cookie-policy/page.tsx
+app/(main)/about/page.tsx
+app/(main)/contact/page.tsx
+B) Çerez onay banner'ı:
+
+components/CookieConsent.tsx → Sayfanın altında görünen banner
+localStorage ile "kabul edildi" durumunu sakla
+app/layout.tsx'e ekle
+C) Footer'ı güncelle:
+
+Gizlilik Politikası, KVKK, Kullanım Koşulları linklerini ekle
+Genel Uygulama Sırası
+
+Hafta 1-2:  Faza 1 (E-posta, Kategori Admin, İndirim Kodu)
+Hafta 3-4:  Faza 2 (Wishlist, İlgili Ürünler, Sipariş İptali)
+Hafta 5-6:  Faza 3 (Kampanya Fiyatı, Düşük Stok, İade)
+Hafta 7:    Faza 4 (SEO, Bülten)
+Hafta 8:    Faza 5 (KVKK, Yasal Sayfalar)
+Hangi özelliği önce uygulamak istiyorsun? Direkt koda geçebilirim.
