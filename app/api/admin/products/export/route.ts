@@ -24,8 +24,8 @@ export async function GET() {
         return [
             escape(p.title),
             escape(p.description),
-            (p.price / 100).toFixed(2),
-            p.salePrice ? (p.salePrice / 100).toFixed(2) : "",
+            (p.price / 100).toFixed(2).replace('.', ','),
+            p.salePrice ? (p.salePrice / 100).toFixed(2).replace('.', ',') : "",
             p.stock,
             escape(p.category?.name ?? ""),
             p.isActive,

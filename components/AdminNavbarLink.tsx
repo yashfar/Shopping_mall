@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export default function AdminNavbarLink() {
+    const t = useTranslations("common");
     const [count, setCount] = useState(0);
 
     useEffect(() => {
@@ -33,7 +35,7 @@ export default function AdminNavbarLink() {
             href="/admin"
             className="no-underline text-[#1A1A1A] font-semibold text-[0.95rem] transition-all duration-200 hover:text-[#C8102E] relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C8102E] after:transition-all after:duration-300 hover:after:w-full group"
         >
-            Admin
+            {t("admin")}
             {count > 0 && (
                 <span className="absolute -top-3 -right-4 bg-purple-600 text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300">
                     {count}

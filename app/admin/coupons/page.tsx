@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Loader2, Tag, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Coupon {
     id: string;
@@ -30,6 +32,8 @@ const emptyForm = {
 };
 
 export default function CouponsPage() {
+    const t = useTranslations("adminCoupons");
+    const { formatPrice } = useCurrency();
     const [coupons, setCoupons] = useState<Coupon[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -44,7 +48,7 @@ export default function CouponsPage() {
             if (!res.ok) throw new Error();
             setCoupons(await res.json());
         } catch {
-            toast.error("Failed to load coupons");
+            toast.error(t("failedToLoad"));
         } finally {
             setLoading(false);
         }
@@ -73,9 +77,9 @@ export default function CouponsPage() {
             setCoupons((prev) => [data, ...prev]);
             setForm(emptyForm);
             setShowForm(false);
-            toast.success(`Coupon "${data.code}" created`);
+            toast.success(t("couponCreated", { code: data.code }));
         } catch (err: any) {
-            toast.error(err.message || "Failed to create coupon");
+            toast.error(err.message || t("failedToCreate"));
         } finally {
             setSubmitting(false);
         }
@@ -92,9 +96,9 @@ export default function CouponsPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCoupons((prev) => prev.map((c) => (c.id === coupon.id ? data : c)));
-            toast.success(`Coupon ${data.isActive ? "activated" : "deactivated"}`);
+            toast.success(data.isActive ? t("couponActivated") : t("couponDeactivated"));
         } catch (err: any) {
-            toast.error(err.message || "Failed to update coupon");
+            toast.error(err.message || t("failedToUpdate"));
         } finally {
             setTogglingId(null);
         }
@@ -107,9 +111,9 @@ export default function CouponsPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCoupons((prev) => prev.filter((c) => c.id !== coupon.id));
-            toast.success(`Coupon "${coupon.code}" deleted`);
+            toast.success(t("couponDeleted", { code: coupon.code }));
         } catch (err: any) {
-            toast.error(err.message || "Failed to delete coupon");
+            toast.error(err.message || t("failedToDelete"));
         } finally {
             setDeletingId(null);
         }
@@ -117,8 +121,8 @@ export default function CouponsPage() {
 
     function formatValue(coupon: Coupon) {
         return coupon.type === "PERCENTAGE"
-            ? `${coupon.value}% off`
-            : `$${(coupon.value / 100).toFixed(2)} off`;
+            ? t("percentOff", { value: coupon.value })
+            : t("fixedOff", { value: formatPrice(coupon.value) });
     }
 
     function isExpired(coupon: Coupon) {
@@ -136,26 +140,28 @@ export default function CouponsPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-[#1A1A1A]">Coupons</h1>
-                        <p className="text-sm text-[#A9A9A9] mt-0.5">Create and manage discount codes</p>
+                        <h1 className="text-2xl font-bold text-[#1A1A1A]">{t("pageTitle")}</h1>
+                        <p className="text-sm text-[#A9A9A9] mt-0.5">{t("pageDesc")}</p>
                     </div>
                 </div>
                 <Button
                     onClick={() => setShowForm((v) => !v)}
                     className="bg-[#C8102E] hover:bg-[#A90D27] text-white"
                 >
-                    <Plus className="h-4 w-4 mr-1" /> New Coupon
+                    <Plus className="h-4 w-4 mr-1" /> {t("newCoupon")}
                 </Button>
             </div>
 
             {/* Create form */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6 space-y-4">
-                    <h2 className="text-base font-bold text-[#1A1A1A]">New Coupon</h2>
+                    <h2 className="text-base font-bold text-[#1A1A1A]">{t("formTitle")}</h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Code <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                {t("codeLabel")} <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="text"
                                 value={form.code}
@@ -168,22 +174,24 @@ export default function CouponsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Type <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                {t("typeLabel")} <span className="text-red-500">*</span>
+                            </label>
                             <select
                                 value={form.type}
                                 onChange={(e) => setForm({ ...form, type: e.target.value as "PERCENTAGE" | "FIXED_AMOUNT" })}
                                 className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white"
                             >
-                                <option value="PERCENTAGE">Percentage (%)</option>
-                                <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
+                                <option value="PERCENTAGE">{t("typePercentage")}</option>
+                                <option value="FIXED_AMOUNT">{t("typeFixed")}</option>
                             </select>
                         </div>
 
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                Value <span className="text-red-500">*</span>
+                                {t("valueLabel")} <span className="text-red-500">*</span>
                                 <span className="text-gray-400 font-normal ml-1">
-                                    {form.type === "PERCENTAGE" ? "(1–100)" : "(in $)"}
+                                    {form.type === "PERCENTAGE" ? t("valueHintPercent") : t("valueHintFixed")}
                                 </span>
                             </label>
                             <input
@@ -201,8 +209,8 @@ export default function CouponsPage() {
 
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                Min. Order Amount
-                                <span className="text-gray-400 font-normal ml-1">(optional, in $)</span>
+                                {t("minAmountLabel")}
+                                <span className="text-gray-400 font-normal ml-1">{t("minAmountHint")}</span>
                             </label>
                             <input
                                 type="number"
@@ -217,8 +225,8 @@ export default function CouponsPage() {
 
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                Max Uses
-                                <span className="text-gray-400 font-normal ml-1">(optional, blank = unlimited)</span>
+                                {t("maxUsesLabel")}
+                                <span className="text-gray-400 font-normal ml-1">{t("maxUsesHint")}</span>
                             </label>
                             <input
                                 type="number"
@@ -232,8 +240,8 @@ export default function CouponsPage() {
 
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                Expires At
-                                <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                                {t("expiresAtLabel")}
+                                <span className="text-gray-400 font-normal ml-1">{t("expiresAtHint")}</span>
                             </label>
                             <input
                                 type="datetime-local"
@@ -246,10 +254,10 @@ export default function CouponsPage() {
 
                     <div className="flex gap-2 pt-2">
                         <Button type="submit" disabled={submitting} className="bg-[#C8102E] hover:bg-[#A90D27] text-white">
-                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Coupon"}
+                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t("createCoupon")}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => { setShowForm(false); setForm(emptyForm); }}>
-                            Cancel
+                            {t("cancel")}
                         </Button>
                     </div>
                 </form>
@@ -264,18 +272,18 @@ export default function CouponsPage() {
                 ) : coupons.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                         <Tag className="h-10 w-10 mb-3 opacity-30" />
-                        <p className="text-sm font-medium">No coupons yet</p>
-                        <p className="text-xs mt-1">Create your first discount code above</p>
+                        <p className="text-sm font-medium">{t("noCouponsYet")}</p>
+                        <p className="text-xs mt-1">{t("noCouponsDesc")}</p>
                     </div>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 text-xs text-[#A9A9A9] font-semibold uppercase tracking-wider">
-                                <th className="text-left px-4 py-3">Code</th>
-                                <th className="text-left px-4 py-3">Discount</th>
-                                <th className="text-left px-4 py-3 hidden sm:table-cell">Uses</th>
-                                <th className="text-left px-4 py-3 hidden md:table-cell">Expires</th>
-                                <th className="text-left px-4 py-3">Status</th>
+                                <th className="text-left px-4 py-3">{t("colCode")}</th>
+                                <th className="text-left px-4 py-3">{t("colDiscount")}</th>
+                                <th className="text-left px-4 py-3 hidden sm:table-cell">{t("colUses")}</th>
+                                <th className="text-left px-4 py-3 hidden md:table-cell">{t("colExpires")}</th>
+                                <th className="text-left px-4 py-3">{t("colStatus")}</th>
                                 <th className="px-4 py-3" />
                             </tr>
                         </thead>
@@ -297,7 +305,7 @@ export default function CouponsPage() {
                                             isExpired(coupon) ? "bg-gray-100 text-gray-400" :
                                             coupon.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                                         }`}>
-                                            {isExpired(coupon) ? "Expired" : coupon.isActive ? "Active" : "Inactive"}
+                                            {isExpired(coupon) ? t("statusExpired") : coupon.isActive ? t("statusActive") : t("statusInactive")}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
@@ -307,7 +315,7 @@ export default function CouponsPage() {
                                                 variant="ghost"
                                                 onClick={() => handleToggle(coupon)}
                                                 disabled={togglingId === coupon.id || isExpired(coupon)}
-                                                title={coupon.isActive ? "Deactivate" : "Activate"}
+                                                title={coupon.isActive ? t("titleDeactivate") : t("titleActivate")}
                                                 className="h-8 w-8 text-gray-400 hover:text-[#1A1A1A] disabled:opacity-30"
                                             >
                                                 {togglingId === coupon.id

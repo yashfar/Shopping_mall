@@ -12,7 +12,13 @@
       "Bash(npx next:*)",
       "Bash(rm -rf .next)",
       "Bash(rm -rf node_modules/.cache)",
-      "Bash(ls \"c:/My-Store/online_shop/app/\\(main\\)/contact/\")"
+      "Bash(ls \"c:/My-Store/online_shop/app/\\(main\\)/contact/\")",
+      "Bash(grep -r \"Invalid\\\\|Error\\\\|Failed\\\\|Success\\\\|error:\\\\|message:\" \"c:/My-Store/online_shop/app\" \"c:/My-Store/online_shop/components\" --include=\"*.tsx\" --include=\"*.ts\" -h ! -path \"*/node_modules/*\" ! -path \"*/.history/*\" ! -path \"*/.next/*\")",
+      "Bash(ls c:/My-Store/online_shop/app/\\\\\\(main\\\\\\)/)",
+      "Bash(ls c:/My-Store/online_shop/app/\\\\\\(main\\\\\\)/admin/)",
+      "Bash(find c:/My-Store/online_shop/app/admin -name *.tsx -type f)",
+      "Bash(find c:/My-Store/online_shop -name *.tsx -type f)",
+      "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)"
     ]
   }
 }

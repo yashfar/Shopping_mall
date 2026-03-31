@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Filters from "./Filters";
 import SortMenu from "./SortMenu";
 import ProductInfiniteList from "./ProductInfiniteList";
+import { useTranslations } from "next-intl";
 
 interface Product {
     id: string;
@@ -40,6 +41,8 @@ export default function ProductCatalog({
     description = "Browse our collection",
     showFilters = true,
 }: ProductCatalogProps) {
+    const t = useTranslations("catalog");
+    const tf = useTranslations("filters");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     // Prevent scrolling when drawer is open
@@ -79,7 +82,7 @@ export default function ProductCatalog({
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
                                         </svg>
                                     </span>
-                                    Filters
+                                    {t("filters")}
                                 </button>
                             )}
                             <SortMenu />
@@ -103,7 +106,7 @@ export default function ProductCatalog({
                         style={{ animation: "slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards" }}
                     >
                         <div className="sticky top-0 bg-white z-10 px-8 py-6 border-b border-[#A9A9A9]/20 flex items-center justify-between">
-                            <h2 className="text-2xl font-black text-[#1A1A1A]">Filters</h2>
+                            <h2 className="text-2xl font-black text-[#1A1A1A]">{t("filters")}</h2>
                             <button
                                 onClick={() => setIsFilterOpen(false)}
                                 className="p-2 text-[#A9A9A9] hover:bg-red-50 hover:text-[#C8102E] rounded-full transition-all duration-300"
@@ -134,7 +137,7 @@ export default function ProductCatalog({
                     {/* Active Filter Badges */}
                     {(queryParams.category || queryParams.min || queryParams.max || queryParams.rating || queryParams.inStock || queryParams.onSale) && (
                         <div className="mb-8 flex flex-wrap gap-2.5 items-center">
-                            <span className="text-xs font-black text-[#A9A9A9] uppercase tracking-wider mr-1">Active:</span>
+                            <span className="text-xs font-black text-[#A9A9A9] uppercase tracking-wider mr-1">{t("active")}</span>
                             {queryParams.category && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
                                     {queryParams.category}
@@ -148,24 +151,24 @@ export default function ProductCatalog({
                             )}
                             {queryParams.rating && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    {queryParams.rating}+ Stars
+                                    {t("stars", { count: queryParams.rating })}
                                 </span>
                             )}
                             {queryParams.inStock === "true" && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100 shadow-sm">
-                                    In Stock
+                                    {tf("inStockOnly")}
                                 </span>
                             )}
                             {queryParams.onSale === "true" && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    On Sale
+                                    {tf("onSale")}
                                 </span>
                             )}
                             <button
                                 onClick={() => window.location.href = window.location.pathname}
                                 className="text-sm font-bold text-[#A9A9A9] hover:text-[#C8102E] ml-2 transition-colors border-b-2 border-transparent hover:border-[#C8102E]/30 pb-0.5"
                             >
-                                Clear all filters
+                                {t("clearAllFilters")}
                             </button>
                         </div>
                     )}
@@ -173,8 +176,8 @@ export default function ProductCatalog({
                     <ProductInfiniteList
                         initialProducts={initialProducts}
                         queryParams={queryParams}
-                        emptyMessage="No products found"
-                        emptyDescription="Try adjusting your filters to find what you're looking for."
+                        emptyMessage={t("noProductsFound")}
+                        emptyDescription={t("noProductsDescription")}
                     />
                 </main>
             </div>

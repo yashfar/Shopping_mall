@@ -2,6 +2,7 @@
 
 import { useState, useRef, DragEvent, ChangeEvent, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Cropper from "react-easy-crop";
 import "./avatar-upload.css";
 
@@ -40,6 +41,7 @@ export default function AvatarUpload({
     const [imageError, setImageError] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
+    const t = useTranslations("profile");
 
     const onCropComplete = useCallback(
         (croppedArea: any, croppedAreaPixels: CropArea) => {
@@ -115,12 +117,12 @@ export default function AvatarUpload({
 
     const handleFile = (file: File) => {
         if (!file.type.startsWith("image/")) {
-            setMessage({ type: "error", text: "Please select an image file" });
+            setMessage({ type: "error", text: t("pleaseSelectImage") });
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setMessage({ type: "error", text: "Image must be less than 5MB" });
+            setMessage({ type: "error", text: t("imageTooLarge") });
             return;
         }
 
@@ -147,7 +149,7 @@ export default function AvatarUpload({
             setZoom(1);
         } catch (error) {
             console.error("Error cropping image:", error);
-            setMessage({ type: "error", text: "Failed to crop image" });
+            setMessage({ type: "error", text: t("failedToCrop") });
         }
     };
 
@@ -163,7 +165,7 @@ export default function AvatarUpload({
 
     const handleUpload = async () => {
         if (!preview || preview === currentAvatar) {
-            setMessage({ type: "error", text: "No new image to upload" });
+            setMessage({ type: "error", text: t("noNewImage") });
             return;
         }
 
@@ -185,18 +187,18 @@ export default function AvatarUpload({
             const data = await response.json();
 
             if (response.ok) {
-                setMessage({ type: "success", text: "Avatar uploaded successfully!" });
+                setMessage({ type: "success", text: t("avatarUploadedSuccess") });
                 router.refresh();
                 if (onSuccess) onSuccess();
             } else {
                 setMessage({
                     type: "error",
-                    text: data.error || "Failed to upload avatar",
+                    text: data.error || t("failedToUploadAvatar"),
                 });
             }
         } catch (error) {
             console.error("Error uploading avatar:", error);
-            setMessage({ type: "error", text: "Failed to upload avatar" });
+            setMessage({ type: "error", text: t("failedToUploadAvatar") });
         } finally {
             setIsUploading(false);
         }
@@ -204,11 +206,11 @@ export default function AvatarUpload({
 
     const handleRemove = async () => {
         if (!currentAvatar) {
-            setMessage({ type: "error", text: "No avatar to remove" });
+            setMessage({ type: "error", text: t("noAvatarToRemove") });
             return;
         }
 
-        if (!confirm("Are you sure you want to remove your avatar?")) {
+        if (!confirm(t("confirmRemoveAvatar"))) {
             return;
         }
 
@@ -224,18 +226,18 @@ export default function AvatarUpload({
 
             if (response.ok) {
                 setPreview(null);
-                setMessage({ type: "success", text: "Avatar removed successfully!" });
+                setMessage({ type: "success", text: t("avatarRemovedSuccess") });
                 router.refresh();
                 if (onSuccess) onSuccess();
             } else {
                 setMessage({
                     type: "error",
-                    text: data.error || "Failed to remove avatar",
+                    text: data.error || t("failedToRemoveAvatar"),
                 });
             }
         } catch (error) {
             console.error("Error removing avatar:", error);
-            setMessage({ type: "error", text: "Failed to remove avatar" });
+            setMessage({ type: "error", text: t("failedToRemoveAvatar") });
         } finally {
             setIsUploading(false);
         }
@@ -258,7 +260,7 @@ export default function AvatarUpload({
     return (
         <>
             <div className="avatar-upload-container">
-                <h3 className="avatar-upload-title">Profile Picture</h3>
+                <h3 className="avatar-upload-title">{t("profilePicture")}</h3>
 
                 {message && (
                     <div className={`upload-message upload-message-${message.type}`}>
@@ -312,10 +314,9 @@ export default function AvatarUpload({
                         </svg>
 
                         <p className="dropzone-text">
-                            <span className="dropzone-highlight">Click to upload</span> or
-                            drag and drop
+                            <span className="dropzone-highlight">{t("clickToUpload")}</span> {t("dragAndDrop")}
                         </p>
-                        <p className="dropzone-hint">PNG, JPG, GIF up to 5MB</p>
+                        <p className="dropzone-hint">{t("uploadHint")}</p>
                     </div>
                 </div>
 
@@ -328,7 +329,7 @@ export default function AvatarUpload({
                                 disabled={isUploading}
                                 className="btn-secondary"
                             >
-                                Cancel
+                                {t("cancel")}
                             </button>
                             <button
                                 type="button"
@@ -339,10 +340,10 @@ export default function AvatarUpload({
                                 {isUploading ? (
                                     <>
                                         <span className="upload-spinner"></span>
-                                        Uploading...
+                                        {t("uploading")}
                                     </>
                                 ) : (
-                                    "Upload Avatar"
+                                    t("uploadAvatar")
                                 )}
                             </button>
                         </>
@@ -358,10 +359,10 @@ export default function AvatarUpload({
                             {isUploading ? (
                                 <>
                                     <span className="upload-spinner"></span>
-                                    Removing...
+                                    {t("removing")}
                                 </>
                             ) : (
-                                "Remove Avatar"
+                                t("removeAvatar")
                             )}
                         </button>
                     )}
@@ -373,7 +374,7 @@ export default function AvatarUpload({
                 <div className="crop-modal-overlay">
                     <div className="crop-modal">
                         <div className="crop-modal-header">
-                            <h3>Crop Your Photo</h3>
+                            <h3>{t("cropYourPhoto")}</h3>
                             <button
                                 onClick={handleCropCancel}
                                 className="crop-modal-close"
@@ -399,7 +400,7 @@ export default function AvatarUpload({
 
                         <div className="crop-controls">
                             <label className="crop-control-label">
-                                Zoom
+                                {t("zoom")}
                                 <input
                                     type="range"
                                     min={1}
@@ -417,10 +418,10 @@ export default function AvatarUpload({
                                 onClick={handleCropCancel}
                                 className="btn-secondary"
                             >
-                                Cancel
+                                {t("cancel")}
                             </button>
                             <button onClick={handleCropSave} className="btn-primary">
-                                Apply Crop
+                                {t("applyCrop")}
                             </button>
                         </div>
                     </div>

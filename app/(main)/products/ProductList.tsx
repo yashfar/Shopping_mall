@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 type Product = {
     id: string;
@@ -14,6 +15,7 @@ type Product = {
 
 export default function ProductList() {
     const router = useRouter();
+    const { formatPrice } = useCurrency();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -181,7 +183,7 @@ export default function ProductList() {
                                     color: "#0070f3",
                                 }}
                             >
-                                ${(product.price / 100).toFixed(2)}
+                                {formatPrice(product.price)}
                             </div>
                             <div
                                 style={{

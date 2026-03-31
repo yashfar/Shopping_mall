@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         console.log("Updating Payment Config:", body);
-        const { taxPercent, shippingFee, freeShippingThreshold } = body;
+        const { taxPercent, shippingFee, freeShippingThreshold, bankName, accountHolder, iban, bankTransferNote } = body;
 
         // Validation
         if (typeof taxPercent !== "number" || typeof shippingFee !== "number" || typeof freeShippingThreshold !== "number") {
@@ -48,7 +48,11 @@ export async function POST(request: Request) {
         const updated = await updatePaymentConfig({
             taxPercent,
             shippingFee,
-            freeShippingThreshold
+            freeShippingThreshold,
+            ...(typeof bankName === "string" ? { bankName } : {}),
+            ...(typeof accountHolder === "string" ? { accountHolder } : {}),
+            ...(typeof iban === "string" ? { iban } : {}),
+            ...(typeof bankTransferNote === "string" ? { bankTransferNote } : {}),
         });
 
         return NextResponse.json({ config: updated });

@@ -2,10 +2,12 @@
 
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { Star, ShoppingCart, Loader2, Heart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface Review {
     id: string;
@@ -31,6 +33,8 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggle, isWishlisted } = useWishlist();
+    const t = useTranslations("productCard");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [isAdding, setIsAdding] = useState(false);
     const wishlisted = isWishlisted(product.id);
@@ -104,7 +108,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <button
                     onClick={(e) => { e.stopPropagation(); toggle(product.id); }}
                     className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110"
-                    title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                    title={wishlisted ? t("removeFromWishlist") : t("addToWishlist")}
                 >
                     <Heart
                         className={`w-4 h-4 transition-colors ${wishlisted ? "fill-[#C8102E] text-[#C8102E]" : "text-gray-400"}`}
@@ -115,7 +119,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
                     {isNew && (
                         <span className="bg-[#1A1A1A] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                            New
+                            {t("new")}
                         </span>
                     )}
                     {product.salePrice && product.stock !== 0 && (
@@ -125,7 +129,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     )}
                     {product.stock === 0 && (
                         <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                            Out of Stock
+                            {t("outOfStock")}
                         </span>
                     )}
                 </div>
@@ -135,7 +139,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     onClick={handleAddToCart}
                     disabled={isAdding || product.stock === 0}
                     className="absolute bottom-3 right-3 h-10 w-10 bg-white text-[#1A1A1A] rounded-full shadow-lg flex items-center justify-center transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#C8102E] hover:text-white lg:flex hidden"
-                    title="Add to Cart"
+                    title={t("addToCart")}
                 >
                     {isAdding ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -185,15 +189,15 @@ export default function ProductCard({ product }: ProductCardProps) {
                         {product.salePrice ? (
                             <>
                                 <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
-                                    ${(product.salePrice / 100).toFixed(2)}
+                                    {formatPrice(product.salePrice)}
                                 </span>
                                 <span className="text-xs text-gray-400 line-through">
-                                    ${(product.price / 100).toFixed(2)}
+                                    {formatPrice(product.price)}
                                 </span>
                             </>
                         ) : (
                             <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
-                                ${(product.price / 100).toFixed(2)}
+                                {formatPrice(product.price)}
                             </span>
                         )}
                     </div>

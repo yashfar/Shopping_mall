@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import "./address-modal.css";
 
 export interface Address {
@@ -32,6 +33,7 @@ export default function AddressModal({
     existingAddress,
     onSuccess,
 }: AddressModalProps) {
+    const t = useTranslations("address");
     const [formData, setFormData] = useState({
         title: "",
         firstName: "",
@@ -107,10 +109,10 @@ export default function AddressModal({
                 onClose();
             } else {
                 const data = await response.json();
-                setError(data.error || "Failed to save address");
+                setError(data.error || t("failedToSave"));
             }
         } catch (err) {
-            setError("An error occurred while saving the address");
+            setError(t("genericError"));
         } finally {
             setIsSubmitting(false);
         }
@@ -128,7 +130,7 @@ export default function AddressModal({
         <div className="address-modal-overlay" onClick={handleOverlayClick}>
             <div className="address-modal-content">
                 <div className="address-modal-header">
-                    <h2>{mode === "add" ? "Add New Address" : "Edit Address"}</h2>
+                    <h2>{mode === "add" ? t("addNewAddress") : t("editAddress")}</h2>
                     <button
                         className="address-modal-close"
                         onClick={onClose}
@@ -156,7 +158,7 @@ export default function AddressModal({
                 <form onSubmit={handleSubmit} className="address-modal-form">
                     <div className="address-form-group">
                         <label htmlFor="title">
-                            Title <span className="required">*</span>
+                            {t("title")} <span className="required">*</span>
                         </label>
                         <input
                             type="text"
@@ -164,7 +166,7 @@ export default function AddressModal({
                             name="title"
                             value={formData.title}
                             onChange={handleInputChange}
-                            placeholder="e.g., Home, Office, etc."
+                            placeholder={t("titlePlaceholder")}
                             required
                             className="address-form-input"
                         />
@@ -173,7 +175,7 @@ export default function AddressModal({
                     <div className="address-form-row">
                         <div className="address-form-group">
                             <label htmlFor="firstName">
-                                First Name <span className="required">*</span>
+                                {t("firstName")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -187,7 +189,7 @@ export default function AddressModal({
                         </div>
                         <div className="address-form-group">
                             <label htmlFor="lastName">
-                                Last Name <span className="required">*</span>
+                                {t("lastName")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -203,7 +205,7 @@ export default function AddressModal({
 
                     <div className="address-form-group">
                         <label htmlFor="phone">
-                            Phone <span className="required">*</span>
+                            {t("phone")} <span className="required">*</span>
                         </label>
                         <input
                             type="tel"
@@ -211,7 +213,7 @@ export default function AddressModal({
                             name="phone"
                             value={formData.phone}
                             onChange={handleInputChange}
-                            placeholder="e.g., +90 555 123 4567"
+                            placeholder={t("phonePlaceholder")}
                             required
                             className="address-form-input"
                         />
@@ -220,7 +222,7 @@ export default function AddressModal({
                     <div className="address-form-row">
                         <div className="address-form-group">
                             <label htmlFor="city">
-                                City <span className="required">*</span>
+                                {t("city")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -234,7 +236,7 @@ export default function AddressModal({
                         </div>
                         <div className="address-form-group">
                             <label htmlFor="district">
-                                District <span className="required">*</span>
+                                {t("district")} <span className="required">*</span>
                             </label>
                             <input
                                 type="text"
@@ -250,7 +252,7 @@ export default function AddressModal({
 
                     <div className="address-form-group">
                         <label htmlFor="neighborhood">
-                            Neighborhood <span className="required">*</span>
+                            {t("neighborhood")} <span className="required">*</span>
                         </label>
                         <input
                             type="text"
@@ -265,7 +267,7 @@ export default function AddressModal({
 
                     <div className="address-form-group">
                         <label htmlFor="fullAddress">
-                            Full Address <span className="required">*</span>
+                            {t("fullAddress")} <span className="required">*</span>
                         </label>
                         <textarea
                             id="fullAddress"
@@ -273,7 +275,7 @@ export default function AddressModal({
                             value={formData.fullAddress}
                             onChange={handleInputChange}
                             rows={3}
-                            placeholder="Street, building number, apartment, etc."
+                            placeholder={t("addressPlaceholder")}
                             required
                             className="address-form-textarea"
                         />
@@ -286,7 +288,7 @@ export default function AddressModal({
                             onClick={onClose}
                             disabled={isSubmitting}
                         >
-                            Cancel
+                            {t("cancel")}
                         </button>
                         <button
                             type="submit"
@@ -296,12 +298,12 @@ export default function AddressModal({
                             {isSubmitting ? (
                                 <>
                                     <div className="address-btn-spinner"></div>
-                                    Saving...
+                                    {t("saving")}
                                 </>
                             ) : mode === "add" ? (
-                                "Add Address"
+                                t("addAddress")
                             ) : (
-                                "Save Changes"
+                                t("saveChanges")
                             )}
                         </button>
                     </div>

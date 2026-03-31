@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface DeleteBannerButtonProps {
     bannerId: string;
@@ -13,6 +14,7 @@ export default function DeleteBannerButton({ bannerId, onSuccess }: DeleteBanner
     const [isDeleting, setIsDeleting] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const router = useRouter();
+    const t = useTranslations("adminBanners");
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -23,16 +25,16 @@ export default function DeleteBannerButton({ bannerId, onSuccess }: DeleteBanner
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || "Failed to delete banner");
+                throw new Error(error.error || t("failedToDeleteBanner"));
             }
 
-            toast.success("Banner deleted successfully");
+            toast.success(t("bannerDeleted"));
             router.refresh();
             if (onSuccess) onSuccess();
             setShowConfirm(false);
         } catch (error) {
             console.error("Delete error:", error);
-            toast.error(error instanceof Error ? error.message : "Failed to delete banner");
+            toast.error(error instanceof Error ? error.message : t("failedToDeleteBanner"));
         } finally {
             setIsDeleting(false);
         }
@@ -46,14 +48,14 @@ export default function DeleteBannerButton({ bannerId, onSuccess }: DeleteBanner
                     disabled={isDeleting}
                     className="flex-1 px-3 py-2.5 bg-[#C8102E] text-white font-bold rounded-xl hover:bg-[#A00D24] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                 >
-                    {isDeleting ? "..." : "Yes"}
+                    {isDeleting ? "..." : t("yes")}
                 </button>
                 <button
                     onClick={() => setShowConfirm(false)}
                     disabled={isDeleting}
                     className="flex-1 px-3 py-2.5 bg-[#A9A9A9] text-white font-bold rounded-xl hover:bg-[#8A8A8A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                 >
-                    No
+                    {t("no")}
                 </button>
             </div>
         );

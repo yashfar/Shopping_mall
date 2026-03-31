@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
     ArrowLeft,
     Timer,
@@ -32,6 +33,7 @@ interface BannerSettings {
 
 export default function BannerSettingsPage() {
     const router = useRouter();
+    const t = useTranslations("adminBanners");
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [animationSpeed, setAnimationSpeed] = useState("500");
@@ -48,7 +50,7 @@ export default function BannerSettingsPage() {
 
                 if (!response.ok) {
                     const data = await response.json();
-                    throw new Error(data.error || "Failed to fetch settings");
+                    throw new Error(data.error || t("failedToLoadSettings"));
                 }
 
                 const data: BannerSettings = await response.json();
@@ -58,7 +60,7 @@ export default function BannerSettingsPage() {
                 setLoop(data.loop);
                 setArrowDisplay(data.arrowDisplay || "hover");
             } catch (err: any) {
-                toast.error(err.message || "Failed to load settings");
+                toast.error(err.message || t("failedToLoadSettings"));
             } finally {
                 setLoading(false);
             }
@@ -73,13 +75,13 @@ export default function BannerSettingsPage() {
         // Validation
         const speed = parseInt(animationSpeed);
         if (isNaN(speed) || speed < 100 || speed > 5000) {
-            toast.error("Animation speed must be between 100 and 5000 milliseconds");
+            toast.error(t("animationSpeedError"));
             return;
         }
 
         const delay = parseInt(slideDelay);
         if (isNaN(delay) || delay < 1000 || delay > 10000) {
-            toast.error("Slide delay must be between 1000 and 10000 milliseconds");
+            toast.error(t("slideDelayError"));
             return;
         }
 
@@ -102,12 +104,12 @@ export default function BannerSettingsPage() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to update settings");
+                throw new Error(data.error || t("failedToUpdateSettings"));
             }
 
-            toast.success("Settings updated successfully!");
+            toast.success(t("settingsUpdated"));
         } catch (err: any) {
-            toast.error(err.message || "Failed to update settings");
+            toast.error(err.message || t("failedToUpdateSettings"));
         } finally {
             setSubmitting(false);
         }
@@ -121,6 +123,18 @@ export default function BannerSettingsPage() {
         );
     }
 
+    const animationTypes = [
+        { value: "slide", label: t("slideLabel"), icon: MoveRight, desc: t("slideDesc") },
+        { value: "fade", label: t("fadeLabel"), icon: Eye, desc: t("fadeDesc") },
+        { value: "zoom", label: t("zoomLabel"), icon: Search, desc: t("zoomDesc") },
+    ];
+
+    const arrowOptions = [
+        { value: "show", label: t("alwaysVisible"), icon: Eye },
+        { value: "hover", label: t("onHover"), icon: MousePointer2 },
+        { value: "invisible", label: t("hidden"), icon: EyeOff },
+    ];
+
     return (
         <div className="min-h-screen bg-gray-50/30 pb-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -131,14 +145,14 @@ export default function BannerSettingsPage() {
                         className="self-start flex items-center gap-2 text-gray-500 hover:text-[#1A1A1A] transition-colors font-medium text-sm group"
                     >
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        Back to Banners
+                        {t("backToBanners")}
                     </button>
                     <div>
                         <h1 className="text-3xl md:text-4xl font-black text-[#1A1A1A] tracking-tight mb-2">
-                            Global Configuration
+                            {t("globalConfiguration")}
                         </h1>
                         <p className="text-gray-500 text-lg max-w-2xl">
-                            Customize the behavior and appearance of the main banner carousel across your entire storefront.
+                            {t("globalConfigDesc")}
                         </p>
                     </div>
                 </div>
@@ -151,14 +165,13 @@ export default function BannerSettingsPage() {
                             {/* Section: Timing */}
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-6 md:p-8">
                                 <div className="flex items-center gap-3 mb-6">
-
-                                    <h2 className="text-xl font-bold text-[#1A1A1A]">Timing & Speed</h2>
+                                    <h2 className="text-xl font-bold text-[#1A1A1A]">{t("timingSpeed")}</h2>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-3">
                                         <label htmlFor="animationSpeed" className="text-sm font-bold text-gray-700">
-                                            Transition Speed
+                                            {t("transitionSpeed")}
                                         </label>
                                         <div className="relative group">
                                             <input
@@ -172,12 +185,12 @@ export default function BannerSettingsPage() {
                                             />
                                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">ms</span>
                                         </div>
-                                        <p className="text-xs text-gray-400 font-medium">Speed of the slide transition</p>
+                                        <p className="text-xs text-gray-400 font-medium">{t("transitionSpeedDesc")}</p>
                                     </div>
 
                                     <div className="space-y-3">
                                         <label htmlFor="slideDelay" className="text-sm font-bold text-gray-700">
-                                            Auto-Play Delay
+                                            {t("autoPlayDelay")}
                                         </label>
                                         <div className="relative group">
                                             <input
@@ -191,7 +204,7 @@ export default function BannerSettingsPage() {
                                             />
                                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">ms</span>
                                         </div>
-                                        <p className="text-xs text-gray-400 font-medium">Duration before next slide</p>
+                                        <p className="text-xs text-gray-400 font-medium">{t("autoPlayDelayDesc")}</p>
                                     </div>
                                 </div>
                             </div>
@@ -199,16 +212,11 @@ export default function BannerSettingsPage() {
                             {/* Section: Visuals */}
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-6 md:p-8">
                                 <div className="flex items-center gap-3 mb-6">
-
-                                    <h2 className="text-xl font-bold text-[#1A1A1A]">Transition Style</h2>
+                                    <h2 className="text-xl font-bold text-[#1A1A1A]">{t("transitionStyle")}</h2>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {[
-                                        { value: "slide", label: "Slide", icon: MoveRight, desc: "Classic horizontal movement" },
-                                        { value: "fade", label: "Fade", icon: Eye, desc: "Smooth opacity crossfade" },
-                                        { value: "zoom", label: "Zoom", icon: Search, desc: "Scale in/out effect" },
-                                    ].map((type) => (
+                                    {animationTypes.map((type) => (
                                         <button
                                             key={type.value}
                                             type="button"
@@ -237,20 +245,16 @@ export default function BannerSettingsPage() {
                             {/* Section: Controls */}
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-6 md:p-8">
                                 <div className="flex items-center gap-3 mb-6">
-                                    <h2 className="text-xl font-bold text-[#1A1A1A]">Interaction & Controls</h2>
+                                    <h2 className="text-xl font-bold text-[#1A1A1A]">{t("interactionControls")}</h2>
                                 </div>
 
                                 <div className="space-y-8">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-4">
-                                            Navigation Arrows
+                                            {t("navigationArrows")}
                                         </label>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            {[
-                                                { value: "show", label: "Always Visible", icon: Eye },
-                                                { value: "hover", label: "On Hover", icon: MousePointer2 },
-                                                { value: "invisible", label: "Hidden", icon: EyeOff },
-                                            ].map((option) => (
+                                            {arrowOptions.map((option) => (
                                                 <button
                                                     key={option.value}
                                                     type="button"
@@ -274,8 +278,8 @@ export default function BannerSettingsPage() {
                                                 <Repeat className="w-5 h-5" />
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold text-[#1A1A1A]">Infinite Loop</div>
-                                                <div className="text-xs text-gray-500">Carousel restarts after last slide</div>
+                                                <div className="text-sm font-bold text-[#1A1A1A]">{t("infiniteLoop")}</div>
+                                                <div className="text-xs text-gray-500">{t("infiniteLoopDesc")}</div>
                                             </div>
                                         </div>
                                         <button
@@ -300,38 +304,37 @@ export default function BannerSettingsPage() {
                             <div className="sticky top-8 space-y-4">
                                 {/* Summary Card */}
                                 <div className="bg-[#1A1A1A] text-white rounded-3xl p-6 shadow-xl overflow-hidden relative">
-                                    {/* Decorative background gradients */}
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#C8102E]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
                                     <div className="relative z-10">
                                         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                                             <MonitorPlay className="w-5 h-5 text-gray-400" />
-                                            Live Configuration
+                                            {t("liveConfiguration")}
                                         </h3>
 
                                         <div className="space-y-4 text-sm">
                                             <div className="flex justify-between items-center py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Mode</span>
+                                                <span className="text-gray-400">{t("mode")}</span>
                                                 <span className="font-bold capitalize text-[#C8102E]">{animationType}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Duration</span>
+                                                <span className="text-gray-400">{t("duration")}</span>
                                                 <span className="font-bold">{animationSpeed}ms</span>
                                             </div>
                                             <div className="flex justify-between items-center py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Delay</span>
+                                                <span className="text-gray-400">{t("delay")}</span>
                                                 <span className="font-bold">{slideDelay}ms</span>
                                             </div>
                                             <div className="flex justify-between items-center py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Looping</span>
+                                                <span className="text-gray-400">{t("looping")}</span>
                                                 <span className={`font-bold ${loop ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                                    {loop ? 'Enabled' : 'Disabled'}
+                                                    {loop ? t("enabled") : t("disabled")}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Arrows</span>
-                                                <span className="font-bold capitalize">{arrowDisplay === 'invisible' ? 'Hidden' : arrowDisplay}</span>
+                                                <span className="text-gray-400">{t("arrows")}</span>
+                                                <span className="font-bold capitalize">{arrowDisplay === 'invisible' ? t("hidden") : arrowDisplay}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -349,7 +352,7 @@ export default function BannerSettingsPage() {
                                         ) : (
                                             <Save className="w-5 h-5" />
                                         )}
-                                        {submitting ? 'Saving Changes...' : 'Save Configuration'}
+                                        {submitting ? t("savingChanges") : t("saveConfiguration")}
                                     </button>
 
                                     <button
@@ -358,12 +361,12 @@ export default function BannerSettingsPage() {
                                         disabled={submitting}
                                         className="w-full py-4 bg-white border-2 border-gray-100 text-gray-500 hover:text-[#1A1A1A] hover:border-gray-200 rounded-2xl font-bold transition-all"
                                     >
-                                        Cancel
+                                        {t("cancel")}
                                     </button>
                                 </div>
 
                                 <p className="text-xs text-center text-gray-400 max-w-[250px] mx-auto mt-4 px-4 leading-relaxed">
-                                    Changes will be published immediately to the live storefront.
+                                    {t("publishNote")}
                                 </p>
                             </div>
                         </div>

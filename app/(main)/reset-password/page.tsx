@@ -3,9 +3,11 @@
 import { useState, FormEvent, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import "./reset-password.css";
 
 function ResetPasswordForm() {
+    const t = useTranslations("resetPassword");
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
@@ -23,7 +25,7 @@ function ResetPasswordForm() {
         if (!token) {
             setMessage({
                 type: "error",
-                text: "Invalid reset link. Please request a new password reset.",
+                text: t("invalidLink"),
             });
         }
     }, [token]);
@@ -36,7 +38,7 @@ function ResetPasswordForm() {
         if (newPassword !== confirmPassword) {
             setMessage({
                 type: "error",
-                text: "Passwords do not match",
+                text: t("passwordMismatch"),
             });
             return;
         }
@@ -45,7 +47,7 @@ function ResetPasswordForm() {
         if (newPassword.length < 8) {
             setMessage({
                 type: "error",
-                text: "Password must be at least 8 characters long",
+                text: t("passwordTooShort"),
             });
             return;
         }
@@ -53,7 +55,7 @@ function ResetPasswordForm() {
         if (!token) {
             setMessage({
                 type: "error",
-                text: "Invalid reset link",
+                text: t("invalidLinkTitle"),
             });
             return;
         }
@@ -91,14 +93,14 @@ function ResetPasswordForm() {
             } else {
                 setMessage({
                     type: "error",
-                    text: data.error || "Failed to reset password",
+                    text: data.error || t("failed"),
                 });
             }
         } catch (error) {
             console.error("Error:", error);
             setMessage({
                 type: "error",
-                text: "An error occurred. Please try again.",
+                text: t("genericError"),
             });
         } finally {
             setLoading(false);
@@ -109,9 +111,9 @@ function ResetPasswordForm() {
         <div className="reset-password-container">
             <div className="reset-password-card">
                 <div className="reset-password-header">
-                    <h1 className="reset-password-title">Reset Password</h1>
+                    <h1 className="reset-password-title">{t("title")}</h1>
                     <p className="reset-password-subtitle">
-                        Enter your new password below.
+                        {t("subtitle")}
                     </p>
                 </div>
 
@@ -128,7 +130,7 @@ function ResetPasswordForm() {
                     <form onSubmit={handleSubmit} className="reset-password-form">
                         <div className="form-group">
                             <label htmlFor="newPassword" className="form-label">
-                                New Password
+                                {t("newPassword")}
                             </label>
                             <input
                                 id="newPassword"
@@ -138,15 +140,15 @@ function ResetPasswordForm() {
                                 required
                                 disabled={loading || !token}
                                 className="form-input"
-                                placeholder="••••••••"
+                                placeholder={t("passwordPlaceholder")}
                                 minLength={8}
                             />
-                            <p className="form-hint">Minimum 8 characters</p>
+                            <p className="form-hint">{t("passwordHint")}</p>
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="confirmPassword" className="form-label">
-                                Confirm Password
+                                {t("confirmPassword")}
                             </label>
                             <input
                                 id="confirmPassword"
@@ -156,7 +158,7 @@ function ResetPasswordForm() {
                                 required
                                 disabled={loading || !token}
                                 className="form-input"
-                                placeholder="••••••••"
+                                placeholder={t("passwordPlaceholder")}
                                 minLength={8}
                             />
                         </div>
@@ -169,10 +171,10 @@ function ResetPasswordForm() {
                             {loading ? (
                                 <>
                                     <span className="spinner"></span>
-                                    Resetting...
+                                    {t("resetting")}
                                 </>
                             ) : (
-                                "Reset Password"
+                                t("resetPassword")
                             )}
                         </button>
                     </form>
@@ -180,11 +182,11 @@ function ResetPasswordForm() {
 
                 <div className="reset-password-footer">
                     <Link href="/login" className="link">
-                        ← Back to Login
+                        ← {t("backToLogin")}
                     </Link>
                     <span className="divider">•</span>
                     <Link href="/forgot-password" className="link">
-                        Request New Link
+                        {t("requestNewLink")}
                     </Link>
                 </div>
             </div>

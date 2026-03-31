@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface CartItem {
     id: string;
@@ -19,6 +20,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+    const t = useTranslations("cartContext");
     const [cartCount, setCartCount] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
 
@@ -51,13 +53,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (res.status === 401) {
-                toast.error("Please sign in to add items to cart");
+                toast.error(t("signInRequired"));
                 return "unauthorized";
             }
 
             if (!res.ok) {
                 const data = await res.json();
-                toast.error(data.error || "Failed to add to cart");
+                toast.error(data.error || t("failedToAdd"));
                 return false;
             }
 
@@ -66,13 +68,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             setIsAnimating(true);
             setTimeout(() => setIsAnimating(false), 500);
 
-            toast.success("Product added to cart");
+            toast.success(t("productAdded"));
             return true;
         } catch {
             // On network error, roll back the optimistic update by re-syncing
             // with the server rather than leaving a stale count.
             await refreshCart();
-            toast.error("Error adding to cart");
+            toast.error(t("errorAdding"));
             return false;
         }
     };

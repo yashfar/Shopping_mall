@@ -2,6 +2,7 @@
 
 import { useWishlist } from "@@/context/WishlistContext";
 import ProductCard from "@@/components/ProductCard";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 
@@ -14,6 +15,7 @@ interface WishlistContentProps {
 
 export default function WishlistContent({ initialProducts }: WishlistContentProps) {
     const { wishlistIds } = useWishlist();
+    const t = useTranslations("wishlist");
 
     // Filter out products removed during this session
     const products = initialProducts.filter((p) => wishlistIds.has(p.id));
@@ -24,13 +26,13 @@ export default function WishlistContent({ initialProducts }: WishlistContentProp
                 <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-6">
                     <Heart className="w-10 h-10 text-[#C8102E] opacity-40" />
                 </div>
-                <h2 className="text-xl font-bold text-[#1A1A1A] mb-2">Your wishlist is empty</h2>
-                <p className="text-[#A9A9A9] mb-8">Browse products and click the heart icon to save your favourites.</p>
+                <h2 className="text-xl font-bold text-[#1A1A1A] mb-2">{t("emptyTitle")}</h2>
+                <p className="text-[#A9A9A9] mb-8">{t("emptyDescription")}</p>
                 <Link
                     href="/products"
                     className="bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold px-8 py-3 rounded-full transition-colors shadow-[0_4px_14px_rgba(200,16,46,0.3)]"
                 >
-                    Browse Products
+                    {t("browseProducts")}
                 </Link>
             </div>
         );

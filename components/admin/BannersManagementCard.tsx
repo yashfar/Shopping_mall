@@ -33,6 +33,7 @@ import {
     Sparkles
 } from "lucide-react";
 import DeleteBannerButton from "@/admin/banners/DeleteBannerButton";
+import { useTranslations } from "next-intl";
 
 interface Banner {
     id: string;
@@ -46,9 +47,11 @@ interface Banner {
 function SortableBannerItem({
     banner,
     onDelete,
+    t,
 }: {
     banner: Banner;
     onDelete: (id: string) => void;
+    t: (key: string) => string;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({ id: banner.id });
@@ -112,18 +115,18 @@ function SortableBannerItem({
             {/* Banner Info */}
             <div className="flex-1 min-w-0 w-full">
                 <h4 className="font-bold text-[#1A1A1A] text-base truncate mb-1.5 group-hover:text-[#C8102E] transition-colors duration-300">
-                    {banner.title || "Untitled Banner"}
+                    {banner.title || t("untitledBanner")}
                 </h4>
                 <div className="flex flex-wrap items-center gap-2">
                     {banner.active ? (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-gradient-to-r from-emerald-100 to-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Active
+                            {t("active")}
                         </span>
                     ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1 rounded-full border border-gray-200 shadow-sm">
                             <XCircle className="w-3.5 h-3.5" />
-                            Inactive
+                            {t("inactive")}
                         </span>
                     )}
                     {banner.subtitle && (
@@ -150,6 +153,7 @@ function SortableBannerItem({
 }
 
 export default function BannersManagementCard() {
+    const t = useTranslations("adminBanners");
     const [banners, setBanners] = useState<Banner[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -170,7 +174,7 @@ export default function BannersManagementCard() {
             }
         } catch (error) {
             console.error(error);
-            toast.error("Failed to load banners");
+            toast.error(t("failedToLoadBanners"));
         } finally {
             setLoading(false);
         }
@@ -216,7 +220,7 @@ export default function BannersManagementCard() {
 
         } catch (error) {
             console.error(error);
-            toast.error("Failed to save banner order");
+            toast.error(t("failedToSaveBannerOrder"));
         }
     };
 
@@ -237,21 +241,21 @@ export default function BannersManagementCard() {
                                 <Sparkles className="w-5 h-5 text-white" />
                             </div>
                             <h3 className="text-2xl font-black text-[#1A1A1A] tracking-tight">
-                                Main Banners
+                                {t("mainBanners")}
                             </h3>
                         </div>
                         <p className="text-gray-500 text-sm font-medium md:ml-12">
-                            Manage your hero section carousel banners
+                            {t("mainBannersDesc")}
                         </p>
                     </div>
                     <div className="flex flex-col items-end gap-2 items-center">
                         <span className="bg-gradient-to-r from-[#1A1A1A] to-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap shadow-lg">
-                            {banners.length} Total
+                            {t("totalCount", { count: banners.length })}
                         </span>
                         {activeBanners > 0 && (
                             <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                {activeBanners} Active
+                                {t("activeCount", { count: activeBanners })}
                             </span>
                         )}
                     </div>
@@ -268,7 +272,7 @@ export default function BannersManagementCard() {
                                 <Loader2 className="w-12 h-12" />
                             </div>
                         </div>
-                        <p className="mt-4 text-gray-400 font-medium">Loading banners...</p>
+                        <p className="mt-4 text-gray-400 font-medium">{t("loadingBanners")}</p>
                     </div>
                 ) : banners.length === 0 ? (
                     <div className="relative text-center py-16 px-6 border-2 border-dashed border-gray-200 rounded-2xl bg-gradient-to-br from-gray-50 to-white overflow-hidden group hover:border-[#C8102E]/30 transition-all duration-300">
@@ -279,16 +283,16 @@ export default function BannersManagementCard() {
                             <div className="inline-flex p-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl mb-4 shadow-sm group-hover:shadow-md transition-shadow">
                                 <ImageIcon className="w-16 h-16 text-gray-300 group-hover:text-[#C8102E]/50 transition-colors duration-300" />
                             </div>
-                            <h4 className="text-lg font-bold text-gray-600 mb-2">No Banners Yet</h4>
+                            <h4 className="text-lg font-bold text-gray-600 mb-2">{t("noBannersYet")}</h4>
                             <p className="text-gray-400 font-medium mb-6 max-w-md mx-auto">
-                                Create your first banner to showcase featured content on your homepage
+                                {t("noBannersDesc")}
                             </p>
                             <Link
                                 href="/admin/banners/new"
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C8102E] to-pink-600 text-white font-bold rounded-xl hover:shadow-xl hover:scale-105 transition-all duration-200 active:scale-95"
                             >
                                 <Plus className="w-5 h-5" />
-                                Create Your First Banner
+                                {t("createFirstBanner")}
                             </Link>
                         </div>
                     </div>
@@ -307,6 +311,7 @@ export default function BannersManagementCard() {
                                     key={item.id}
                                     banner={item}
                                     onDelete={fetchBanners}
+                                    t={t}
                                 />
                             ))}
                         </SortableContext>
@@ -323,7 +328,7 @@ export default function BannersManagementCard() {
                     <div className="p-1 bg-white/20 rounded-lg group-hover:bg-white/30 transition-colors">
                         <Plus className="w-5 h-5" />
                     </div>
-                    Add New Banner
+                    {t("addNewBanner")}
                 </Link>
             </div>
         </div>

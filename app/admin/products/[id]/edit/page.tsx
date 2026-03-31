@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -42,6 +43,7 @@ export default function EditProductPage() {
     const router = useRouter();
     const params = useParams();
     const id = params?.id as string;
+    const t = useTranslations("adminProductForm");
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -71,7 +73,7 @@ export default function EditProductPage() {
             try {
                 const response = await fetch(`/api/admin/products/${id}`);
                 if (!response.ok) {
-                    throw new Error("Failed to fetch product details");
+                    throw new Error(t("failedToLoadProduct"));
                 }
                 const data = await response.json();
                 const product = data.product;
@@ -93,8 +95,8 @@ export default function EditProductPage() {
                     setImages([]);
                 }
             } catch (err: any) {
-                setError(err.message || "Failed to load product");
-                toast.error(err.message || "Failed to load product");
+                setError(err.message || t("failedToLoadProduct"));
+                toast.error(err.message || t("failedToLoadProduct"));
             } finally {
                 setLoading(false);
             }
@@ -138,7 +140,7 @@ export default function EditProductPage() {
 
                 if (!response.ok) {
                     const data = await response.json();
-                    throw new Error(data.error || "Failed to upload image");
+                    throw new Error(data.error || t("failedToUploadImages"));
                 }
 
                 const data = await response.json();
@@ -152,9 +154,9 @@ export default function EditProductPage() {
                 setThumbnail(uploadedImages[0].url);
             }
 
-            toast.success(`${uploadedImages.length} image(s) uploaded successfully`);
+            toast.success(t("imagesUploaded", { count: uploadedImages.length }));
         } catch (err: any) {
-            setError(err.message || "Failed to upload images");
+            setError(err.message || t("failedToUploadImages"));
             toast.error(err.message);
         } finally {
             setUploading(false);
@@ -187,12 +189,12 @@ export default function EditProductPage() {
 
                 if (!response.ok) {
                     console.error("Failed to delete from storage");
-                    toast.warning("Could not delete from storage, but removing from list.");
+                    toast.warning(t("storageDeleteWarning"));
                 } else {
-                    toast.success("Image removed");
+                    toast.success(t("imageRemoved"));
                 }
             } else {
-                toast.success("Image removed from list");
+                toast.success(t("imageRemovedFromList"));
             }
 
             setImages((prev) => prev.filter((img) => img.url !== deleteId));
@@ -203,7 +205,7 @@ export default function EditProductPage() {
 
         } catch (err: any) {
             console.error(err);
-            toast.error("Failed to remove image");
+            toast.error(t("failedToRemoveImage"));
         } finally {
             setIsDeleting(false);
             setDeleteId(null);
@@ -212,7 +214,7 @@ export default function EditProductPage() {
 
     const handleSetThumbnail = (url: string) => {
         setThumbnail(url);
-        toast.info("Thumbnail selected");
+        toast.info(t("thumbnailSelected"));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -220,26 +222,26 @@ export default function EditProductPage() {
         setError("");
 
         if (images.length === 0) {
-            setError("Please upload at least one product image");
-            toast.error("Please upload at least one product image");
+            setError(t("errorNoImages"));
+            toast.error(t("errorNoImages"));
             return;
         }
 
         if (!thumbnail) {
-            setError("Please select a thumbnail image");
-            toast.error("Please select a thumbnail image");
+            setError(t("errorNoThumbnail"));
+            toast.error(t("errorNoThumbnail"));
             return;
         }
 
         if (!title.trim() || !description.trim() || !category.trim()) {
-            setError("Please fill in all required fields");
-            toast.error("Please fill in all required fields");
+            setError(t("errorRequiredFields"));
+            toast.error(t("errorRequiredFields"));
             return;
         }
 
         const priceInCents = Math.round(parseFloat(price) * 100);
         if (isNaN(priceInCents) || priceInCents <= 0) {
-            setError("Please enter a valid positive price");
+            setError(t("errorInvalidPrice"));
             return;
         }
 
@@ -247,18 +249,18 @@ export default function EditProductPage() {
         if (salePrice.trim()) {
             salePriceInCents = Math.round(parseFloat(salePrice) * 100);
             if (isNaN(salePriceInCents) || salePriceInCents <= 0) {
-                setError("Please enter a valid sale price");
+                setError(t("errorInvalidSalePrice"));
                 return;
             }
             if (salePriceInCents >= priceInCents) {
-                setError("Sale price must be lower than the original price");
+                setError(t("errorSalePriceTooHigh"));
                 return;
             }
         }
 
         const stockNumber = parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
-            setError("Please enter a valid stock quantity");
+            setError(t("errorInvalidStock"));
             return;
         }
 
@@ -285,15 +287,15 @@ export default function EditProductPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Failed to update product");
+                throw new Error(data.error || t("failedToUpdateProduct"));
             }
 
-            toast.success("Product updated successfully!");
+            toast.success(t("productUpdated"));
             setTimeout(() => {
                 router.push("/admin/products");
             }, 1000);
         } catch (err: any) {
-            setError(err.message || "Failed to update product");
+            setError(err.message || t("failedToUpdateProduct"));
             toast.error(err.message);
             setSubmitting(false);
         }
@@ -317,8 +319,8 @@ export default function EditProductPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
-                        <p className="text-sm text-gray-500">Update product information and images</p>
+                        <h1 className="text-2xl font-bold text-gray-900">{t("editProduct")}</h1>
+                        <p className="text-sm text-gray-500">{t("editProductDesc")}</p>
                     </div>
                 </div>
             </div>
@@ -334,9 +336,9 @@ export default function EditProductPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("productImages")}</h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                Upload product images. Select the star icon to set the thumbnail.
+                                {t("imagesDescEdit")}
                             </p>
 
                             <div className="relative mb-6">
@@ -362,9 +364,9 @@ export default function EditProductPage() {
                                         <Upload className="h-8 w-8 text-gray-400 mb-2" />
                                     )}
                                     <span className="text-sm font-medium text-gray-700">
-                                        {uploading ? "Uploading..." : "Click to upload"}
+                                        {uploading ? t("uploading") : t("clickToUpload")}
                                     </span>
-                                    <span className="text-xs text-gray-500 mt-1">MAX 5MB per file</span>
+                                    <span className="text-xs text-gray-500 mt-1">{t("maxFileSize")}</span>
                                 </label>
                             </div>
 
@@ -394,7 +396,7 @@ export default function EditProductPage() {
                                                         className="bg-white/90 hover:bg-white text-gray-900 shadow-sm backdrop-blur-[2px]"
                                                         onClick={() => handleSetThumbnail(img.url)}
                                                     >
-                                                        Set Thumbnail
+                                                        {t("setThumbnail")}
                                                     </Button>
                                                 </div>
                                                 <Button
@@ -403,7 +405,7 @@ export default function EditProductPage() {
                                                     className="lg:hidden absolute bottom-2 right-12 h-8 px-3 rounded-full shadow-md z-20 bg-white hover:bg-yellow-50 text-yellow-600 border border-gray-200 text-xs font-medium"
                                                     onClick={() => handleSetThumbnail(img.url)}
                                                 >
-                                                    Thumbnail
+                                                    {t("thumbnailBtn")}
                                                 </Button>
                                             </>
                                         )}
@@ -420,7 +422,7 @@ export default function EditProductPage() {
 
                                         {thumbnail === img.url && (
                                             <div className="absolute top-2 right-2 bg-[#C8102E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-                                                MAIN
+                                                {t("main")}
                                             </div>
                                         )}
                                     </div>
@@ -431,12 +433,12 @@ export default function EditProductPage() {
 
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-6">Product Information</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-6">{t("productInformation")}</h2>
 
                             <div className="space-y-6">
                                 <div>
                                     <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Product Title <span className="text-red-500">*</span>
+                                        {t("productTitle")} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -444,7 +446,7 @@ export default function EditProductPage() {
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder="E.g., Wireless Noise-Canceling Headphones"
+                                        placeholder={t("productTitlePlaceholder")}
                                         required
                                         disabled={submitting}
                                     />
@@ -452,7 +454,7 @@ export default function EditProductPage() {
 
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description <span className="text-red-500">*</span>
+                                        {t("description")} <span className="text-red-500">*</span>
                                     </label>
                                     <textarea
                                         id="description"
@@ -460,7 +462,7 @@ export default function EditProductPage() {
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={6}
                                         className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder="Describe the product features, specs, etc."
+                                        placeholder={t("descriptionPlaceholder")}
                                         required
                                         disabled={submitting}
                                     />
@@ -470,7 +472,7 @@ export default function EditProductPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div>
                                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                            Price (USD) <span className="text-red-500">*</span>
+                                            {t("priceUSD")} <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -491,7 +493,7 @@ export default function EditProductPage() {
 
                                     <div>
                                         <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
-                                            Sale Price <span className="text-gray-400 font-normal">(optional)</span>
+                                            {t("salePrice")} <span className="text-gray-400 font-normal">{t("optional")}</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -511,7 +513,7 @@ export default function EditProductPage() {
 
                                     <div>
                                         <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            Stock Quantity <span className="text-red-500">*</span>
+                                            {t("stockQuantity")} <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="number"
@@ -529,7 +531,7 @@ export default function EditProductPage() {
 
                                 <div>
                                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Category <span className="text-red-500">*</span>
+                                        {t("category")} <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
                                         <input
@@ -539,7 +541,7 @@ export default function EditProductPage() {
                                             value={category}
                                             onChange={(e) => setCategory(e.target.value)}
                                             className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder="Select or type a category..."
+                                            placeholder={t("categoryPlaceholder")}
                                             required
                                             disabled={submitting}
                                             autoComplete="off"
@@ -562,7 +564,7 @@ export default function EditProductPage() {
                                 disabled={submitting}
                                 className="w-full sm:w-auto"
                             >
-                                Cancel
+                                {t("cancel")}
                             </Button>
                             <Button
                                 type="submit"
@@ -572,10 +574,10 @@ export default function EditProductPage() {
                                 {submitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Saving...
+                                        {t("saving")}
                                     </>
                                 ) : (
-                                    "Save Changes"
+                                    t("saveChanges")
                                 )}
                             </Button>
                         </div>
@@ -586,13 +588,13 @@ export default function EditProductPage() {
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("deleteImageTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete this image from storage. This action cannot be undone.
+                            {t("deleteImageDesc")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeleting}>{t("cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => {
                                 e.preventDefault();
@@ -601,7 +603,7 @@ export default function EditProductPage() {
                             disabled={isDeleting}
                             className="bg-red-600 hover:bg-red-700 text-white"
                         >
-                            {isDeleting ? "Deleting..." : "Delete"}
+                            {isDeleting ? t("deleting") : t("delete")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

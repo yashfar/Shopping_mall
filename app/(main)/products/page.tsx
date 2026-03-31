@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
+import { getTranslations } from "next-intl/server";
 
 interface ProductsPageProps {
     searchParams: Promise<{
@@ -16,6 +17,7 @@ interface ProductsPageProps {
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+    const t = await getTranslations("catalog");
     const params = await searchParams;
     const query = params.q || "";
     const category = params.category || "";
@@ -117,8 +119,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 inStock: params.inStock,
                 onSale: params.onSale,
             }}
-            title="All Products"
-            description="Explore our complete catalog of quality items"
+            title={t("allProducts")}
+            description={t("browseCollection")}
         />
     );
 }

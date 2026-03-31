@@ -28,6 +28,12 @@ export async function GET(request: Request) {
                 case "pending":
                     whereClause.status = "PENDING";
                     break;
+                case "payment_uploaded":
+                    whereClause.status = "PAYMENT_UPLOADED";
+                    break;
+                case "payment_rejected":
+                    whereClause.status = "PAYMENT_REJECTED";
+                    break;
                 case "ready_to_ship":
                     whereClause.status = "PAID";
                     break;

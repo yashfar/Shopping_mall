@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function LoginForm() {
+  const t = useTranslations("login");
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -31,7 +33,7 @@ function LoginForm() {
       });
 
       if (result?.error || !result?.ok) {
-        setError("Invalid email or password");
+        setError(t("invalidCredentials"));
       } else if (result?.ok) {
         // Refresh to get the new session
         router.refresh();
@@ -41,7 +43,7 @@ function LoginForm() {
         window.location.href = callbackUrl;
       }
     } catch (err: unknown) {
-      setError("Invalid email or password");
+      setError(t("invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -53,7 +55,7 @@ function LoginForm() {
     try {
       await signIn("google", { callbackUrl });
     } catch (err) {
-      setError("Failed to sign in with Google");
+      setError(t("googleError"));
       setGoogleLoading(false);
     }
   }
@@ -69,8 +71,8 @@ function LoginForm() {
 
       <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8 relative z-10 backdrop-blur-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
-          <p className="text-gray-500">Sign in to your account to continue</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{t("welcomeBack")}</h1>
+          <p className="text-gray-500">{t("subtitle")}</p>
         </div>
 
         {error && (
@@ -83,7 +85,7 @@ function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-gray-700 block">
-              Email
+              {t("email")}
             </label>
             <div className="relative group">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
@@ -95,7 +97,7 @@ function LoginForm() {
                 required
                 disabled={loading || googleLoading}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
               />
             </div>
           </div>
@@ -103,13 +105,13 @@ function LoginForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
+                {t("password")}
               </label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </Link>
             </div>
             <div className="relative group">
@@ -122,7 +124,7 @@ function LoginForm() {
                 required
                 disabled={loading || googleLoading}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 text-gray-900"
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
               />
             </div>
           </div>
@@ -135,10 +137,10 @@ function LoginForm() {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Signing in...</span>
+                <span>{t("signingIn")}</span>
               </>
             ) : (
-              "Sign in"
+              t("signIn")
             )}
           </button>
         </form>
@@ -148,7 +150,7 @@ function LoginForm() {
             <span className="w-full border-t border-gray-200"></span>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400">Or continue with</span>
+            <span className="bg-white px-2 text-gray-400">{t("orContinueWith")}</span>
           </div>
         </div>
 
@@ -161,7 +163,7 @@ function LoginForm() {
           {googleLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-              <span>Connecting...</span>
+              <span>{t("connecting")}</span>
             </>
           ) : (
             <>
@@ -183,18 +185,18 @@ function LoginForm() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span>Sign in with Google</span>
+              <span>{t("signInWithGoogle")}</span>
             </>
           )}
         </button>
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          Don't have an account?{" "}
+          {t("noAccount")}{" "}
           <Link
             href="/register"
             className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
           >
-            Sign up
+            {t("signUp")}
           </Link>
         </p>
       </div>

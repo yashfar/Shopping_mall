@@ -24,7 +24,7 @@ export async function PATCH(
         const { status, trackingNumber } = body;
 
         // Validate status
-        const validStatuses = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
+        const validStatuses = ["PENDING", "PAYMENT_UPLOADED", "PAYMENT_REJECTED", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
         if (!status || !validStatuses.includes(status)) {
             return NextResponse.json(
                 { error: "Invalid status. Must be one of: " + validStatuses.join(", ") },

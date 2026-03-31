@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface WishlistContextType {
     wishlistIds: Set<string>;
@@ -14,6 +15,7 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
+    const t = useTranslations("wishlistContext");
     const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
 
     const refreshWishlist = useCallback(async () => {
@@ -59,14 +61,14 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
                     else next.delete(productId);
                     return next;
                 });
-                toast.error("Please sign in to save favourites");
+                toast.error(t("signInRequired"));
                 return;
             }
 
             if (!res.ok) throw new Error();
 
             const data = await res.json();
-            toast.success(data.wishlisted ? "Added to wishlist" : "Removed from wishlist");
+            toast.success(data.wishlisted ? t("added") : t("removed"));
         } catch {
             // Roll back on error
             setWishlistIds((prev) => {
@@ -75,7 +77,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
                 else next.delete(productId);
                 return next;
             });
-            toast.error("Failed to update wishlist");
+            toast.error(t("failedToUpdate"));
         }
     };
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
@@ -33,6 +35,8 @@ type Product = {
 };
 
 export default function ProductManagement() {
+    const t = useTranslations("adminProducts");
+    const { formatPrice } = useCurrency();
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -56,7 +60,7 @@ export default function ProductManagement() {
             const data = await response.json();
             setProducts(data.products);
         } catch (err) {
-            setError("Failed to load products");
+            setError(t("failedToLoadProducts"));
             console.error(err);
         } finally {
             setLoading(false);
@@ -76,10 +80,10 @@ export default function ProductManagement() {
                 throw new Error("Failed to delete product");
             }
 
-            toast.success("Product deleted successfully");
+            toast.success(t("productDeleted"));
             await fetchProducts();
         } catch (err: any) {
-            toast.error(err.message || "Failed to delete product");
+            toast.error(err.message || t("failedToDeleteProduct"));
         } finally {
             setUpdatingId(null);
             setDeleteDialog(prev => ({ ...prev, open: false }));
@@ -100,13 +104,13 @@ export default function ProductManagement() {
                 throw new Error("Failed to update status");
             }
 
-            toast.success(`Product ${!currentStatus ? "activated" : "deactivated"}`);
+            toast.success(!currentStatus ? t("productActivated") : t("productDeactivated"));
             // Optimistic update
             setProducts(products.map(p =>
                 p.id === id ? { ...p, isActive: !currentStatus } : p
             ));
         } catch (err: any) {
-            toast.error(err.message || "Failed to update status");
+            toast.error(err.message || t("failedToUpdateStatus"));
             await fetchProducts(); // Revert on error
         } finally {
             setUpdatingId(null);
@@ -129,17 +133,17 @@ export default function ProductManagement() {
             const data = await res.json();
 
             if (!res.ok) {
-                toast.error(data.error || "Import failed");
+                toast.error(data.error || t("importFailed"));
                 return;
             }
 
-            toast.success(`Imported ${data.created} of ${data.total} products`);
+            toast.success(t("importedProducts", { created: data.created, total: data.total }));
             if (data.errors?.length) {
                 data.errors.slice(0, 3).forEach((err: string) => toast.error(err));
             }
             await fetchProducts();
         } catch {
-            toast.error("Failed to import CSV");
+            toast.error(t("failedToImportCsv"));
         } finally {
             setImporting(false);
             e.target.value = "";
@@ -168,7 +172,7 @@ export default function ProductManagement() {
             <div className="p-6 bg-red-50 rounded-lg border border-red-200 text-red-600 flex flex-col items-center gap-4">
                 <p>{error}</p>
                 <Button onClick={fetchProducts} variant="outline" className="border-red-200 hover:bg-red-100">
-                    Retry
+                    {t("retry")}
                 </Button>
             </div>
         );
@@ -180,11 +184,11 @@ export default function ProductManagement() {
             <ConfirmDialog
                 open={deleteDialog.open}
                 onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
-                title="Delete Product"
-                description={`Are you sure you want to delete "${deleteDialog.title}"? This action cannot be undone.`}
+                title={t("deleteProduct")}
+                description={t("deleteProductConfirm", { title: deleteDialog.title })}
                 onConfirm={confirmDelete}
                 variant="destructive"
-                confirmText="Delete"
+                confirmText={t("delete")}
             />
 
             {/* Header & Actions */}
@@ -193,7 +197,7 @@ export default function ProductManagement() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search products..."
+                        placeholder={t("searchProducts")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm"
@@ -206,14 +210,14 @@ export default function ProductManagement() {
                         variant="outline"
                         size="icon"
                         className="shrink-0"
-                        title="Refresh"
+                        title={t("refresh")}
                     >
                         <RefreshCw className="h-4 w-4" />
                     </Button>
                     <a href="/api/admin/products/export" download>
-                        <Button variant="outline" className="gap-2" title="Export CSV">
+                        <Button variant="outline" className="gap-2" title={t("exportCsv")}>
                             <Download className="w-4 h-4" />
-                            <span className="hidden sm:inline">Export</span>
+                            <span className="hidden sm:inline">{t("export")}</span>
                         </Button>
                     </a>
                     <div className="relative">
@@ -226,13 +230,13 @@ export default function ProductManagement() {
                         />
                         <Button variant="outline" className="gap-2 pointer-events-none" disabled={importing}>
                             <Upload className="w-4 h-4" />
-                            <span className="hidden sm:inline">{importing ? "Importing..." : "Import"}</span>
+                            <span className="hidden sm:inline">{importing ? t("importing") : t("import")}</span>
                         </Button>
                     </div>
                     <Link href="/admin/products/new" className="w-full md:w-auto">
                         <Button className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
                             <Plus className="w-4 h-4 mr-2" />
-                            Create Product
+                            {t("createProduct")}
                         </Button>
                     </Link>
                 </div>
@@ -266,7 +270,7 @@ export default function ProductManagement() {
                                         ? "bg-emerald-500/90 text-white border-emerald-600/20"
                                         : "bg-gray-500/90 text-white border-gray-600/20"
                                     }`}>
-                                    {product.isActive ? "Active" : "Draft"}
+                                    {product.isActive ? t("active") : t("draft")}
                                 </span>
                             </div>
                         </div>
@@ -277,18 +281,18 @@ export default function ProductManagement() {
                                 {product.title}
                             </h3>
                             <p className="text-sm text-gray-500 line-clamp-2 mb-4 h-10">
-                                {product.description || "No description provided"}
+                                {product.description || t("noDescription")}
                             </p>
 
                             <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                                 <div className="flex flex-col">
-                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Price</span>
+                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("price")}</span>
                                     <span className="font-bold text-lg text-gray-900">
-                                        ${(product.price / 100).toFixed(2)}
+                                        {formatPrice(product.price)}
                                     </span>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Stock</span>
+                                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("stock")}</span>
                                     <span className={`font-medium ${product.stock > 0 ? "text-gray-700" : "text-red-500"}`}>
                                         {product.stock}
                                     </span>
@@ -305,7 +309,7 @@ export default function ProductManagement() {
                                 onClick={() => router.push(`/admin/products/${product.id}/edit`)}
                             >
                                 <Edit className="w-3.5 h-3.5 mr-2" />
-                                Edit
+                                {t("edit")}
                             </Button>
                             <Button
                                 variant="outline"
@@ -314,7 +318,7 @@ export default function ProductManagement() {
                                 onClick={() => setDeleteDialog({ open: true, id: product.id, title: product.title })}
                             >
                                 <Trash2 className="w-3.5 h-3.5 mr-2" />
-                                Delete
+                                {t("delete")}
                             </Button>
                         </div>
 
@@ -328,7 +332,7 @@ export default function ProductManagement() {
                                     ? "bg-white/90 text-emerald-600 border-white/50 hover:bg-red-50 hover:text-red-600"
                                     : "bg-white/90 text-gray-400 border-white/50 hover:bg-emerald-50 hover:text-emerald-600"
                                 }`}
-                            title={product.isActive ? "Deactivate" : "Activate"}
+                            title={product.isActive ? t("deactivate") : t("activate")}
                         >
                             {product.isActive ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                         </button>
@@ -342,14 +346,14 @@ export default function ProductManagement() {
                     <div className="bg-white p-4 rounded-full inline-flex mb-4 shadow-sm">
                         <Package className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No products found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">{t("noProductsFound")}</h3>
                     <p className="text-gray-500 max-w-sm mx-auto mb-6">
-                        {searchTerm ? "We couldn't find any products matching your search terms." : "Get started by creating your first product in the store."}
+                        {searchTerm ? t("noProductsSearchDesc") : t("noProductsEmptyDesc")}
                     </p>
                     <Link href="/admin/products/new">
                         <Button className="bg-[#C8102E] hover:bg-[#A90D27] text-white">
                             <Plus className="w-4 h-4 mr-2" />
-                            Create New Product
+                            {t("createNewProduct")}
                         </Button>
                     </Link>
                 </div>

@@ -2,6 +2,10 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function formatPrice(kurus: number): string {
+    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(kurus / 100);
+}
+
 // ---------------------------------------------------------------------------
 // Order Confirmation Email
 // ---------------------------------------------------------------------------
@@ -21,7 +25,7 @@ export interface OrderConfirmationData {
 }
 
 /**
- * Send order confirmation email after successful Stripe payment.
+ * Send order confirmation email after payment is approved.
  */
 export async function sendOrderConfirmationEmail(
     email: string,
@@ -67,7 +71,7 @@ function getOrderConfirmationTemplate(data: OrderConfirmationData): string {
             x${item.quantity}
           </td>
           <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #1a1a1a; font-size: 14px; font-weight: 600; vertical-align: middle;">
-            $${((item.price * item.quantity) / 100).toFixed(2)}
+            ${formatPrice(item.price * item.quantity)}
           </td>
         </tr>`
         )
@@ -135,7 +139,7 @@ function getOrderConfirmationTemplate(data: OrderConfirmationData): string {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="color:#374151;font-size:16px;font-weight:700;">Total</td>
-                        <td style="text-align:right;color:#C8102E;font-size:20px;font-weight:700;">$${(total / 100).toFixed(2)}</td>
+                        <td style="text-align:right;color:#C8102E;font-size:20px;font-weight:700;">${formatPrice(total)}</td>
                       </tr>
                     </table>
                   </td>
@@ -230,7 +234,7 @@ function getReturnResultTemplate(data: ReturnResultData): string {
     const statusIcon = approved ? "&#10003;" : "&#10007;";
 
     const message = approved
-        ? `Your return request for order <strong>#${orderNumber}</strong> has been approved. A refund of <strong>$${(total / 100).toFixed(2)}</strong> will be issued to your original payment method.`
+        ? `Your return request for order <strong>#${orderNumber}</strong> has been approved. A refund of <strong>${formatPrice(total)}</strong> will be issued to your original payment method.`
         : `Your return request for order <strong>#${orderNumber}</strong> has been reviewed and unfortunately could not be approved at this time.`;
 
     return `

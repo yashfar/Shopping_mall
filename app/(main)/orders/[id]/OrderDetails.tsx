@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
 
@@ -28,6 +30,8 @@ type Order = {
 };
 
 export default function OrderDetails({ orderId }: { orderId: string }) {
+    const t = useTranslations("orderDetails");
+    const { formatPrice } = useCurrency();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -40,7 +44,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
     const submitReturn = async () => {
         if (!returnReason) {
-            toast.error("Please select a reason");
+            toast.error(t("selectReasonError"));
             return;
         }
         setSubmittingReturn(true);
@@ -52,14 +56,14 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             });
             const data = await res.json();
             if (!res.ok) {
-                toast.error(data.error || "Failed to submit return request");
+                toast.error(data.error || t("returnSubmitFailed"));
                 return;
             }
-            toast.success("Return request submitted successfully");
+            toast.success(t("returnSubmitSuccess"));
             setOrder((prev) => prev ? { ...prev, status: "RETURN_REQUESTED" } : prev);
             setShowReturn(false);
         } catch {
-            toast.error("Failed to submit return request");
+            toast.error(t("returnSubmitFailed"));
         } finally {
             setSubmittingReturn(false);
         }
@@ -71,13 +75,13 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
             const data = await res.json();
             if (!res.ok) {
-                toast.error(data.error || "Failed to cancel order");
+                toast.error(data.error || t("cancelFailed"));
                 return;
             }
-            toast.success("Order canceled successfully");
+            toast.success(t("orderCanceled"));
             setOrder((prev) => prev ? { ...prev, status: "CANCELED" } : prev);
         } catch {
-            toast.error("Failed to cancel order");
+            toast.error(t("cancelFailed"));
         } finally {
             setCanceling(false);
             setShowConfirm(false);
@@ -139,7 +143,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-[#C8102E] rounded-full border-t-transparent animate-spin"></div>
                 </div>
-                <p className="text-gray-400 font-medium animate-pulse">Retrieving order details...</p>
+                <p className="text-gray-400 font-medium animate-pulse">{t("loading")}</p>
             </div>
         );
     }
@@ -150,11 +154,11 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-[#C8102E] mx-auto mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                 </svg>
-                <h3 className="text-lg font-bold text-[#C8102E] mb-2">Error Loading Order</h3>
+                <h3 className="text-lg font-bold text-[#C8102E] mb-2">{t("errorLoading")}</h3>
                 <p className="text-red-600/80 mb-6">{error}</p>
                 <Link href="/orders">
                     <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
-                        Back to Orders
+                        {t("backToOrders")}
                     </Button>
                 </Link>
             </div>
@@ -162,7 +166,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     }
 
     if (!order) {
-        return <div className="text-center py-20 text-gray-400 font-bold">Order not found</div>;
+        return <div className="text-center py-20 text-gray-400 font-bold">{t("orderNotFound")}</div>;
     }
 
     return (
@@ -176,9 +180,9 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-400">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                             </svg>
-                            Order Items
+                            {t("orderItems")}
                         </h2>
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{order.items.length} ITEMS</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{order.items.length} {t("items")}</span>
                     </div>
 
                     <div className="divide-y divide-gray-100">
@@ -206,7 +210,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                             <div className="flex justify-between items-start mb-2">
                                                 <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.product.title}</h3>
                                                 <p className="font-black text-gray-900 text-lg sm:text-xl">
-                                                    ${((item.price * item.quantity) / 100).toFixed(2)}
+                                                    {formatPrice(item.price * item.quantity)}
                                                 </p>
                                             </div>
                                             {item.product.description && (
@@ -216,12 +220,12 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
                                         <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100/50">
                                             <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
-                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Qty</span>
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">{t("qty")}</span>
                                                 <span className="font-bold text-gray-900">{item.quantity}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
-                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Unit Price</span>
-                                                <span className="font-medium text-gray-600">${(item.price / 100).toFixed(2)}</span>
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">{t("unitPrice")}</span>
+                                                <span className="font-medium text-gray-600">{formatPrice(item.price)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -233,17 +237,17 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     <div className="bg-gray-50 p-6 border-t border-gray-100">
                         <div className="flex flex-col gap-2 max-w-xs ml-auto">
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500 font-medium">Subtotal</span>
-                                <span className="font-bold text-gray-900">${(order.total / 100).toFixed(2)}</span>
+                                <span className="text-gray-500 font-medium">{t("subtotal")}</span>
+                                <span className="font-bold text-gray-900">{formatPrice(order.total)}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500 font-medium">Shipping</span>
-                                <span className="font-bold text-gray-900 text-green-600">Free</span>
+                                <span className="text-gray-500 font-medium">{t("shipping")}</span>
+                                <span className="font-bold text-gray-900 text-green-600">{t("free")}</span>
                             </div>
                             <div className="my-2 border-t border-gray-200 border-dashed"></div>
                             <div className="flex justify-between items-center text-lg">
-                                <span className="font-black text-gray-900">Total Paid</span>
-                                <span className="font-black text-[#C8102E] text-2xl">${(order.total / 100).toFixed(2)}</span>
+                                <span className="font-black text-gray-900">{t("totalPaid")}</span>
+                                <span className="font-black text-[#C8102E] text-2xl">{formatPrice(order.total)}</span>
                             </div>
                         </div>
                     </div>
@@ -271,24 +275,24 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                         )}
                     </div>
 
-                    <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Order Status</h3>
+                    <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">{t("orderStatus")}</h3>
 
                     <div className="mb-6">
                         <span className={getStatusStyles(order.status)}>
                             {order.status}
                         </span>
                         <p className="text-xs text-gray-400 mt-2 font-medium">
-                            Placed on {new Date(order.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
+                            {t("placedOn", { date: new Date(order.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }) })}
                         </p>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Reference</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">{t("reference")}</label>
                         <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-900 font-mono font-bold border border-gray-100 flex items-center justify-between group cursor-pointer hover:bg-gray-100 transition-colors"
                             onClick={() => {
                                 navigator.clipboard.writeText(order.orderNumber || order.id);
                             }}
-                            title="Click to copy Order ID"
+                            title={t("clickToCopyOrderId")}
                         >
                             {order.orderNumber || order.id.substring(0, 8)}
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-400 group-hover:text-gray-900">
@@ -299,13 +303,13 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
                     {order.trackingNumber && (
                         <div className="mt-4 space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tracking Number</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">{t("trackingNumber")}</label>
                             <div className="bg-sky-50 rounded-xl p-3 text-sm text-sky-900 font-mono font-bold border border-sky-100 flex items-center justify-between group cursor-pointer hover:bg-sky-100 transition-colors"
                                 onClick={() => {
                                     navigator.clipboard.writeText(order.trackingNumber!);
-                                    toast.success("Tracking number copied");
+                                    toast.success(t("trackingCopied"));
                                 }}
-                                title="Click to copy"
+                                title={t("clickToCopy")}
                             >
                                 <div className="flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-sky-500">
@@ -328,11 +332,11 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                     className="w-full border-red-200 text-[#C8102E] hover:bg-red-50 hover:border-[#C8102E] font-bold"
                                     onClick={() => setShowConfirm(true)}
                                 >
-                                    Cancel Order
+                                    {t("cancelOrder")}
                                 </Button>
                             ) : (
                                 <div className="space-y-2">
-                                    <p className="text-xs text-gray-500 text-center font-medium">Are you sure you want to cancel this order?</p>
+                                    <p className="text-xs text-gray-500 text-center font-medium">{t("cancelConfirm")}</p>
                                     <div className="flex gap-2">
                                         <Button
                                             variant="outline"
@@ -340,14 +344,14 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                             onClick={() => setShowConfirm(false)}
                                             disabled={canceling}
                                         >
-                                            Keep Order
+                                            {t("keepOrder")}
                                         </Button>
                                         <Button
                                             className="flex-1 text-sm bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold"
                                             onClick={cancelOrder}
                                             disabled={canceling}
                                         >
-                                            {canceling ? "Canceling..." : "Yes, Cancel"}
+                                            {canceling ? t("canceling") : t("yesCancel")}
                                         </Button>
                                     </div>
                                 </div>
@@ -363,27 +367,27 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                     className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-400 font-bold"
                                     onClick={() => setShowReturn(true)}
                                 >
-                                    Request Return
+                                    {t("requestReturn")}
                                 </Button>
                             ) : (
                                 <div className="space-y-3">
-                                    <p className="text-xs text-gray-500 font-medium">Why do you want to return this order?</p>
+                                    <p className="text-xs text-gray-500 font-medium">{t("returnReason")}</p>
                                     <select
                                         value={returnReason}
                                         onChange={(e) => setReturnReason(e.target.value)}
                                         className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
                                     >
-                                        <option value="">Select a reason...</option>
-                                        <option value="DAMAGED">Damaged product</option>
-                                        <option value="WRONG_ITEM">Wrong item received</option>
-                                        <option value="NOT_AS_DESCRIBED">Not as described</option>
-                                        <option value="CHANGED_MIND">Changed my mind</option>
-                                        <option value="OTHER">Other</option>
+                                        <option value="">{t("selectReason")}</option>
+                                        <option value="DAMAGED">{t("damagedProduct")}</option>
+                                        <option value="WRONG_ITEM">{t("wrongItem")}</option>
+                                        <option value="NOT_AS_DESCRIBED">{t("notAsDescribed")}</option>
+                                        <option value="CHANGED_MIND">{t("changedMind")}</option>
+                                        <option value="OTHER">{t("other")}</option>
                                     </select>
                                     <textarea
                                         value={returnNote}
                                         onChange={(e) => setReturnNote(e.target.value)}
-                                        placeholder="Additional details (optional)"
+                                        placeholder={t("additionalDetails")}
                                         rows={2}
                                         className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
                                     />
@@ -394,14 +398,14 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                             onClick={() => { setShowReturn(false); setReturnReason(""); setReturnNote(""); }}
                                             disabled={submittingReturn}
                                         >
-                                            Cancel
+                                            {t("cancel")}
                                         </Button>
                                         <Button
                                             className="flex-1 text-sm bg-orange-500 hover:bg-orange-600 text-white font-bold"
                                             onClick={submitReturn}
                                             disabled={submittingReturn || !returnReason}
                                         >
-                                            {submittingReturn ? "Submitting..." : "Submit Request"}
+                                            {submittingReturn ? t("submitting") : t("submitRequest")}
                                         </Button>
                                     </div>
                                 </div>
@@ -412,8 +416,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     {order.status === "RETURN_REQUESTED" && (
                         <div className="mt-6 pt-4 border-t border-gray-100">
                             <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
-                                <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Return Pending</p>
-                                <p className="text-xs text-orange-500">Your return request is being reviewed by our team.</p>
+                                <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">{t("returnPending")}</p>
+                                <p className="text-xs text-orange-500">{t("returnPendingMessage")}</p>
                             </div>
                         </div>
                     )}
@@ -421,8 +425,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     {order.status === "RETURNED" && (
                         <div className="mt-6 pt-4 border-t border-gray-100">
                             <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
-                                <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">Return Approved</p>
-                                <p className="text-xs text-violet-500">Your return has been processed. Refund will be issued shortly.</p>
+                                <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">{t("returnApproved")}</p>
+                                <p className="text-xs text-violet-500">{t("returnApprovedMessage")}</p>
                             </div>
                         </div>
                     )}
@@ -430,11 +434,11 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
                 {/* Need Help Card */}
                 <div className="bg-[#1A1A1A] rounded-3xl p-6 text-white shadow-xl shadow-[#1A1A1A]/20">
-                    <h3 className="text-sm font-bold text-white mb-2">Need Help?</h3>
-                    <p className="text-xs text-gray-400 mb-6">If you have any issues with your order, please contact our support team.</p>
+                    <h3 className="text-sm font-bold text-white mb-2">{t("needHelp")}</h3>
+                    <p className="text-xs text-gray-400 mb-6">{t("needHelpMessage")}</p>
                     <Link href="/contact" className="block">
                         <Button variant="outline" className="w-full bg-white/10 border-white/10 text-white hover:bg-white hover:text-black hover:border-white transition-all">
-                            Contact Support
+                            {t("contactSupport")}
                         </Button>
                     </Link>
                 </div>

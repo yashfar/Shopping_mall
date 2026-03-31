@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calculateCartTotals } from "@@/lib/payment-utils";
+import { useCurrency } from "@@/context/CurrencyContext";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -31,6 +33,9 @@ type AppliedCoupon = {
 
 export default function CheckoutContent() {
     const router = useRouter();
+    const { formatPrice } = useCurrency();
+    const t = useTranslations("checkout");
+    const tc = useTranslations("common");
     const [cart, setCart] = useState<Cart | null>(null);
     const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
     const [loading, setLoading] = useState(true);
@@ -104,7 +109,7 @@ export default function CheckoutContent() {
             setAppliedCoupon(data);
             setCouponInput("");
         } catch (err: any) {
-            setCouponError(err.message || "Invalid coupon");
+            setCouponError(err.message || t("invalidCoupon"));
         } finally {
             setCouponLoading(false);
         }
@@ -126,7 +131,7 @@ export default function CheckoutContent() {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create order");
+                throw new Error(data.error || t("failedToCreateOrder"));
             }
 
             const data = await response.json();
@@ -135,7 +140,7 @@ export default function CheckoutContent() {
             router.push(`/checkout?orderId=${data.orderId}`);
         } catch (error: any) {
             console.error("Error creating order:", error);
-            alert(error.message || "Failed to create order");
+            alert(error.message || t("failedToCreateOrder"));
             setCreating(false); // Only reset on error
         }
         // Don't reset creating on success - let the redirect happen
@@ -146,7 +151,7 @@ export default function CheckoutContent() {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
-                <p className="text-[#A9A9A9] font-semibold">Preparing your order...</p>
+                <p className="text-[#A9A9A9] font-semibold">{t("preparingOrder")}</p>
             </div>
         );
     }
@@ -170,7 +175,7 @@ export default function CheckoutContent() {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#C8102E]">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                         </svg>
-                        Items in your order
+                        {t("itemsInOrder")}
                     </h2>
 
                     <div className="space-y-6">
@@ -205,14 +210,14 @@ export default function CheckoutContent() {
                                             >
                                                 {item.product.title}
                                             </Link>
-                                            <p className="text-sm text-gray-500 mt-1">Quantity: {item.quantity}</p>
+                                            <p className="text-sm text-gray-500 mt-1">{t("quantity", { count: item.quantity })}</p>
                                         </div>
                                         <div className="font-extrabold text-[#1A1A1A]">
-                                            ${(item.product.price / 100).toFixed(2)}
+                                            {formatPrice(item.product.price)}
                                         </div>
                                     </div>
                                     <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
-                                        Subtotal: <span className="text-[#C8102E]">${((item.product.price * item.quantity) / 100).toFixed(2)}</span>
+                                        {t("subtotal")} <span className="text-[#C8102E]">{formatPrice(item.product.price * item.quantity)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -227,11 +232,11 @@ export default function CheckoutContent() {
                         </svg>
                     </div>
                     <div className="space-y-1">
-                        <p className="text-[#1A1A1A] font-bold">Shipping Information</p>
+                        <p className="text-[#1A1A1A] font-bold">{t("shippingInfo")}</p>
                         <p className="text-sm text-gray-600 leading-relaxed">
                             {totals.shippingAmount === 0
-                                ? "You qualify for free shipping! Your items will be shipped immediately."
-                                : `Standard shipping fee of $${(config.shippingFee / 100).toFixed(2)} applies.`}
+                                ? t("freeShippingMessage")
+                                : t("standardShipping", { fee: (config.shippingFee / 100).toFixed(2) })}
                         </p>
                     </div>
                 </div>
@@ -240,7 +245,7 @@ export default function CheckoutContent() {
             {/* Right Column: Place Order */}
             <div className="lg:col-span-1">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
-                    <h2 className="text-xl font-extrabold text-[#1A1A1A]">Order Summary</h2>
+                    <h2 className="text-xl font-extrabold text-[#1A1A1A]">{t("orderSummary")}</h2>
 
                     {/* Coupon Input */}
                     {!appliedCoupon ? (
@@ -251,7 +256,7 @@ export default function CheckoutContent() {
                                     value={couponInput}
                                     onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
                                     onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
-                                    placeholder="Coupon code..."
+                                    placeholder={t("couponPlaceholder")}
                                     disabled={couponLoading || creating}
                                     className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
                                 />
@@ -260,7 +265,7 @@ export default function CheckoutContent() {
                                     disabled={couponLoading || !couponInput.trim() || creating}
                                     className="px-3 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 transition-colors"
                                 >
-                                    {couponLoading ? "..." : "Apply"}
+                                    {couponLoading ? "..." : t("apply")}
                                 </button>
                             </div>
                             {couponError && (
@@ -275,7 +280,7 @@ export default function CheckoutContent() {
                                 </svg>
                                 <span className="text-sm font-bold text-green-700">{appliedCoupon.code}</span>
                                 <span className="text-xs text-green-600">
-                                    {appliedCoupon.type === "PERCENTAGE" ? `${appliedCoupon.value}% off` : `$${(appliedCoupon.value / 100).toFixed(2)} off`}
+                                    {appliedCoupon.type === "PERCENTAGE" ? `${appliedCoupon.value}% off` : `${formatPrice(appliedCoupon.value)} off`}
                                 </span>
                             </div>
                             <button onClick={removeCoupon} disabled={creating} className="text-gray-400 hover:text-red-500 transition-colors">
@@ -288,37 +293,37 @@ export default function CheckoutContent() {
 
                     <div className="space-y-3 pb-6 border-b border-gray-100">
                         <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span className="text-md flex flex-col">Subtotal <span className="text-xs">(Tax included)</span></span>
-                            <span className="text-[#1A1A1A] font-bold">${(totals.subtotal / 100).toFixed(2)}</span>
+                            <span className="text-md flex flex-col">{t("subtotalTaxIncluded")} <span className="text-xs">{t("taxIncluded")}</span></span>
+                            <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.subtotal)}</span>
                         </div>
                         <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span className="text-md">Shipping</span>
+                            <span className="text-md">{t("shipping")}</span>
                             {totals.shippingAmount === 0 ? (
-                                <span className="text-emerald-600 font-bold">FREE</span>
+                                <span className="text-emerald-600 font-bold">{tc("free")}</span>
                             ) : (
-                                <span className="text-[#1A1A1A] font-bold">${(totals.shippingAmount / 100).toFixed(2)}</span>
+                                <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.shippingAmount)}</span>
                             )}
                         </div>
                         <div className="flex justify-between items-center text-gray-400 text-sm">
-                            <span>Estimated Tax (Included)</span>
-                            <span className="font-medium">${(totals.taxAmount / 100).toFixed(2)}</span>
+                            <span>{t("estimatedTaxIncluded")}</span>
+                            <span className="font-medium">{formatPrice(totals.taxAmount)}</span>
                         </div>
                         {appliedCoupon && (
                             <div className="flex justify-between items-center text-green-600 font-medium">
-                                <span className="text-sm">Discount ({appliedCoupon.code})</span>
-                                <span className="font-bold">-${(discountAmount / 100).toFixed(2)}</span>
+                                <span className="text-sm">{t("discount", { code: appliedCoupon.code })}</span>
+                                <span className="font-bold">-{formatPrice(discountAmount)}</span>
                             </div>
                         )}
                     </div>
 
                     <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-[#1A1A1A]">Total</span>
+                        <span className="text-lg font-bold text-[#1A1A1A]">{t("total")}</span>
                         <div className="text-right">
                             {appliedCoupon && (
-                                <p className="text-sm text-gray-400 line-through">${(totals.total / 100).toFixed(2)}</p>
+                                <p className="text-sm text-gray-400 line-through">{formatPrice(totals.total)}</p>
                             )}
                             <span className="text-2xl font-black text-[#C8102E]">
-                                ${(finalTotal / 100).toFixed(2)}
+                                {formatPrice(finalTotal)}
                             </span>
                         </div>
                     </div>
@@ -335,7 +340,7 @@ export default function CheckoutContent() {
                             )}
 
                             <span className="relative z-10 flex items-center justify-center gap-2 text-lg md:text-sm">
-                                {creating ? "Processing..." : "Confirm Payment"}
+                                {creating ? t("processing") : t("confirmPayment")}
                                 {!creating && (
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                                         <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm4.28 10.28a.75.75 0 0 0 0-1.06l-3-3a.75.75 0 1 0-1.06 1.06l1.72 1.72H8.25a.75.75 0 0 0 0 1.5h5.69l-1.72 1.72a.75.75 0 1 0 1.06 1.06l3-3Z" clipRule="evenodd" />
@@ -349,7 +354,7 @@ export default function CheckoutContent() {
                             disabled={creating}
                             className="w-full py-3 px-6 text-sm font-bold text-gray-500 hover:text-[#C8102E] transition-colors"
                         >
-                            Back to Cart
+                            {t("backToCart")}
                         </button>
                     </div>
 
@@ -357,7 +362,7 @@ export default function CheckoutContent() {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                         </svg>
-                        Secure Checkout
+                        {t("secureCheckout")}
                     </div>
                 </div>
             </div>

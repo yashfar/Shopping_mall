@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Search, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@@/lib/utils";
+import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Product {
     id: string;
@@ -19,8 +21,8 @@ interface ProductSelectModalProps {
     open: boolean;
     onClose: () => void;
     onSelect: (productIds: string[]) => void;
-    currentCount: number; // How many already in carousel
-    existingProductIds: string[]; // Already in carousel
+    currentCount: number;
+    existingProductIds: string[];
 }
 
 export default function ProductSelectModal({
@@ -30,6 +32,8 @@ export default function ProductSelectModal({
     currentCount,
     existingProductIds,
 }: ProductSelectModalProps) {
+    const t = useTranslations("adminCarousel");
+    const { formatPrice } = useCurrency();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
@@ -39,7 +43,6 @@ export default function ProductSelectModal({
     const maxItems = 12;
     const remainingSlots = maxItems - currentCount;
 
-    // Fetch products
     useEffect(() => {
         if (!open) return;
 
@@ -61,11 +64,10 @@ export default function ProductSelectModal({
             }
         };
 
-        const timeoutId = setTimeout(fetchProducts, 300); // Debounce
+        const timeoutId = setTimeout(fetchProducts, 300);
         return () => clearTimeout(timeoutId);
     }, [open, search]);
 
-    // Reset selection when closed
     useEffect(() => {
         if (!open) {
             setSelectedIds([]);
@@ -78,7 +80,7 @@ export default function ProductSelectModal({
             setSelectedIds(selectedIds.filter((id) => id !== productId));
         } else {
             if (selectedIds.length >= remainingSlots) {
-                return; // Max limit reached
+                return;
             }
             setSelectedIds([...selectedIds, productId]);
         }
@@ -99,9 +101,9 @@ export default function ProductSelectModal({
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div>
-                        <h2 className="text-2xl font-black text-[#1A1A1A]">Select Products</h2>
+                        <h2 className="text-2xl font-black text-[#1A1A1A]">{t("selectProducts")}</h2>
                         <p className="text-gray-500 text-sm mt-1">
-                            Selected: {selectedIds.length} / {remainingSlots} available slots
+                            {t("selectedSlots", { selected: selectedIds.length, slots: remainingSlots })}
                         </p>
                     </div>
                     <button
@@ -118,7 +120,7 @@ export default function ProductSelectModal({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by name or description..."
+                            placeholder={t("searchPlaceholder")}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent focus:border-[#C8102E]/20 focus:bg-white rounded-xl outline-none transition-all placeholder:text-gray-400 font-medium"
@@ -134,7 +136,7 @@ export default function ProductSelectModal({
                         </div>
                     ) : products.length === 0 ? (
                         <div className="text-center py-12 text-gray-400">
-                            No products found.
+                            {t("noProductsFound")}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -153,7 +155,7 @@ export default function ProductSelectModal({
                                             isDisabled && "opacity-50 cursor-not-allowed grayscale hover:border-gray-200 hover:shadow-none"
                                         )}
                                     >
-                                        <div className="relative w-16 h-16 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-100">
+                                        <div className="relative w-16 h-16 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
                                             {product.thumbnail ? (
                                                 <Image
                                                     src={product.thumbnail}
@@ -163,7 +165,7 @@ export default function ProductSelectModal({
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                    <span className="text-xs">No Img</span>
+                                                    <span className="text-xs">{t("noImg")}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -173,7 +175,7 @@ export default function ProductSelectModal({
                                                     {product.title}
                                                 </h3>
                                                 <div className={cn(
-                                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
                                                     isSelected
                                                         ? "bg-[#C8102E] border-[#C8102E]"
                                                         : "border-gray-300 group-hover:border-[#C8102E]/50"
@@ -182,10 +184,10 @@ export default function ProductSelectModal({
                                                 </div>
                                             </div>
                                             <p className="text-gray-500 text-xs mt-1">
-                                                ${(product.price / 100).toFixed(2)}
+                                                {formatPrice(product.price)}
                                             </p>
                                             <p className="text-xs mt-1 text-gray-400">
-                                                {isAlreadyIn ? "Already added" : product.stock > 0 ? "In Stock" : "Out of Stock"}
+                                                {isAlreadyIn ? t("alreadyAdded") : product.stock > 0 ? t("inStock") : t("outOfStock")}
                                             </p>
                                         </div>
                                     </div>
@@ -201,7 +203,7 @@ export default function ProductSelectModal({
                         onClick={onClose}
                         className="px-6 py-2.5 font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                     >
-                        Cancel
+                        {t("cancel")}
                     </button>
                     <button
                         onClick={handleConfirm}
@@ -211,7 +213,7 @@ export default function ProductSelectModal({
                         {submitting ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
-                            `Add ${selectedIds.length} Products`
+                            t("addSelectedProducts", { count: selectedIds.length })
                         )}
                     </button>
                 </div>
