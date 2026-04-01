@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
-import { ArrowLeft, Upload, X, Check, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -21,8 +21,15 @@ import {
 
 interface UploadedImage {
     url: string;
-    path?: string; // Supabase storage path
+    path?: string;
     file?: File;
+}
+
+interface VariantDraft {
+    tempId: string;
+    color: string;
+    colorHex: string;
+    stock: string;
 }
 
 export default function NewProductPage() {
@@ -47,6 +54,11 @@ export default function NewProductPage() {
     // Delete confirmation state
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Variant state
+    const [hasVariants, setHasVariants] = useState(false);
+    const [variants, setVariants] = useState<VariantDraft[]>([]);
+    const [newVariant, setNewVariant] = useState<VariantDraft>({ tempId: "", color: "", colorHex: "#000000", stock: "0" });
 
     // Fetch categories
     useEffect(() => {
@@ -160,6 +172,16 @@ export default function NewProductPage() {
         toast.info(t("thumbnailUpdated"));
     };
 
+    const addVariant = () => {
+        if (!newVariant.color.trim()) return;
+        setVariants(prev => [...prev, { ...newVariant, tempId: crypto.randomUUID() }]);
+        setNewVariant({ tempId: "", color: "", colorHex: "#000000", stock: "0" });
+    };
+
+    const removeVariant = (tempId: string) => {
+        setVariants(prev => prev.filter(v => v.tempId !== tempId));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -203,7 +225,9 @@ export default function NewProductPage() {
             }
         }
 
-        const stockNumber = parseInt(stock);
+        const stockNumber = hasVariants
+            ? variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0)
+            : parseInt(stock);
         if (isNaN(stockNumber) || stockNumber < 0) {
             setError(t("errorInvalidStock"));
             toast.error(t("errorInvalidStock"));
@@ -238,6 +262,22 @@ export default function NewProductPage() {
                     throw new Error(detailMessages || "Validation failed");
                 }
                 throw new Error(data.error || t("failedToCreateProduct"));
+            }
+
+            // Create variants if any
+            if (hasVariants && variants.length > 0) {
+                const productId = data.product.id;
+                await Promise.all(variants.map(v =>
+                    fetch(`/api/admin/products/${productId}/variants`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            color: v.color,
+                            colorHex: v.colorHex,
+                            stock: parseInt(v.stock) || 0,
+                        }),
+                    })
+                ));
             }
 
             toast.success(t("productCreated"));
@@ -464,19 +504,25 @@ export default function NewProductPage() {
 
                                     <div>
                                         <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("stockQuantity")} <span className="text-red-500">*</span>
+                                            {t("stockQuantity")} {!hasVariants && <span className="text-red-500">*</span>}
                                         </label>
-                                        <input
-                                            type="number"
-                                            id="stock"
-                                            value={stock}
-                                            onChange={(e) => setStock(e.target.value)}
-                                            min="0"
-                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder="0"
-                                            required
-                                            disabled={submitting}
-                                        />
+                                        {hasVariants ? (
+                                            <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
+                                                {variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0)} (varyantlardan otomatik)
+                                            </div>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                id="stock"
+                                                value={stock}
+                                                onChange={(e) => setStock(e.target.value)}
+                                                min="0"
+                                                className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                placeholder="0"
+                                                required
+                                                disabled={submitting}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 
@@ -506,6 +552,82 @@ export default function NewProductPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Variants Section */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Palette className="w-5 h-5 text-gray-400" />
+                                    <h2 className="text-lg font-semibold text-gray-900">Renk Varyantları</h2>
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <div
+                                        onClick={() => setHasVariants(v => !v)}
+                                        className={`relative w-10 h-5 rounded-full transition-colors ${hasVariants ? "bg-[#C8102E]" : "bg-gray-200"}`}
+                                    >
+                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hasVariants ? "translate-x-5" : ""}`} />
+                                    </div>
+                                    <span className="text-sm text-gray-600">Bu üründe renk varyantları var</span>
+                                </label>
+                            </div>
+
+                            {hasVariants && (
+                                <div className="space-y-4">
+                                    {/* Variant List */}
+                                    {variants.length > 0 && (
+                                        <div className="space-y-2">
+                                            {variants.map(v => (
+                                                <div key={v.tempId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <div className="w-6 h-6 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex }} />
+                                                    <span className="font-medium text-gray-900 flex-1">{v.color}</span>
+                                                    <span className="text-sm text-gray-500 w-20 text-right">Stok: {v.stock}</span>
+                                                    <button type="button" onClick={() => removeVariant(v.tempId)} className="text-red-500 hover:text-red-700 p-1">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Add New Variant Row */}
+                                    <div className="flex items-end gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-medium text-gray-600">Renk Adı</label>
+                                            <input
+                                                type="text"
+                                                value={newVariant.color}
+                                                onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
+                                                placeholder="Siyah"
+                                                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 focus:outline-none focus:border-[#C8102E]"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-medium text-gray-600">Renk</label>
+                                            <input
+                                                type="color"
+                                                value={newVariant.colorHex}
+                                                onChange={e => setNewVariant(v => ({ ...v, colorHex: e.target.value }))}
+                                                className="h-9 w-14 rounded-md border border-gray-200 cursor-pointer p-0.5"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-medium text-gray-600">Stok</label>
+                                            <input
+                                                type="number"
+                                                value={newVariant.stock}
+                                                onChange={e => setNewVariant(v => ({ ...v, stock: e.target.value }))}
+                                                min="0"
+                                                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-24 focus:outline-none focus:border-[#C8102E]"
+                                            />
+                                        </div>
+                                        <Button type="button" onClick={addVariant} className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0">
+                                            <Plus className="w-4 h-4 mr-1" /> Ekle
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-gray-400">Varyant eklenince Stok alanı otomatik olarak yok sayılır.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Action Buttons */}

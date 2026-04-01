@@ -30,6 +30,14 @@ interface Review {
     };
 }
 
+interface ProductVariant {
+    id: string;
+    color: string;
+    colorHex: string | null;
+    stock: number;
+    images: string[];
+}
+
 interface Product {
     id: string;
     title: string;
@@ -41,6 +49,7 @@ interface Product {
     thumbnail: string | null;
     images: ProductImage[];
     reviews: Review[];
+    variants: ProductVariant[];
 }
 
 interface ProductDetailClientProps {
@@ -70,16 +79,23 @@ export default function ProductDetailClient({
     const [quantity, setQuantity] = useState(1);
     const [stockAlertSubscribed, setStockAlertSubscribed] = useState(false);
     const [stockAlertLoading, setStockAlertLoading] = useState(false);
+    const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+        product.variants.length > 0 ? null : null
+    );
+
+    // Effective stock: use variant stock if a variant is selected, else product stock
+    const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
+    const hasVariants = product.variants.length > 0;
 
     // Check stock alert status for out-of-stock products
     useEffect(() => {
-        if (product.stock === 0 && isAuthenticated) {
+        if (effectiveStock === 0 && isAuthenticated) {
             fetch(`/api/stock-alert?productId=${product.id}`)
                 .then((res) => res.json())
                 .then((data) => setStockAlertSubscribed(data.subscribed))
                 .catch(() => {});
         }
-    }, [product.id, product.stock, isAuthenticated]);
+    }, [product.id, effectiveStock, isAuthenticated]);
 
     const toggleStockAlert = async () => {
         if (!isAuthenticated) {
@@ -103,13 +119,25 @@ export default function ProductDetailClient({
         }
     };
 
-    // Use product images or fallback to thumbnail
+    // Use variant images if selected variant has images, else fall back to product images
+    const variantImages: ProductImage[] = selectedVariant?.images.length
+        ? selectedVariant.images.map((url, i) => ({ id: `variant-${i}`, url, createdAt: new Date() }))
+        : [];
+
     const displayImages =
-        product.images.length > 0
-            ? product.images
-            : product.thumbnail
-                ? [{ id: "thumbnail", url: product.thumbnail, createdAt: new Date() }]
-                : [];
+        variantImages.length > 0
+            ? variantImages
+            : product.images.length > 0
+                ? product.images
+                : product.thumbnail
+                    ? [{ id: "thumbnail", url: product.thumbnail, createdAt: new Date() }]
+                    : [];
+
+    const handleSelectVariant = (variant: ProductVariant) => {
+        setSelectedVariant(variant);
+        setSelectedImageIndex(0);
+        setQuantity(1);
+    };
 
     const handlePreviousImage = () => {
         setSelectedImageIndex((prev) =>
@@ -124,16 +152,21 @@ export default function ProductDetailClient({
     };
 
     const updateQuantity = (change: number) => {
-        setQuantity((prev) => Math.min(Math.max(1, prev + change), product.stock));
+        setQuantity((prev) => Math.min(Math.max(1, prev + change), effectiveStock));
     };
 
     const handleAddToCart = async () => {
         if (isAddingToCart) return;
+
+        // If product has variants, require a variant selection
+        if (hasVariants && !selectedVariant) {
+            toast.error(t("selectColorFirst"));
+            return;
+        }
+
         setIsAddingToCart(true);
+        const result = await addToCart(product.id, quantity, selectedVariant?.id ?? undefined);
 
-        const result = await addToCart(product.id, quantity);
-
-        // If user is not authenticated, redirect to register page
         if (result === "unauthorized") {
             router.push("/register");
         }
@@ -297,6 +330,53 @@ export default function ProductDetailClient({
                             </div>
                         </div>
 
+                        {/* Color Variant Selector */}
+                        {hasVariants && (
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-sm font-semibold text-gray-700">{t("color")}:</span>
+                                    {selectedVariant ? (
+                                        <span className="text-sm font-bold text-[#1A1A1A]">{selectedVariant.color}</span>
+                                    ) : (
+                                        <span className="text-sm text-gray-400">{t("selectColor")}</span>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    {product.variants.map((variant) => {
+                                        const isSelected = selectedVariant?.id === variant.id;
+                                        const isOutOfStock = variant.stock === 0;
+                                        return (
+                                            <button
+                                                key={variant.id}
+                                                onClick={() => !isOutOfStock && handleSelectVariant(variant)}
+                                                title={`${variant.color}${isOutOfStock ? " (Tükendi)" : ` — ${variant.stock} adet`}`}
+                                                className={`relative w-10 h-10 rounded-full border-4 transition-all duration-200 ${
+                                                    isSelected
+                                                        ? "border-[#C8102E] scale-110 shadow-md"
+                                                        : "border-gray-200 hover:border-gray-400"
+                                                } ${isOutOfStock ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                                                style={{ backgroundColor: variant.colorHex || "#ccc" }}
+                                            >
+                                                {isOutOfStock && (
+                                                    <div className="absolute inset-0 flex items-center justify-center rounded-full overflow-hidden">
+                                                        <div className="w-[130%] h-0.5 bg-gray-500/70 rotate-45 absolute" />
+                                                    </div>
+                                                )}
+                                                {isSelected && (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="w-3 h-3 bg-white rounded-full shadow-sm" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {hasVariants && !selectedVariant && (
+                                    <p className="mt-2 text-xs text-amber-600 font-medium">{t("selectColorFirst")}</p>
+                                )}
+                            </div>
+                        )}
+
                         {/* Price */}
                         <div className="mb-8 p-6 bg-white border border-[#A9A9A9]/20 rounded-2xl shadow-sm">
                             <div className="flex flex-col gap-2">
@@ -324,7 +404,7 @@ export default function ProductDetailClient({
                         </div>
 
                         {/* Controls */}
-                        {product.stock > 0 ? (
+                        {(!hasVariants || selectedVariant) && effectiveStock > 0 ? (
                             <div className="space-y-6">
                                 {/* Quantity */}
                                 <div className="flex items-center gap-6">
@@ -339,7 +419,7 @@ export default function ProductDetailClient({
                                         <span className="font-bold text-lg text-[#1A1A1A]">{quantity}</span>
                                         <button
                                             onClick={() => updateQuantity(1)}
-                                            disabled={quantity >= 10 || quantity >= product.stock}
+                                            disabled={quantity >= 10 || quantity >= effectiveStock}
                                             className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-30 text-[#1A1A1A] transition-colors"
                                         >
                                             <Plus className="w-4 h-4" />
@@ -347,7 +427,7 @@ export default function ProductDetailClient({
                                     </div>
                                     <div className="text-sm font-medium text-emerald-600 flex items-center gap-1.5">
                                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                        {t("inStockAvailable", { count: product.stock })}
+                                        {t("inStockAvailable", { count: effectiveStock })}
                                     </div>
                                 </div>
 
@@ -379,7 +459,7 @@ export default function ProductDetailClient({
                                     </button>
                                 </div>
                             </div>
-                        ) : (
+                        ) : (!hasVariants || selectedVariant) ? (
                             <div className="space-y-3">
                                 <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
                                     <User className="w-5 h-5" />
@@ -409,7 +489,7 @@ export default function ProductDetailClient({
                                     {stockAlertLoading ? "..." : stockAlertSubscribed ? t("youllBeNotified") : t("notifyWhenAvailable")}
                                 </button>
                             </div>
-                        )}
+                        ) : null}
 
                         {/* Description */}
                         {product.description && (

@@ -38,6 +38,7 @@ export async function GET() {
                 items: {
                     include: {
                         product: true,
+                        variant: true,
                     },
                 },
             },
@@ -53,6 +54,7 @@ export async function GET() {
                     items: {
                         include: {
                             product: true,
+                            variant: true,
                         },
                     },
                 },

@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
  * POST /api/orders/[id]/upload-payment
  * Upload payment proof (receipt) for a bank transfer order.
  * Accepts a file via FormData and updates order status to PAYMENT_UPLOADED.
+ * Also decrements stock (per variant if applicable) when proof is submitted.
  */
 export async function POST(
     req: Request,
@@ -23,6 +24,11 @@ export async function POST(
     try {
         const order = await prisma.order.findUnique({
             where: { id },
+            include: {
+                items: {
+                    select: { productId: true, variantId: true, quantity: true },
+                },
+            },
         });
 
         if (!order) {
@@ -94,14 +100,81 @@ export async function POST(
             .from(bucket)
             .getPublicUrl(path);
 
-        // Update order with proof and set status
-        await prisma.order.update({
-            where: { id },
-            data: {
-                paymentProofUrl: publicUrl,
-                paymentProofPath: path,
-                status: "PAYMENT_UPLOADED",
-            },
+        // Update order status, clear cart, and decrement stock in a single transaction
+        await prisma.$transaction(async (tx) => {
+            // Update order with proof URL and new status
+            await tx.order.update({
+                where: { id },
+                data: {
+                    paymentProofUrl: publicUrl,
+                    paymentProofPath: path,
+                    status: "PAYMENT_UPLOADED",
+                },
+            });
+
+            // Clear the user's cart — this is the point of no return for the customer.
+            // (Re-uploads after rejection are safe: cart is already empty.)
+            const cart = await tx.cart.findUnique({
+                where: { userId: order.userId },
+                select: { id: true },
+            });
+            if (cart) {
+                await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+            }
+
+            // Decrement stock per order item (variant-aware)
+            const variantProductIds = new Set<string>();
+
+            for (const item of order.items) {
+                if (item.variantId) {
+                    // Decrement variant stock
+                    await tx.productVariant.update({
+                        where: { id: item.variantId },
+                        data: { stock: { decrement: item.quantity } },
+                    });
+                    variantProductIds.add(item.productId);
+                } else {
+                    // Decrement product stock directly
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { decrement: item.quantity } },
+                    });
+                }
+            }
+
+            // Sync product.stock = sum of variant stocks for variant products
+            for (const productId of variantProductIds) {
+                const variants = await tx.productVariant.findMany({
+                    where: { productId },
+                    select: { stock: true },
+                });
+                const totalStock = Math.max(
+                    0,
+                    variants.reduce((sum, v) => sum + v.stock, 0)
+                );
+                await tx.product.update({
+                    where: { id: productId },
+                    data: {
+                        stock: totalStock,
+                        ...(totalStock <= 0 ? { isActive: false } : {}),
+                    },
+                });
+            }
+
+            // Deactivate non-variant products that ran out of stock
+            const nonVariantProductIds = order.items
+                .filter((i) => !i.variantId)
+                .map((i) => i.productId);
+
+            if (nonVariantProductIds.length > 0) {
+                await tx.product.updateMany({
+                    where: {
+                        id: { in: nonVariantProductIds },
+                        stock: { lte: 0 },
+                    },
+                    data: { isActive: false, stock: 0 },
+                });
+            }
         });
 
         return NextResponse.json({

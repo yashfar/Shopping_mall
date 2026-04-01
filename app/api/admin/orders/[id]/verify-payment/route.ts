@@ -9,8 +9,10 @@ import { sendOrderConfirmationEmail } from "@@/lib/mail";
  *
  * Body: { action: "approve" | "reject" }
  *
- * On approve: status → PAID, stock decremented, confirmation email sent.
- * On reject:  status → PAYMENT_REJECTED (customer can re-upload).
+ * On approve: status → PAID, confirmation email sent.
+ *             Stock was already decremented when customer uploaded the proof.
+ * On reject:  status → PAYMENT_REJECTED, stock restored (variant-aware).
+ *             Customer can re-upload; stock will be decremented again on re-upload.
  */
 export async function POST(
     req: Request,
@@ -34,7 +36,7 @@ export async function POST(
         const order = await prisma.order.findUnique({
             where: { id },
             include: {
-                items: { select: { productId: true, quantity: true } },
+                items: { select: { productId: true, variantId: true, quantity: true } },
             },
         });
 
@@ -50,32 +52,10 @@ export async function POST(
         }
 
         if (action === "approve") {
-            // Approve: mark as PAID and decrement stock (same logic as old Stripe webhook)
-            await prisma.$transaction(async (tx) => {
-                await tx.order.update({
-                    where: { id },
-                    data: { status: "PAID" },
-                });
-
-                for (const item of order.items) {
-                    await tx.product.update({
-                        where: { id: item.productId },
-                        data: {
-                            stock: { decrement: item.quantity },
-                        },
-                    });
-                }
-
-                await tx.product.updateMany({
-                    where: {
-                        id: { in: order.items.map((i) => i.productId) },
-                        stock: { lte: 0 },
-                    },
-                    data: {
-                        isActive: false,
-                        stock: 0,
-                    },
-                });
+            // Stock was already decremented on upload — just mark as PAID
+            await prisma.order.update({
+                where: { id },
+                data: { status: "PAID" },
             });
 
             // Send confirmation email (non-critical)
@@ -117,13 +97,66 @@ export async function POST(
 
             return NextResponse.json({ message: "Payment approved, order marked as PAID" });
         } else {
-            // Reject: allow customer to re-upload
-            await prisma.order.update({
-                where: { id },
-                data: { status: "PAYMENT_REJECTED" },
+            // Reject: restore stock and allow customer to re-upload
+            await prisma.$transaction(async (tx) => {
+                await tx.order.update({
+                    where: { id },
+                    data: { status: "PAYMENT_REJECTED" },
+                });
+
+                const variantProductIds = new Set<string>();
+
+                for (const item of order.items) {
+                    if (item.variantId) {
+                        // Restore variant stock
+                        await tx.productVariant.update({
+                            where: { id: item.variantId },
+                            data: { stock: { increment: item.quantity } },
+                        });
+                        variantProductIds.add(item.productId);
+                    } else {
+                        // Restore product stock directly
+                        await tx.product.update({
+                            where: { id: item.productId },
+                            data: { stock: { increment: item.quantity } },
+                        });
+                    }
+                }
+
+                // Sync product.stock = sum of variant stocks for variant products
+                for (const productId of variantProductIds) {
+                    const variants = await tx.productVariant.findMany({
+                        where: { productId },
+                        select: { stock: true },
+                    });
+                    const totalStock = variants.reduce((sum, v) => sum + v.stock, 0);
+                    await tx.product.update({
+                        where: { id: productId },
+                        data: {
+                            stock: totalStock,
+                            // Re-activate product if stock was restored
+                            ...(totalStock > 0 ? { isActive: true } : {}),
+                        },
+                    });
+                }
+
+                // Re-activate non-variant products that now have stock
+                const nonVariantProductIds = order.items
+                    .filter((i) => !i.variantId)
+                    .map((i) => i.productId);
+
+                if (nonVariantProductIds.length > 0) {
+                    await tx.product.updateMany({
+                        where: {
+                            id: { in: nonVariantProductIds },
+                            stock: { gt: 0 },
+                        },
+                        data: { isActive: true },
+                    });
+                }
             });
 
-            return NextResponse.json({ message: "Payment rejected, customer can re-upload" });
+            return NextResponse.json({ message: "Payment rejected, stock restored, customer can re-upload" });
         }
     } catch (error) {
         console.error("Error verifying payment:", error);

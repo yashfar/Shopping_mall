@@ -6,6 +6,7 @@ import AddressModal from "@@/components/AddressModal";
 import "./address-selection.css";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@@/context/CurrencyContext";
+import { useCart } from "@@/context/CartContext";
 
 interface Address {
     id: string;
@@ -47,6 +48,7 @@ interface BankDetails {
 export default function PaymentCheckoutWithAddress({ orderId }: { orderId: string }) {
     const t = useTranslations("paymentCheckout");
     const { formatPrice } = useCurrency();
+    const { refreshCart } = useCart();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -202,6 +204,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                 throw new Error(data.error || t("failedToUpload"));
             }
 
+            await refreshCart();
             router.push(`/checkout/success?orderId=${orderId}`);
         } catch (error: any) {
             console.error("Upload error:", error);

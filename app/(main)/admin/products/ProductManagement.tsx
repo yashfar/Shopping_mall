@@ -29,9 +29,10 @@ type Product = {
     price: number;
     stock: number;
     isActive: boolean;
-    thumbnail?: string | null; // Added potential field
+    thumbnail?: string | null;
     createdAt: string;
     updatedAt: string;
+    variants?: { id: string; stock: number }[];
 };
 
 export default function ProductManagement() {
@@ -293,9 +294,18 @@ export default function ProductManagement() {
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("stock")}</span>
-                                    <span className={`font-medium ${product.stock > 0 ? "text-gray-700" : "text-red-500"}`}>
-                                        {product.stock}
-                                    </span>
+                                    {product.variants && product.variants.length > 0 ? (
+                                        <span className="text-xs text-gray-500 text-right">
+                                            <span className="font-bold text-gray-700">{product.variants.length}</span> renk ·{" "}
+                                            <span className={`font-bold ${product.variants.reduce((s, v) => s + v.stock, 0) > 0 ? "text-gray-700" : "text-red-500"}`}>
+                                                {product.variants.reduce((s, v) => s + v.stock, 0)}
+                                            </span> toplam
+                                        </span>
+                                    ) : (
+                                        <span className={`font-medium ${product.stock > 0 ? "text-gray-700" : "text-red-500"}`}>
+                                            {product.stock}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
