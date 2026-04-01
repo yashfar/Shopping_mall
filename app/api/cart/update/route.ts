@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/cart/update
- * Updates quantity of a product in cart
- * If quantity <= 0, removes the item
+ * Updates quantity of a cart item by cartItemId.
+ * If quantity <= 0, removes the item.
  */
 export async function POST(req: Request) {
     const session = await auth();
@@ -15,16 +15,16 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { productId, quantity } = await req.json();
+        const { cartItemId, quantity } = await req.json();
 
-        if (!productId || quantity === undefined) {
+        if (!cartItemId || quantity === undefined) {
             return NextResponse.json(
-                { error: "Product ID and quantity are required" },
+                { error: "cartItemId and quantity are required" },
                 { status: 400 }
             );
         }
 
-        // Find user's cart
+        // Find cart item (verify ownership via cart)
         const cart = await prisma.cart.findUnique({
             where: { userId: session.user.id },
         });
@@ -33,14 +33,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Cart not found" }, { status: 404 });
         }
 
-        // Find cart item
-        const cartItem = await prisma.cartItem.findUnique({
-            where: {
-                cartId_productId: {
-                    cartId: cart.id,
-                    productId,
-                },
-            },
+        const cartItem = await prisma.cartItem.findFirst({
+            where: { id: cartItemId, cartId: cart.id },
         });
 
         if (!cartItem) {
@@ -50,26 +44,22 @@ export async function POST(req: Request) {
             );
         }
 
-        // If quantity <= 0, remove item
         if (quantity <= 0) {
-            await prisma.cartItem.delete({
-                where: { id: cartItem.id },
-            });
+            await prisma.cartItem.delete({ where: { id: cartItem.id } });
         } else {
-            // Update quantity
             await prisma.cartItem.update({
                 where: { id: cartItem.id },
                 data: { quantity },
             });
         }
 
-        // Fetch updated cart
         const updatedCart = await prisma.cart.findUnique({
             where: { id: cart.id },
             include: {
                 items: {
                     include: {
                         product: true,
+                        variant: true,
                     },
                 },
             },

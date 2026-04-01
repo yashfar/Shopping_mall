@@ -57,6 +57,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         where: whereClause,
         include: {
             reviews: { select: { id: true, rating: true } },
+            variants: { select: { id: true, color: true, colorHex: true, stock: true } },
         },
         orderBy: getSortOrder(sort),
         take: 12,

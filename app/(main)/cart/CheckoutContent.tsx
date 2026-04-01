@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calculateCartTotals } from "@@/lib/payment-utils";
 import { useCurrency } from "@@/context/CurrencyContext";
+
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
@@ -34,6 +35,7 @@ type AppliedCoupon = {
 export default function CheckoutContent() {
     const router = useRouter();
     const { formatPrice } = useCurrency();
+
     const t = useTranslations("checkout");
     const tc = useTranslations("common");
     const [cart, setCart] = useState<Cart | null>(null);
@@ -108,8 +110,8 @@ export default function CheckoutContent() {
             if (!res.ok) throw new Error(data.error);
             setAppliedCoupon(data);
             setCouponInput("");
-        } catch (err: any) {
-            setCouponError(err.message || t("invalidCoupon"));
+        } catch (err) {
+            setCouponError(err instanceof Error ? err.message : t("invalidCoupon"));
         } finally {
             setCouponLoading(false);
         }
@@ -136,11 +138,12 @@ export default function CheckoutContent() {
 
             const data = await response.json();
 
-            // Redirect to payment page
+            // Redirect to payment page (cart is NOT cleared here anymore —
+            // it's cleared when the customer uploads the payment proof)
             router.push(`/checkout?orderId=${data.orderId}`);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error creating order:", error);
-            alert(error.message || t("failedToCreateOrder"));
+            alert(error instanceof Error ? error.message : t("failedToCreateOrder"));
             setCreating(false); // Only reset on error
         }
         // Don't reset creating on success - let the redirect happen

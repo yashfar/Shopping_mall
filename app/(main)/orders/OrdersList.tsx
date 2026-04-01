@@ -61,6 +61,23 @@ export default function OrdersList() {
         fetchOrders();
     }, []);
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case "PENDING":           return t("pending");
+            case "PAYMENT_UPLOADED":  return t("paymentUploaded");
+            case "PAYMENT_REJECTED":  return t("paymentRejected");
+            case "PAID":              return t("paid");
+            case "SHIPPED":           return t("shipped");
+            case "DELIVERED":         return t("delivered");
+            case "COMPLETED":         return t("completed");
+            case "CANCELED":
+            case "CANCELLED":         return t("canceled");
+            case "RETURN_REQUESTED":  return t("returnRequested");
+            case "RETURNED":          return t("returned");
+            default:                  return status;
+        }
+    };
+
     const getStatusStyles = (status: string) => {
         const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border";
         switch (status) {
@@ -260,7 +277,7 @@ export default function OrdersList() {
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className={getStatusStyles(order.status)}>
-                                        {order.status.replace("_", " ")}
+                                        {getStatusLabel(order.status)}
                                     </span>
                                     {getReturnBadge(order)}
                                 </td>
@@ -293,7 +310,7 @@ export default function OrdersList() {
                             <div>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                     <span className={getStatusStyles(order.status)}>
-                                        {order.status.replace("_", " ")}
+                                        {getStatusLabel(order.status)}
                                     </span>
                                     {getReturnBadge(order)}
                                 </div>

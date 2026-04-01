@@ -20,6 +20,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 },
             },
             category: true,
+            variants: {
+                orderBy: { createdAt: "asc" },
+            },
             reviews: {
                 include: {
                     user: {

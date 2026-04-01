@@ -33,7 +33,7 @@ export async function POST(req: Request) {
                 where: { userId: session.user.id },
                 include: {
                     items: {
-                        include: { product: true },
+                        include: { product: true, variant: true },
                     },
                 },
             });
@@ -48,9 +48,10 @@ export async function POST(req: Request) {
                 if (!item.product.isActive) {
                     throw new Error(`PRODUCT_INACTIVE:${item.product.title}`);
                 }
-                if (item.product.stock < item.quantity) {
+                const availableStock = item.variant ? item.variant.stock : item.product.stock;
+                if (availableStock < item.quantity) {
                     throw new Error(
-                        `INSUFFICIENT_STOCK:${item.product.title}:${item.product.stock}:${item.quantity}`
+                        `INSUFFICIENT_STOCK:${item.product.title}:${availableStock}:${item.quantity}`
                     );
                 }
             }
@@ -107,6 +108,8 @@ export async function POST(req: Request) {
                 data: cart.items.map((item) => ({
                     orderId: newOrder.id,
                     productId: item.productId,
+                    variantId: item.variantId ?? null,
+                    variantColor: item.variant?.color ?? null,
                     quantity: item.quantity,
                     price: item.product.price,
                 })),
@@ -126,9 +129,8 @@ export async function POST(req: Request) {
                 });
             }
 
-            await tx.cartItem.deleteMany({
-                where: { cartId: cart.id },
-            });
+            // Cart is cleared when the customer uploads payment proof,
+            // not here — so "back to cart" still shows their items.
 
             return newOrder;
         });

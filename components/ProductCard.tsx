@@ -14,6 +14,13 @@ interface Review {
     rating: number;
 }
 
+interface ProductVariant {
+    id: string;
+    color: string;
+    colorHex: string | null;
+    stock: number;
+}
+
 interface Product {
     id: string;
     title: string;
@@ -24,6 +31,7 @@ interface Product {
     stock?: number;
     category?: string | { name: string };
     createdAt?: Date | string;
+    variants?: ProductVariant[];
 }
 
 interface ProductCardProps {
@@ -164,6 +172,23 @@ export default function ProductCard({ product }: ProductCardProps) {
                 >
                     {product.title}
                 </h3>
+
+                {/* Color variant dots */}
+                {product.variants && product.variants.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {product.variants.slice(0, 6).map((v) => (
+                            <div
+                                key={v.id}
+                                title={v.color}
+                                className={`w-4 h-4 rounded-full border border-gray-200 shrink-0 ${v.stock === 0 ? "opacity-40" : ""}`}
+                                style={{ backgroundColor: v.colorHex || "#ccc" }}
+                            />
+                        ))}
+                        {product.variants.length > 6 && (
+                            <span className="text-[10px] text-gray-400">+{product.variants.length - 6}</span>
+                        )}
+                    </div>
+                )}
 
                 {/* Rating */}
                 <div className="flex items-center gap-1.5 mt-auto">

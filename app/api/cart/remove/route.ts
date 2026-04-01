@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/cart/remove
- * Removes a product from cart
+ * Removes a cart item by cartItemId.
  */
 export async function POST(req: Request) {
     const session = await auth();
@@ -14,16 +14,15 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { productId } = await req.json();
+        const { cartItemId } = await req.json();
 
-        if (!productId) {
+        if (!cartItemId) {
             return NextResponse.json(
-                { error: "Product ID is required" },
+                { error: "cartItemId is required" },
                 { status: 400 }
             );
         }
 
-        // Find user's cart
         const cart = await prisma.cart.findUnique({
             where: { userId: session.user.id },
         });
@@ -32,14 +31,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Cart not found" }, { status: 404 });
         }
 
-        // Find and delete cart item
-        const cartItem = await prisma.cartItem.findUnique({
-            where: {
-                cartId_productId: {
-                    cartId: cart.id,
-                    productId,
-                },
-            },
+        const cartItem = await prisma.cartItem.findFirst({
+            where: { id: cartItemId, cartId: cart.id },
         });
 
         if (!cartItem) {
@@ -49,17 +42,15 @@ export async function POST(req: Request) {
             );
         }
 
-        await prisma.cartItem.delete({
-            where: { id: cartItem.id },
-        });
+        await prisma.cartItem.delete({ where: { id: cartItem.id } });
 
-        // Fetch updated cart
         const updatedCart = await prisma.cart.findUnique({
             where: { id: cart.id },
             include: {
                 items: {
                     include: {
                         product: true,
+                        variant: true,
                     },
                 },
             },

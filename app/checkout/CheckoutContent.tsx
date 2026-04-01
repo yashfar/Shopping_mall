@@ -66,9 +66,9 @@ export default function CheckoutContent() {
 
             // Redirect to payment page
             router.push(`/checkout?orderId=${data.orderId}`);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error creating order:", error);
-            alert(error.message || "Failed to create order");
+            alert(error instanceof Error ? error.message : "Failed to create order");
         } finally {
             setCreating(false);
         }
@@ -151,7 +151,7 @@ export default function CheckoutContent() {
                 }}
             >
                 <p style={{ margin: 0, fontSize: "14px" }}>
-                    ℹ️ <strong>Ready to place order:</strong> Click "Place Order" to confirm your purchase.
+                    ℹ️ <strong>Ready to place order:</strong> Click &ldquo;Place Order&rdquo; to confirm your purchase.
                     Payment integration will be added in Step 12.
                 </p>
             </div>

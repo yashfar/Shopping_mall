@@ -10,11 +10,12 @@ const CartAddSchema = z.object({
         .int({ error: "Quantity must be a whole number" })
         .min(1, { error: "Quantity must be at least 1" })
         .max(99, { error: "Quantity cannot exceed 99" }),
+    variantId: z.string().optional().nullable(),
 });
 
 /**
  * POST /api/cart/add
- * Adds a product to cart or increases quantity if it already exists.
+ * Adds a product (with optional variant) to cart or increases quantity if already exists.
  */
 export async function POST(req: Request) {
     const session = await auth();
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { productId, quantity } = validation.data;
+        const { productId, quantity, variantId } = validation.data;
 
         // Verify product exists and is active
         const product = await prisma.product.findUnique({
@@ -48,12 +49,30 @@ export async function POST(req: Request) {
             );
         }
 
-        // Validate requested quantity does not exceed available stock
-        if (quantity > product.stock) {
+        // If product has variants, a variantId is required
+        const totalVariants = await prisma.productVariant.count({ where: { productId } });
+        if (totalVariants > 0 && !variantId) {
             return NextResponse.json(
-                {
-                    error: `Only ${product.stock} unit(s) available in stock`,
-                },
+                { error: "Please select a color variant" },
+                { status: 400 }
+            );
+        }
+
+        // Determine available stock
+        let availableStock: number;
+        if (variantId) {
+            const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+            if (!variant) {
+                return NextResponse.json({ error: "Variant not found" }, { status: 404 });
+            }
+            availableStock = variant.stock;
+        } else {
+            availableStock = product.stock;
+        }
+
+        if (quantity > availableStock) {
+            return NextResponse.json(
+                { error: `Only ${availableStock} unit(s) available in stock` },
                 { status: 400 }
             );
         }
@@ -69,24 +88,22 @@ export async function POST(req: Request) {
             });
         }
 
-        // Check if item already exists in cart
-        const existingItem = await prisma.cartItem.findUnique({
+        // Check if item already exists in cart (same product + same variant)
+        const existingItem = await prisma.cartItem.findFirst({
             where: {
-                cartId_productId: {
-                    cartId: cart.id,
-                    productId,
-                },
+                cartId: cart.id,
+                productId,
+                variantId: variantId ?? null,
             },
         });
 
         if (existingItem) {
             const newQuantity = existingItem.quantity + quantity;
 
-            // Ensure total cart quantity does not exceed stock
-            if (newQuantity > product.stock) {
+            if (newQuantity > availableStock) {
                 return NextResponse.json(
                     {
-                        error: `Cannot add ${quantity} more — only ${product.stock - existingItem.quantity} unit(s) remaining`,
+                        error: `Cannot add ${quantity} more — only ${availableStock - existingItem.quantity} unit(s) remaining`,
                     },
                     { status: 400 }
                 );
@@ -101,6 +118,7 @@ export async function POST(req: Request) {
                 data: {
                     cartId: cart.id,
                     productId,
+                    variantId: variantId ?? null,
                     quantity,
                 },
             });
@@ -110,7 +128,10 @@ export async function POST(req: Request) {
             where: { id: cart.id },
             include: {
                 items: {
-                    include: { product: true },
+                    include: {
+                        product: true,
+                        variant: true,
+                    },
                 },
             },
         });

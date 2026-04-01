@@ -12,7 +12,7 @@ interface CartItem {
 
 interface CartContextType {
     cartCount: number;
-    addToCart: (productId: string, quantity: number) => Promise<boolean | "unauthorized">;
+    addToCart: (productId: string, quantity: number, variantId?: string) => Promise<boolean | "unauthorized">;
     refreshCart: () => Promise<void>;
     isAnimating: boolean;
 }
@@ -44,12 +44,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         refreshCart();
     }, [refreshCart]);
 
-    const addToCart = async (productId: string, quantity: number): Promise<boolean | "unauthorized"> => {
+    const addToCart = async (productId: string, quantity: number, variantId?: string): Promise<boolean | "unauthorized"> => {
         try {
             const res = await fetch("/api/cart/add", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId, quantity }),
+                body: JSON.stringify({ productId, quantity, variantId: variantId ?? null }),
             });
 
             if (res.status === 401) {

@@ -112,6 +112,23 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
         fetchOrder();
     }, [orderId]);
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case "PENDING":           return t("statusPending");
+            case "PAYMENT_UPLOADED":  return t("statusPaymentUploaded");
+            case "PAYMENT_REJECTED":  return t("statusPaymentRejected");
+            case "PAID":              return t("statusPaid");
+            case "SHIPPED":           return t("statusShipped");
+            case "DELIVERED":         return t("statusDelivered");
+            case "COMPLETED":         return t("statusCompleted");
+            case "CANCELED":
+            case "CANCELLED":         return t("statusCanceled");
+            case "RETURN_REQUESTED":  return t("statusReturnRequested");
+            case "RETURNED":          return t("statusReturned");
+            default:                  return status;
+        }
+    };
+
     const getStatusStyles = (status: string) => {
         const base = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border";
         switch (status) {
@@ -279,7 +296,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
                     <div className="mb-6">
                         <span className={getStatusStyles(order.status)}>
-                            {order.status}
+                            {getStatusLabel(order.status)}
                         </span>
                         <p className="text-xs text-gray-400 mt-2 font-medium">
                             {t("placedOn", { date: new Date(order.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }) })}

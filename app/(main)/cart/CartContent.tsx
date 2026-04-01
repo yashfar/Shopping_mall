@@ -21,6 +21,12 @@ type CartItem = {
         stock: number;
         thumbnail: string | null;
     };
+    variant?: {
+        id: string;
+        color: string;
+        colorHex: string | null;
+        stock: number;
+    } | null;
 };
 
 type Cart = {
@@ -42,9 +48,9 @@ export default function CartContent() {
     const [checkingAddresses, setCheckingAddresses] = useState(true);
 
     // Confirmation state
-    const [confirmRemove, setConfirmRemove] = useState<{ open: boolean; productId: string }>({
+    const [confirmRemove, setConfirmRemove] = useState<{ open: boolean; cartItemId: string }>({
         open: false,
-        productId: "",
+        cartItemId: "",
     });
 
     const fetchCart = async () => {
@@ -78,19 +84,19 @@ export default function CartContent() {
         }
     };
 
-    const updateQuantity = async (productId: string, quantity: number) => {
+    const updateQuantity = async (cartItemId: string, quantity: number) => {
         try {
-            setUpdating(productId);
+            setUpdating(cartItemId);
             const response = await fetch("/api/cart/update", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId, quantity }),
+                body: JSON.stringify({ cartItemId, quantity }),
             });
 
             if (!response.ok) throw new Error("Failed to update cart");
             const data = await response.json();
             setCart(data.cart);
-            await refreshCart(); // Sync navbar
+            await refreshCart();
             toast.success(t("cartUpdated"));
         } catch (error) {
             console.error("Error updating cart:", error);
@@ -101,15 +107,15 @@ export default function CartContent() {
     };
 
     const handleRemoveItem = async () => {
-        const productId = confirmRemove.productId;
-        if (!productId) return;
+        const cartItemId = confirmRemove.cartItemId;
+        if (!cartItemId) return;
 
         try {
-            setUpdating(productId);
+            setUpdating(cartItemId);
             const response = await fetch("/api/cart/remove", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId }),
+                body: JSON.stringify({ cartItemId }),
             });
 
             if (!response.ok) throw new Error("Failed to remove item");
@@ -122,12 +128,12 @@ export default function CartContent() {
             toast.error(t("failedToRemoveItem"));
         } finally {
             setUpdating(null);
-            setConfirmRemove({ open: false, productId: "" });
+            setConfirmRemove({ open: false, cartItemId: "" });
         }
     };
 
-    const openRemoveConfirm = (productId: string) => {
-        setConfirmRemove({ open: true, productId });
+    const openRemoveConfirm = (cartItemId: string) => {
+        setConfirmRemove({ open: true, cartItemId });
     };
 
     useEffect(() => {
@@ -206,7 +212,7 @@ export default function CartContent() {
                 {cart.items.map((item) => (
                     <div
                         key={item.id}
-                        className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 transition-all duration-300 ${updating === item.product.id ? "opacity-50 pointer-events-none" : ""}`}
+                        className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 transition-all duration-300 ${updating === item.id ? "opacity-50 pointer-events-none" : ""}`}
                     >
                         <div className="flex flex-col gap-4">
                             {/* Product Info */}
@@ -238,8 +244,16 @@ export default function CartContent() {
                                     >
                                         {item.product.title}
                                     </Link>
+                                    {item.variant && (
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            {item.variant.colorHex && (
+                                                <div className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: item.variant.colorHex }} />
+                                            )}
+                                            <span className="text-xs text-gray-500 font-medium">{item.variant.color}</span>
+                                        </div>
+                                    )}
                                     <div className="text-xs font-bold uppercase tracking-wider mt-1">
-                                        {item.product.stock > 0 ? (
+                                        {(item.variant ? item.variant.stock : item.product.stock) > 0 ? (
                                             <span className="text-emerald-600">{tc("inStock")}</span>
                                         ) : (
                                             <span className="text-[#C8102E]">{tc("outOfStock")}</span>
@@ -261,8 +275,8 @@ export default function CartContent() {
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("quantity")}</span>
                                 <div className="flex items-center gap-3">
                                     <button
-                                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                        disabled={updating === item.product.id || item.quantity <= 1}
+                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                        disabled={updating === item.id || item.quantity <= 1}
                                         className="w-10 h-10 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
                                     >
                                         −
@@ -271,8 +285,8 @@ export default function CartContent() {
                                         {item.quantity}
                                     </span>
                                     <button
-                                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                        disabled={updating === item.product.id || item.quantity >= item.product.stock}
+                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                        disabled={updating === item.id || item.quantity >= (item.variant ? item.variant.stock : item.product.stock)}
                                         className="w-10 h-10 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
                                     >
                                         +
@@ -290,8 +304,8 @@ export default function CartContent() {
 
                             {/* Remove Button */}
                             <button
-                                onClick={() => openRemoveConfirm(item.product.id)}
-                                disabled={updating === item.product.id}
+                                onClick={() => openRemoveConfirm(item.id)}
+                                disabled={updating === item.id}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-[#C8102E] rounded-xl font-bold text-sm transition-all hover:bg-[#C8102E] hover:text-white active:scale-95"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -321,7 +335,7 @@ export default function CartContent() {
                             {cart.items.map((item) => (
                                 <tr
                                     key={item.id}
-                                    className={`transition-all duration-300 ${updating === item.product.id ? "opacity-50 pointer-events-none" : "hover:bg-red-50/5"}`}
+                                    className={`transition-all duration-300 ${updating === item.id ? "opacity-50 pointer-events-none" : "hover:bg-red-50/5"}`}
                                 >
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-4">
@@ -350,8 +364,16 @@ export default function CartContent() {
                                                 >
                                                     {item.product.title}
                                                 </Link>
+                                                {item.variant && (
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        {item.variant.colorHex && (
+                                                            <div className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: item.variant.colorHex }} />
+                                                        )}
+                                                        <span className="text-xs text-gray-500 font-medium">{item.variant.color}</span>
+                                                    </div>
+                                                )}
                                                 <div className="text-xs font-bold uppercase tracking-wider">
-                                                    {item.product.stock > 0 ? (
+                                                    {(item.variant ? item.variant.stock : item.product.stock) > 0 ? (
                                                         <span className="text-emerald-600">{tc("inStock")}</span>
                                                     ) : (
                                                         <span className="text-[#C8102E]">{tc("outOfStock")}</span>
@@ -366,8 +388,8 @@ export default function CartContent() {
                                     <td className="px-6 py-6">
                                         <div className="flex items-center justify-center gap-3">
                                             <button
-                                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                                disabled={updating === item.product.id || item.quantity <= 1}
+                                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                disabled={updating === item.id || item.quantity <= 1}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30"
                                             >
                                                 −
@@ -376,8 +398,8 @@ export default function CartContent() {
                                                 {item.quantity}
                                             </span>
                                             <button
-                                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                                disabled={updating === item.product.id || item.quantity >= item.product.stock}
+                                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                disabled={updating === item.id || item.quantity >= (item.variant ? item.variant.stock : item.product.stock)}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30"
                                             >
                                                 +
@@ -389,8 +411,8 @@ export default function CartContent() {
                                     </td>
                                     <td className="px-6 py-6 text-center">
                                         <button
-                                            onClick={() => openRemoveConfirm(item.product.id)}
-                                            disabled={updating === item.product.id}
+                                            onClick={() => openRemoveConfirm(item.id)}
+                                            disabled={updating === item.id}
                                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-lg font-bold text-sm transition-all hover:bg-[#C8102E] hover:text-white group active:scale-95"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">

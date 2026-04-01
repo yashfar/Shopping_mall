@@ -67,6 +67,9 @@ export async function GET(req: Request) {
                         rating: true,
                     },
                 },
+                variants: {
+                    select: { id: true, color: true, colorHex: true, stock: true },
+                },
             },
             orderBy: getSortOrder(sort),
             skip,

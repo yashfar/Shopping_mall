@@ -66,6 +66,9 @@ export default async function Home({ searchParams }: HomeProps) {
           rating: true,
         },
       },
+      variants: {
+        select: { id: true, color: true, colorHex: true, stock: true },
+      },
     },
     orderBy: getSortOrder(sort),
     take: 12,
