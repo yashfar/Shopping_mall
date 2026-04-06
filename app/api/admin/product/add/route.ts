@@ -6,9 +6,12 @@ import { z } from "zod";
 const AddProductSchema = z.object({
     title: z.string().min(1, { error: "Title is required" }).max(200, { error: "Title must be less than 200 characters" }),
     description: z.string().min(1, { error: "Description is required" }),
+    titleEn: z.string().max(200).optional().nullable(),
+    descriptionEn: z.string().optional().nullable(),
     price: z.number().int().positive({ error: "Price must be a positive number" }),
     salePrice: z.number().int().positive({ error: "Sale price must be a positive number" }).optional().nullable(),
     category: z.string().min(1, { error: "Category is required" }),
+    categoryNameEn: z.string().max(100).optional().nullable(),
     stock: z.number().int().min(0, { error: "Stock cannot be negative" }).default(0),
     images: z.array(z.string().min(1, { error: "Image path cannot be empty" })).min(1, { error: "At least one image is required" }),
     thumbnail: z.string().min(1, { error: "Thumbnail path cannot be empty" }),
@@ -21,7 +24,6 @@ const AddProductSchema = z.object({
 export async function POST(req: Request) {
     const session = await auth();
 
-    // Check authentication
     if (!session) {
         return NextResponse.json(
             { error: "Unauthorized: Please login to continue" },
@@ -29,7 +31,6 @@ export async function POST(req: Request) {
         );
     }
 
-    // Check admin role
     if (session.user.role !== "ADMIN") {
         return NextResponse.json(
             { error: "Forbidden: Admin access required" },
@@ -40,7 +41,6 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        // Validate input with Zod
         const validation = AddProductSchema.safeParse(body);
 
         if (!validation.success) {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { title, description, price, salePrice, category, stock, images, thumbnail } =
+        const { title, description, titleEn, descriptionEn, price, salePrice, category, categoryNameEn, stock, images, thumbnail } =
             validation.data;
 
         // Additional validation: Thumbnail must be in images array
@@ -84,9 +84,9 @@ export async function POST(req: Request) {
             );
         }
 
-        // Create product with images in a transaction
+        // Create product with images and translations in a transaction
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Create the product
+            // 1. Create the product (Turkish is the main language)
             const product = await tx.product.create({
                 data: {
                     title,
@@ -95,11 +95,11 @@ export async function POST(req: Request) {
                     salePrice: salePrice ?? null,
                     stock,
                     thumbnail,
-                    isActive: stock > 0, // Auto-activate if stock > 0
+                    isActive: stock > 0,
                     category: {
                         connectOrCreate: {
                             where: { name: category },
-                            create: { name: category },
+                            create: { name: category, nameEn: categoryNameEn?.trim() || null },
                         },
                     },
                 },
@@ -109,19 +109,24 @@ export async function POST(req: Request) {
             const createdImages = await Promise.all(
                 images.map((url) =>
                     tx.productImage.create({
-                        data: {
-                            productId: product.id,
-                            url,
-                        },
+                        data: { productId: product.id, url },
                     })
                 )
             );
 
-            // 3. Return complete product with images
-            return {
-                product,
-                images: createdImages,
-            };
+            // 3. Save English translation if provided
+            if (titleEn?.trim()) {
+                await tx.productTranslation.create({
+                    data: {
+                        productId: product.id,
+                        locale: "en",
+                        title: titleEn.trim(),
+                        description: descriptionEn?.trim() ?? null,
+                    },
+                });
+            }
+
+            return { product, images: createdImages };
         });
 
         return NextResponse.json(
@@ -136,44 +141,29 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("Error creating product:", error);
 
-        // Handle Prisma-specific errors
         if (error.code === "P2002") {
             return NextResponse.json(
-                {
-                    error: "Duplicate entry",
-                    message: "A product with this information already exists"
-                },
+                { error: "Duplicate entry", message: "A product with this information already exists" },
                 { status: 409 }
             );
         }
 
         if (error.code === "P2003") {
             return NextResponse.json(
-                {
-                    error: "Foreign key constraint failed",
-                    message: "Invalid reference in product data"
-                },
+                { error: "Foreign key constraint failed", message: "Invalid reference in product data" },
                 { status: 400 }
             );
         }
 
-        // Handle JSON parsing errors
         if (error instanceof SyntaxError) {
             return NextResponse.json(
-                {
-                    error: "Invalid JSON",
-                    message: "Request body must be valid JSON"
-                },
+                { error: "Invalid JSON", message: "Request body must be valid JSON" },
                 { status: 400 }
             );
         }
 
-        // Generic error response
         return NextResponse.json(
-            {
-                error: "Internal server error",
-                message: "Failed to create product. Please try again later."
-            },
+            { error: "Internal server error", message: "Failed to create product. Please try again later." },
             { status: 500 }
         );
     }

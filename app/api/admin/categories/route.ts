@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { name } = await req.json();
+        const { name, nameEn } = await req.json();
 
         if (!name || typeof name !== "string" || name.trim().length === 0) {
             return NextResponse.json({ error: "Category name is required" }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         }
 
         const category = await prisma.category.create({
-            data: { name: name.trim() },
+            data: { name: name.trim(), nameEn: nameEn?.trim() || null },
             include: { _count: { select: { products: true } } },
         });
 

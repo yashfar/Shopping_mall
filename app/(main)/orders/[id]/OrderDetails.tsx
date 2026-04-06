@@ -102,8 +102,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                 }
                 const data = await response.json();
                 setOrder(data.order);
-            } catch (err: any) {
-                setError(err.message || "Failed to load order");
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to load order");
             } finally {
                 setLoading(false);
             }

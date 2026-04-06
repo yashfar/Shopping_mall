@@ -61,9 +61,13 @@ export default function EditProductPage() {
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [titleEn, setTitleEn] = useState("");
+    const [descriptionEn, setDescriptionEn] = useState("");
+    const [contentTab, setContentTab] = useState<"tr" | "en">("tr");
     const [price, setPrice] = useState("");
     const [salePrice, setSalePrice] = useState("");
     const [category, setCategory] = useState("");
+    const [categoryNameEn, setCategoryNameEn] = useState("");
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -100,6 +104,9 @@ export default function EditProductPage() {
 
                 setTitle(product.title);
                 setDescription(product.description || "");
+                const enTranslation = product.translations?.find((tr: any) => tr.locale === "en");
+                setTitleEn(enTranslation?.title || "");
+                setDescriptionEn(enTranslation?.description || "");
                 setPrice((product.price / 100).toFixed(2));
                 setSalePrice(product.salePrice ? (product.salePrice / 100).toFixed(2) : "");
                 setCategory(product.category?.name || product.category || "");
@@ -371,9 +378,12 @@ export default function EditProductPage() {
                 body: JSON.stringify({
                     title: title.trim(),
                     description: description.trim(),
+                    titleEn: titleEn.trim() || null,
+                    descriptionEn: descriptionEn.trim() || null,
                     price: priceInCents,
                     salePrice: salePriceInCents,
                     category: category.trim(),
+                    categoryNameEn: categoryNameEn.trim() || null,
                     stock: stockNumber,
                     images: images.map((img) => img.url),
                     thumbnail,
@@ -532,36 +542,93 @@ export default function EditProductPage() {
                             <h2 className="text-lg font-semibold text-gray-900 mb-6">{t("productInformation")}</h2>
 
                             <div className="space-y-6">
+                                {/* Language Tabs */}
                                 <div>
-                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                                        {t("productTitle")} <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="title"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder={t("productTitlePlaceholder")}
-                                        required
-                                        disabled={submitting}
-                                    />
-                                </div>
+                                    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setContentTab("tr")}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${contentTab === "tr" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                        >
+                                            🇹🇷 Türkçe
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setContentTab("en")}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${contentTab === "en" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                        >
+                                            🇬🇧 English
+                                            {titleEn && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
+                                        </button>
+                                    </div>
 
-                                <div>
-                                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                                        {t("description")} <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        id="description"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        rows={6}
-                                        className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                        placeholder={t("descriptionPlaceholder")}
-                                        required
-                                        disabled={submitting}
-                                    />
+                                    {contentTab === "tr" && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    {t("productTitle")} <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="title"
+                                                    value={title}
+                                                    onChange={(e) => setTitle(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder={t("productTitlePlaceholder")}
+                                                    required
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    {t("description")} <span className="text-red-500">*</span>
+                                                </label>
+                                                <textarea
+                                                    id="description"
+                                                    value={description}
+                                                    onChange={(e) => setDescription(e.target.value)}
+                                                    rows={6}
+                                                    className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder={t("descriptionPlaceholder")}
+                                                    required
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {contentTab === "en" && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label htmlFor="titleEn" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Product Title <span className="text-gray-400 font-normal">(optional)</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="titleEn"
+                                                    value={titleEn}
+                                                    onChange={(e) => setTitleEn(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="Enter product title in English..."
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="descriptionEn" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Description <span className="text-gray-400 font-normal">(optional)</span>
+                                                </label>
+                                                <textarea
+                                                    id="descriptionEn"
+                                                    value={descriptionEn}
+                                                    onChange={(e) => setDescriptionEn(e.target.value)}
+                                                    rows={6}
+                                                    className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="Enter product description in English..."
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Row: Price, Sale Price & Stock */}
@@ -641,7 +708,12 @@ export default function EditProductPage() {
                                             id="category"
                                             list="category-suggestions"
                                             value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
+                                            onChange={(e) => {
+                                                setCategory(e.target.value);
+                                                if (categories.some(c => c.name.toLowerCase() === e.target.value.toLowerCase())) {
+                                                    setCategoryNameEn("");
+                                                }
+                                            }}
                                             className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
                                             placeholder={t("categoryPlaceholder")}
                                             required
@@ -654,6 +726,27 @@ export default function EditProductPage() {
                                             ))}
                                         </datalist>
                                     </div>
+                                    {/* Show EN name field only for new categories */}
+                                    {category.trim() && !categories.some(c => c.name.toLowerCase() === category.trim().toLowerCase()) && (
+                                        <div className="mt-2">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <span className="text-xs font-medium text-amber-600">🆕 Yeni kategori</span>
+                                                <span className="text-xs text-gray-400">— İngilizce ismini de gir:</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm shrink-0">🇬🇧</span>
+                                                <input
+                                                    type="text"
+                                                    value={categoryNameEn}
+                                                    onChange={(e) => setCategoryNameEn(e.target.value)}
+                                                    placeholder="English category name (optional)"
+                                                    maxLength={100}
+                                                    disabled={submitting}
+                                                    className="flex-1 h-9 px-3 rounded-md border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/40 focus:border-amber-400 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

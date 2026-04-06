@@ -206,9 +206,9 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
 
             await refreshCart();
             router.push(`/checkout/success?orderId=${orderId}`);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Upload error:", error);
-            setUploadError(error.message || t("failedToUploadRetry"));
+            setUploadError(error instanceof Error ? error.message : t("failedToUploadRetry"));
             setUploading(false);
         }
     };
@@ -474,30 +474,30 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
 
                             <div style={{ display: "grid", gap: "10px" }}>
                                 {bankDetails.bankName && (
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
-                                        <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div style={{ minWidth: 0 }}>
                                             <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("bankName")}</div>
-                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.bankName}</div>
+                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bankDetails.bankName}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.bankName)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.bankName)} style={{ flexShrink: 0, background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                                 {bankDetails.accountHolder && (
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
-                                        <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div style={{ minWidth: 0 }}>
                                             <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("accountHolder")}</div>
-                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{bankDetails.accountHolder}</div>
+                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bankDetails.accountHolder}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.accountHolder)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.accountHolder)} style={{ flexShrink: 0, background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                                 {bankDetails.iban && (
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
-                                        <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div style={{ minWidth: 0, flex: 1 }}>
                                             <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("iban")}</div>
-                                            <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.iban}</div>
+                                            <div style={{ fontSize: "14px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", wordBreak: "break-all", letterSpacing: "0.5px" }}>{bankDetails.iban}</div>
                                         </div>
-                                        <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
+                                        <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ flexShrink: 0, background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666", marginTop: "2px" }}>{t("copy")}</button>
                                     </div>
                                 )}
                             </div>

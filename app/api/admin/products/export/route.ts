@@ -8,24 +8,32 @@ export async function GET() {
     }
 
     const products = await prisma.product.findMany({
-        include: { category: true },
+        include: {
+            category: true,
+            translations: true,
+        },
         orderBy: { createdAt: "desc" },
     });
 
-    const header = "title,description,price,salePrice,stock,category,isActive,thumbnail";
+    const escape = (s: string | null | undefined) => {
+        if (!s) return "";
+        if (s.includes(",") || s.includes("\n") || s.includes('"')) {
+            return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+    };
+
+    const header = "title,description,title_en,description_en,price,salePrice,stock,category,isActive,thumbnail";
+
     const rows = products.map((p) => {
-        const escape = (s: string | null) => {
-            if (!s) return "";
-            if (s.includes(",") || s.includes("\n") || s.includes('"')) {
-                return `"${s.replace(/"/g, '""')}"`;
-            }
-            return s;
-        };
+        const enTranslation = p.translations.find((t) => t.locale === "en");
         return [
             escape(p.title),
             escape(p.description),
-            (p.price / 100).toFixed(2).replace('.', ','),
-            p.salePrice ? (p.salePrice / 100).toFixed(2).replace('.', ',') : "",
+            escape(enTranslation?.title),
+            escape(enTranslation?.description),
+            (p.price / 100).toFixed(2).replace(".", ","),
+            p.salePrice ? (p.salePrice / 100).toFixed(2).replace(".", ",") : "",
             p.stock,
             escape(p.category?.name ?? ""),
             p.isActive,

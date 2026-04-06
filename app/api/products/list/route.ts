@@ -6,30 +6,18 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
 
-        // Pagination
         const page = parseInt(searchParams.get("page") || "1");
         const pageSize = parseInt(searchParams.get("pageSize") || "12");
-
-        // Filters
         const query = searchParams.get("q") || "";
         const category = searchParams.get("category") || "";
-        const minPrice = searchParams.get("min")
-            ? parseFloat(searchParams.get("min")!) * 100
-            : undefined;
-        const maxPrice = searchParams.get("max")
-            ? parseFloat(searchParams.get("max")!) * 100
-            : undefined;
-        const minRating = searchParams.get("rating")
-            ? parseInt(searchParams.get("rating")!)
-            : undefined;
+        const minPrice = searchParams.get("min") ? parseFloat(searchParams.get("min")!) * 100 : undefined;
+        const maxPrice = searchParams.get("max") ? parseFloat(searchParams.get("max")!) * 100 : undefined;
+        const minRating = searchParams.get("rating") ? parseInt(searchParams.get("rating")!) : undefined;
         const sort = searchParams.get("sort") || undefined;
+        const locale = searchParams.get("locale") || "tr";
 
-        // Build where clause
-        const whereClause: any = {
-            isActive: true,
-        };
+        const whereClause: any = { isActive: true };
 
-        // Search query filter
         if (query) {
             whereClause.OR = [
                 { title: { contains: query, mode: "insensitive" } },
@@ -37,38 +25,34 @@ export async function GET(req: Request) {
             ];
         }
 
-        // Category filter
         if (category) {
-            whereClause.category = { name: category };
+            // Match by Turkish name OR English name
+            whereClause.category = {
+                OR: [
+                    { name: { equals: category, mode: "insensitive" } },
+                    { nameEn: { equals: category, mode: "insensitive" } },
+                ],
+            };
         }
 
-        // Price filter
         if (minPrice !== undefined || maxPrice !== undefined) {
             whereClause.price = {};
-            if (minPrice !== undefined) {
-                whereClause.price.gte = minPrice;
-            }
-            if (maxPrice !== undefined) {
-                whereClause.price.lte = maxPrice;
-            }
+            if (minPrice !== undefined) whereClause.price.gte = minPrice;
+            if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
         }
 
-        // Calculate skip and take
         const skip = (page - 1) * pageSize;
-        const take = pageSize + 1; // Fetch one extra to check if there are more
+        const take = pageSize + 1;
 
-        // Fetch products
         const products = await prisma.product.findMany({
             where: whereClause,
             include: {
-                reviews: {
-                    select: {
-                        id: true,
-                        rating: true,
-                    },
-                },
-                variants: {
-                    select: { id: true, color: true, colorHex: true, stock: true },
+                reviews: { select: { id: true, rating: true } },
+                variants: { select: { id: true, color: true, colorHex: true, stock: true } },
+                category: { select: { id: true, name: true, nameEn: true } },
+                translations: {
+                    where: { locale },
+                    select: { title: true, description: true },
                 },
             },
             orderBy: getSortOrder(sort),
@@ -76,34 +60,34 @@ export async function GET(req: Request) {
             take,
         });
 
-        // Filter by rating if needed
         let filteredProducts = minRating
-            ? products.filter((product) => {
-                if (product.reviews.length === 0) return false;
-                const avgRating =
-                    product.reviews.reduce((sum, r) => sum + r.rating, 0) /
-                    product.reviews.length;
-                return avgRating >= minRating;
+            ? products.filter((p) => {
+                if (p.reviews.length === 0) return false;
+                const avg = p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviews.length;
+                return avg >= minRating;
             })
             : products;
 
-        // Check if there are more products
         const hasMore = filteredProducts.length > pageSize;
+        if (hasMore) filteredProducts = filteredProducts.slice(0, pageSize);
 
-        // Remove the extra product if it exists
-        if (hasMore) {
-            filteredProducts = filteredProducts.slice(0, pageSize);
-        }
-
-        return NextResponse.json({
-            products: filteredProducts,
-            hasMore,
+        // Apply locale translation
+        const localizedProducts = filteredProducts.map(({ translations, category, ...p }) => {
+            const tr = translations[0];
+            return {
+                ...p,
+                title: tr?.title ?? p.title,
+                description: tr?.description ?? p.description,
+                category: category ? {
+                    ...category,
+                    name: locale === "en" && category.nameEn ? category.nameEn : category.name,
+                } : null,
+            };
         });
+
+        return NextResponse.json({ products: localizedProducts, hasMore });
     } catch (error) {
         console.error("Error fetching products:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch products" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
     }
 }

@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 interface Category {
     id: string;
     name: string;
+    nameEn?: string | null;
     _count: { products: number };
 }
 
@@ -19,10 +20,12 @@ export default function CategoriesPage() {
     const [loading, setLoading] = useState(true);
 
     const [newName, setNewName] = useState("");
+    const [newNameEn, setNewNameEn] = useState("");
     const [adding, setAdding] = useState(false);
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState("");
+    const [editNameEn, setEditNameEn] = useState("");
     const [saving, setSaving] = useState(false);
 
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -52,12 +55,13 @@ export default function CategoriesPage() {
             const res = await fetch("/api/admin/categories", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newName.trim() }),
+                body: JSON.stringify({ name: newName.trim(), nameEn: newNameEn.trim() || undefined }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
             setNewName("");
+            setNewNameEn("");
             toast.success(t("categoryAdded", { name: data.name }));
         } catch (err: any) {
             toast.error(err.message || t("failedToAdd"));
@@ -69,11 +73,13 @@ export default function CategoriesPage() {
     function startEdit(cat: Category) {
         setEditingId(cat.id);
         setEditName(cat.name);
+        setEditNameEn(cat.nameEn ?? "");
     }
 
     function cancelEdit() {
         setEditingId(null);
         setEditName("");
+        setEditNameEn("");
     }
 
     async function handleSave(id: string) {
@@ -83,7 +89,7 @@ export default function CategoriesPage() {
             const res = await fetch(`/api/admin/categories/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: editName.trim() }),
+                body: JSON.stringify({ name: editName.trim(), nameEn: editNameEn.trim() || undefined }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -130,20 +136,36 @@ export default function CategoriesPage() {
             </div>
 
             {/* Add new category */}
-            <form onSubmit={handleAdd} className="flex gap-2 mb-8">
-                <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder={t("newNamePlaceholder")}
-                    maxLength={100}
-                    disabled={adding}
-                    className="flex-1 h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                />
+            <form onSubmit={handleAdd} className="mb-8 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+                <p className="text-xs font-semibold text-[#A9A9A9] uppercase tracking-wide">{t("add")}</p>
+                <div className="flex items-center gap-2">
+                    <span className="text-base shrink-0">🇹🇷</span>
+                    <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder={t("newNamePlaceholder")}
+                        maxLength={100}
+                        disabled={adding}
+                        className="flex-1 h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-base shrink-0">🇬🇧</span>
+                    <input
+                        type="text"
+                        value={newNameEn}
+                        onChange={(e) => setNewNameEn(e.target.value)}
+                        placeholder="English name (optional)"
+                        maxLength={100}
+                        disabled={adding}
+                        className="flex-1 h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                    />
+                </div>
                 <Button
                     type="submit"
                     disabled={adding || !newName.trim()}
-                    className="bg-[#C8102E] hover:bg-[#A90D27] text-white px-4"
+                    className="bg-[#C8102E] hover:bg-[#A90D27] text-white px-4 w-full"
                 >
                     {adding ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -168,45 +190,75 @@ export default function CategoriesPage() {
                 ) : (
                     <ul className="divide-y divide-gray-100">
                         {categories.map((cat) => (
-                            <li key={cat.id} className="flex items-center gap-3 px-4 py-3">
+                            <li key={cat.id} className="px-4 py-3">
                                 {editingId === cat.id ? (
-                                    <>
-                                        <input
-                                            type="text"
-                                            value={editName}
-                                            onChange={(e) => setEditName(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") handleSave(cat.id);
-                                                if (e.key === "Escape") cancelEdit();
-                                            }}
-                                            maxLength={100}
-                                            autoFocus
-                                            className="flex-1 h-9 px-3 rounded-md border border-[#C8102E] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
-                                        />
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleSave(cat.id)}
-                                            disabled={saving || !editName.trim()}
-                                            className="h-8 w-8 text-green-600 hover:bg-green-50"
-                                        >
-                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={cancelEdit}
-                                            disabled={saving}
-                                            className="h-8 w-8 text-gray-400 hover:bg-gray-100"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base shrink-0">🇹🇷</span>
+                                            <input
+                                                type="text"
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Escape") cancelEdit();
+                                                }}
+                                                maxLength={100}
+                                                autoFocus
+                                                className="flex-1 h-9 px-3 rounded-md border border-[#C8102E] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base shrink-0">🇬🇧</span>
+                                            <input
+                                                type="text"
+                                                value={editNameEn}
+                                                onChange={(e) => setEditNameEn(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") handleSave(cat.id);
+                                                    if (e.key === "Escape") cancelEdit();
+                                                }}
+                                                placeholder="English name (optional)"
+                                                maxLength={100}
+                                                className="flex-1 h-9 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 justify-end">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleSave(cat.id)}
+                                                disabled={saving || !editName.trim()}
+                                                className="text-green-600 hover:bg-green-50"
+                                            >
+                                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Kaydet</>}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={cancelEdit}
+                                                disabled={saving}
+                                                className="text-gray-400 hover:bg-gray-100"
+                                            >
+                                                <X className="h-4 w-4 mr-1" /> İptal
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <>
+                                    <div className="flex items-center gap-3">
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-sm font-medium text-[#1A1A1A]">{cat.name}</span>
-                                            <span className="ml-2 text-xs text-[#A9A9A9]">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-medium text-[#1A1A1A]">
+                                                    🇹🇷 {cat.name}
+                                                </span>
+                                                {cat.nameEn ? (
+                                                    <span className="text-sm text-blue-600 font-medium">
+                                                        🇬🇧 {cat.nameEn}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-amber-500 font-medium">🇬🇧 eksik</span>
+                                                )}
+                                            </div>
+                                            <span className="text-xs text-[#A9A9A9]">
                                                 {cat._count.products !== 1
                                                     ? t("productCountPlural", { count: cat._count.products })
                                                     : t("productCount", { count: cat._count.products })}
@@ -234,7 +286,7 @@ export default function CategoriesPage() {
                                                 <Trash2 className="h-4 w-4" />
                                             )}
                                         </Button>
-                                    </>
+                                    </div>
                                 )}
                             </li>
                         ))}

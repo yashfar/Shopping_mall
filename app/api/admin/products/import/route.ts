@@ -54,7 +54,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "CSV must have a header row and at least one data row" }, { status: 400 });
         }
 
-        // Validate header
         const header = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
         const requiredFields = ["title", "price", "stock"];
         for (const field of requiredFields) {
@@ -65,6 +64,8 @@ export async function POST(req: Request) {
 
         const titleIdx = header.indexOf("title");
         const descIdx = header.indexOf("description");
+        const titleEnIdx = header.indexOf("title_en");
+        const descEnIdx = header.indexOf("description_en");
         const priceIdx = header.indexOf("price");
         const salePriceIdx = header.indexOf("saleprice");
         const stockIdx = header.indexOf("stock");
@@ -85,7 +86,8 @@ export async function POST(req: Request) {
                 continue;
             }
 
-            const price = Math.round(parseFloat(cols[priceIdx]) * 100);
+            const rawPrice = cols[priceIdx]?.replace(",", ".");
+            const price = Math.round(parseFloat(rawPrice) * 100);
             if (isNaN(price) || price <= 0) {
                 errors.push(`Row ${row}: Invalid price`);
                 continue;
@@ -93,7 +95,8 @@ export async function POST(req: Request) {
 
             let salePrice: number | null = null;
             if (salePriceIdx >= 0 && cols[salePriceIdx]?.trim()) {
-                salePrice = Math.round(parseFloat(cols[salePriceIdx]) * 100);
+                const rawSale = cols[salePriceIdx].replace(",", ".");
+                salePrice = Math.round(parseFloat(rawSale) * 100);
                 if (isNaN(salePrice) || salePrice <= 0) {
                     salePrice = null;
                 } else if (salePrice >= price) {
@@ -109,29 +112,45 @@ export async function POST(req: Request) {
             }
 
             const description = descIdx >= 0 ? cols[descIdx]?.trim() || null : null;
+            const titleEn = titleEnIdx >= 0 ? cols[titleEnIdx]?.trim() || null : null;
+            const descriptionEn = descEnIdx >= 0 ? cols[descEnIdx]?.trim() || null : null;
             const categoryName = categoryIdx >= 0 ? cols[categoryIdx]?.trim() || null : null;
             const isActive = isActiveIdx >= 0 ? cols[isActiveIdx]?.toLowerCase() !== "false" : stock > 0;
             const thumbnail = thumbnailIdx >= 0 ? cols[thumbnailIdx]?.trim() || null : null;
 
             try {
-                await prisma.product.create({
-                    data: {
-                        title,
-                        description,
-                        price,
-                        salePrice,
-                        stock,
-                        isActive,
-                        thumbnail,
-                        ...(categoryName && {
-                            category: {
-                                connectOrCreate: {
-                                    where: { name: categoryName },
-                                    create: { name: categoryName },
+                await prisma.$transaction(async (tx) => {
+                    const product = await tx.product.create({
+                        data: {
+                            title,
+                            description,
+                            price,
+                            salePrice,
+                            stock,
+                            isActive,
+                            thumbnail,
+                            ...(categoryName && {
+                                category: {
+                                    connectOrCreate: {
+                                        where: { name: categoryName },
+                                        create: { name: categoryName },
+                                    },
                                 },
+                            }),
+                        },
+                    });
+
+                    // Save English translation if provided
+                    if (titleEn) {
+                        await tx.productTranslation.create({
+                            data: {
+                                productId: product.id,
+                                locale: "en",
+                                title: titleEn,
+                                description: descriptionEn ?? null,
                             },
-                        }),
-                    },
+                        });
+                    }
                 });
                 created++;
             } catch (err) {

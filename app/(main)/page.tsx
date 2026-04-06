@@ -3,7 +3,7 @@ import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import BannerCarousel from "@@/components/BannerCarousel";
 import FeaturedProductsCarousel from "@@/components/FeaturedProductsCarousel";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -18,6 +18,7 @@ interface HomeProps {
 
 export default async function Home({ searchParams }: HomeProps) {
   const t = await getTranslations("catalog");
+  const locale = await getLocale();
   const params = await searchParams;
   const query = params.q || "";
   const category = params.category || "";
@@ -39,13 +40,13 @@ export default async function Home({ searchParams }: HomeProps) {
     ];
   }
 
-  // Category filter
+  // Category filter (match TR or EN name)
   if (category) {
     whereClause.category = {
-      name: {
-        equals: category,
-        mode: "insensitive"
-      }
+      OR: [
+        { name: { equals: category, mode: "insensitive" } },
+        { nameEn: { equals: category, mode: "insensitive" } },
+      ],
     };
   }
 
@@ -57,21 +58,26 @@ export default async function Home({ searchParams }: HomeProps) {
   }
 
   // Fetch initial page of products (12 items)
-  const products = await prisma.product.findMany({
+  const rawProducts = await prisma.product.findMany({
     where: whereClause,
     include: {
-      reviews: {
-        select: {
-          id: true,
-          rating: true,
-        },
-      },
-      variants: {
-        select: { id: true, color: true, colorHex: true, stock: true },
-      },
+      reviews: { select: { id: true, rating: true } },
+      variants: { select: { id: true, color: true, colorHex: true, stock: true } },
+      category: { select: { id: true, name: true, nameEn: true } },
+      translations: { where: { locale }, select: { title: true, description: true } },
     },
     orderBy: getSortOrder(sort),
     take: 12,
+  });
+
+  const products = rawProducts.map(({ translations, category, ...p }) => {
+    const tr = translations[0];
+    return {
+      ...p,
+      title: tr?.title ?? p.title,
+      description: tr?.description ?? p.description,
+      category: category ? { ...category, name: locale === "en" && category.nameEn ? category.nameEn : category.name } : null,
+    };
   });
 
   // Filter by rating (client-side)
@@ -88,13 +94,13 @@ export default async function Home({ searchParams }: HomeProps) {
   // Apply sorting
   filteredProducts = sortProducts(filteredProducts, sort);
 
-  // Fetch all categories for the sidebar
+  // Fetch all categories for the sidebar (locale-aware)
   const allCategories = await prisma.category.findMany({
-    select: { name: true },
+    select: { name: true, nameEn: true },
     orderBy: { name: "asc" },
   });
 
-  const categories = allCategories.map((c) => c.name);
+  const categories = allCategories.map((c) => locale === "en" && c.nameEn ? c.nameEn : c.name);
 
   // Fetch active banners and settings for carousel
   const banners = await prisma.banner.findMany({
@@ -134,11 +140,14 @@ export default async function Home({ searchParams }: HomeProps) {
         orderBy: { order: "asc" },
         include: {
           product: {
-            include: { category: true } // Include category for display
-          }
-        }
-      }
-    }
+            include: {
+              category: true,
+              translations: { where: { locale }, select: { title: true, description: true } },
+            },
+          },
+        },
+      },
+    },
   });
 
   const newProductsCarousel = await prisma.featuredCarousel.findUnique({
@@ -148,16 +157,30 @@ export default async function Home({ searchParams }: HomeProps) {
         orderBy: { order: "asc" },
         include: {
           product: {
-            include: { category: true }
-          }
-        }
-      }
-    }
+            include: {
+              category: true,
+              translations: { where: { locale }, select: { title: true, description: true } },
+            },
+          },
+        },
+      },
+    },
   });
 
-  // Extract products from carousels
-  const bestSellers = bestSellerCarousel?.items.map(item => item.product) || [];
-  const newProducts = newProductsCarousel?.items.map(item => item.product) || [];
+  // Extract products from carousels, applying locale translation
+  const applyTranslation = (product: any) => {
+    const tr = product.translations?.[0];
+    const { translations, category, ...rest } = product;
+    return {
+      ...rest,
+      title: tr?.title ?? product.title,
+      description: tr?.description ?? product.description,
+      category: category ? { ...category, name: locale === "en" && category.nameEn ? category.nameEn : category.name } : null,
+    };
+  };
+
+  const bestSellers = bestSellerCarousel?.items.map(item => applyTranslation(item.product)) || [];
+  const newProducts = newProductsCarousel?.items.map(item => applyTranslation(item.product)) || [];
 
   return (
     <>
@@ -189,6 +212,7 @@ export default async function Home({ searchParams }: HomeProps) {
       <ProductCatalog
         initialProducts={filteredProducts}
         categories={categories}
+        locale={locale}
         queryParams={{
           q: query,
           category,

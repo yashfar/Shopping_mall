@@ -18,6 +18,7 @@ interface Product {
 interface ProductCatalogProps {
     initialProducts: Product[];
     categories: string[];
+    locale?: string;
     queryParams: {
         q?: string;
         category?: string;
@@ -36,6 +37,7 @@ interface ProductCatalogProps {
 export default function ProductCatalog({
     initialProducts,
     categories,
+    locale = "tr",
     queryParams,
     title = "All Products",
     description = "Browse our collection",
@@ -176,6 +178,7 @@ export default function ProductCatalog({
                     <ProductInfiniteList
                         initialProducts={initialProducts}
                         queryParams={queryParams}
+                        locale={locale}
                         emptyMessage={t("noProductsFound")}
                         emptyDescription={t("noProductsDescription")}
                     />

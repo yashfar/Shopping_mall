@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@@/context/CurrencyContext";
@@ -18,7 +18,9 @@ import {
     CheckCircle2,
     XCircle,
     Download,
-    Upload
+    Upload,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,54 +37,81 @@ type Product = {
     variants?: { id: string; stock: number }[];
 };
 
+type Pagination = {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+};
+
+const PAGE_SIZE = 20;
+
 export default function ProductManagement() {
     const t = useTranslations("adminProducts");
     const { formatPrice } = useCurrency();
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
+    const [pagination, setPagination] = useState<Pagination | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "", title: "" });
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [importing, setImporting] = useState(false);
 
-    // Fetch products
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async (page = 1, search = "") => {
         try {
             setLoading(true);
             setError("");
-            const response = await fetch("/api/admin/products");
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(PAGE_SIZE),
+            });
+            if (search) params.set("search", search);
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch products");
-            }
+            const response = await fetch(`/api/admin/products?${params}`);
+            if (!response.ok) throw new Error("Failed to fetch products");
 
             const data = await response.json();
             setProducts(data.products);
+            setPagination(data.pagination);
         } catch (err) {
             setError(t("failedToLoadProducts"));
             console.error(err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
 
-    // Delete product logic
+    useEffect(() => {
+        fetchProducts(currentPage, searchTerm);
+    }, [currentPage, searchTerm, fetchProducts]);
+
+    // Debounced search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput);
+            setCurrentPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
     const confirmDelete = async () => {
         const { id } = deleteDialog;
         try {
             setUpdatingId(id);
-            const response = await fetch(`/api/admin/products/${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || t("failedToDeleteProduct"));
 
-            if (!response.ok) {
-                throw new Error("Failed to delete product");
+            if (data.message === "deactivated") {
+                toast.warning("Bu ürünün siparişleri olduğu için silinemedi. Bunun yerine pasife alındı.");
+            } else {
+                toast.success(t("productDeleted"));
             }
-
-            toast.success(t("productDeleted"));
-            await fetchProducts();
+            await fetchProducts(currentPage, searchTerm);
         } catch (err: any) {
             toast.error(err.message || t("failedToDeleteProduct"));
         } finally {
@@ -91,7 +120,6 @@ export default function ProductManagement() {
         }
     };
 
-    // Toggle active status
     const toggleActive = async (id: string, currentStatus: boolean) => {
         try {
             setUpdatingId(id);
@@ -100,19 +128,12 @@ export default function ProductManagement() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isActive: !currentStatus }),
             });
-
-            if (!response.ok) {
-                throw new Error("Failed to update status");
-            }
-
+            if (!response.ok) throw new Error("Failed to update status");
             toast.success(!currentStatus ? t("productActivated") : t("productDeactivated"));
-            // Optimistic update
-            setProducts(products.map(p =>
-                p.id === id ? { ...p, isActive: !currentStatus } : p
-            ));
+            setProducts(products.map(p => p.id === id ? { ...p, isActive: !currentStatus } : p));
         } catch (err: any) {
             toast.error(err.message || t("failedToUpdateStatus"));
-            await fetchProducts(); // Revert on error
+            await fetchProducts(currentPage, searchTerm);
         } finally {
             setUpdatingId(null);
         }
@@ -121,28 +142,17 @@ export default function ProductManagement() {
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         setImporting(true);
         try {
             const formData = new FormData();
             formData.append("file", file);
-
-            const res = await fetch("/api/admin/products/import", {
-                method: "POST",
-                body: formData,
-            });
+            const res = await fetch("/api/admin/products/import", { method: "POST", body: formData });
             const data = await res.json();
-
-            if (!res.ok) {
-                toast.error(data.error || t("importFailed"));
-                return;
-            }
-
+            if (!res.ok) { toast.error(data.error || t("importFailed")); return; }
             toast.success(t("importedProducts", { created: data.created, total: data.total }));
-            if (data.errors?.length) {
-                data.errors.slice(0, 3).forEach((err: string) => toast.error(err));
-            }
-            await fetchProducts();
+            if (data.errors?.length) data.errors.slice(0, 3).forEach((err: string) => toast.error(err));
+            await fetchProducts(1, searchTerm);
+            setCurrentPage(1);
         } catch {
             toast.error(t("failedToImportCsv"));
         } finally {
@@ -150,15 +160,6 @@ export default function ProductManagement() {
             e.target.value = "";
         }
     };
-
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-
-    const filteredProducts = products.filter(product =>
-        product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
 
     if (loading) {
         return (
@@ -172,7 +173,7 @@ export default function ProductManagement() {
         return (
             <div className="p-6 bg-red-50 rounded-lg border border-red-200 text-red-600 flex flex-col items-center gap-4">
                 <p>{error}</p>
-                <Button onClick={fetchProducts} variant="outline" className="border-red-200 hover:bg-red-100">
+                <Button onClick={() => fetchProducts(currentPage, searchTerm)} variant="outline" className="border-red-200 hover:bg-red-100">
                     {t("retry")}
                 </Button>
             </div>
@@ -181,7 +182,6 @@ export default function ProductManagement() {
 
     return (
         <div className="space-y-8">
-            {/* Confirm Dialog */}
             <ConfirmDialog
                 open={deleteDialog.open}
                 onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
@@ -199,15 +199,15 @@ export default function ProductManagement() {
                     <input
                         type="text"
                         placeholder={t("searchProducts")}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
                         className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all text-sm"
                     />
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
                     <Button
-                        onClick={fetchProducts}
+                        onClick={() => fetchProducts(currentPage, searchTerm)}
                         variant="outline"
                         size="icon"
                         className="shrink-0"
@@ -243,15 +243,21 @@ export default function ProductManagement() {
                 </div>
             </div>
 
+            {/* Total count */}
+            {pagination && (
+                <p className="text-sm text-gray-500">
+                    Toplam <span className="font-semibold text-gray-700">{pagination.total}</span> ürün
+                    {searchTerm && ` · "${searchTerm}" araması`}
+                </p>
+            )}
+
             {/* Products Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                     <div
                         key={product.id}
-                        className={`group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full ${updatingId === product.id ? "opacity-60 pointer-events-none" : ""
-                            }`}
+                        className={`group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full ${updatingId === product.id ? "opacity-60 pointer-events-none" : ""}`}
                     >
-                        {/* Image / Thumbnail Area */}
                         <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
                             {product.thumbnail ? (
                                 <img
@@ -264,19 +270,13 @@ export default function ProductManagement() {
                                     <ImageIcon className="w-12 h-12" />
                                 </div>
                             )}
-
-                            {/* Status Badge */}
                             <div className="absolute top-3 right-3">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md shadow-sm border ${product.isActive
-                                        ? "bg-emerald-500/90 text-white border-emerald-600/20"
-                                        : "bg-gray-500/90 text-white border-gray-600/20"
-                                    }`}>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md shadow-sm border ${product.isActive ? "bg-emerald-500/90 text-white border-emerald-600/20" : "bg-gray-500/90 text-white border-gray-600/20"}`}>
                                     {product.isActive ? t("active") : t("draft")}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Content */}
                         <div className="p-4 flex flex-col flex-1">
                             <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-[#C8102E] transition-colors">
                                 {product.title}
@@ -288,9 +288,7 @@ export default function ProductManagement() {
                             <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                                 <div className="flex flex-col">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("price")}</span>
-                                    <span className="font-bold text-lg text-gray-900">
-                                        {formatPrice(product.price)}
-                                    </span>
+                                    <span className="font-bold text-lg text-gray-900">{formatPrice(product.price)}</span>
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("stock")}</span>
@@ -310,7 +308,6 @@ export default function ProductManagement() {
                             </div>
                         </div>
 
-                        {/* Actions Overlay (Desktop) / Buttons (Mobile) */}
                         <div className="p-3 bg-gray-50/80 border-t border-gray-100 grid grid-cols-2 gap-2">
                             <Button
                                 variant="outline"
@@ -332,16 +329,9 @@ export default function ProductManagement() {
                             </Button>
                         </div>
 
-                        {/* Quick Action: Toggle Status */}
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                toggleActive(product.id, product.isActive);
-                            }}
-                            className={`absolute top-3 left-3 p-1.5 rounded-full backdrop-blur-md border transition-all ${product.isActive
-                                    ? "bg-white/90 text-emerald-600 border-white/50 hover:bg-red-50 hover:text-red-600"
-                                    : "bg-white/90 text-gray-400 border-white/50 hover:bg-emerald-50 hover:text-emerald-600"
-                                }`}
+                            onClick={(e) => { e.stopPropagation(); toggleActive(product.id, product.isActive); }}
+                            className={`absolute top-3 left-3 p-1.5 rounded-full backdrop-blur-md border transition-all ${product.isActive ? "bg-white/90 text-emerald-600 border-white/50 hover:bg-red-50 hover:text-red-600" : "bg-white/90 text-gray-400 border-white/50 hover:bg-emerald-50 hover:text-emerald-600"}`}
                             title={product.isActive ? t("deactivate") : t("activate")}
                         >
                             {product.isActive ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
@@ -351,7 +341,7 @@ export default function ProductManagement() {
             </div>
 
             {/* Empty State */}
-            {filteredProducts.length === 0 && (
+            {products.length === 0 && (
                 <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                     <div className="bg-white p-4 rounded-full inline-flex mb-4 shadow-sm">
                         <Package className="w-8 h-8 text-gray-400" />
@@ -366,6 +356,58 @@ export default function ProductManagement() {
                             {t("createNewProduct")}
                         </Button>
                     </Link>
+                </div>
+            )}
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-500">
+                        Sayfa <span className="font-semibold">{pagination.page}</span> / <span className="font-semibold">{pagination.totalPages}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1 || loading}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - currentPage) <= 1)
+                            .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                                acc.push(p);
+                                return acc;
+                            }, [])
+                            .map((item, idx) =>
+                                item === "..." ? (
+                                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
+                                ) : (
+                                    <Button
+                                        key={item}
+                                        variant={currentPage === item ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setCurrentPage(item as number)}
+                                        disabled={loading}
+                                        className={currentPage === item ? "bg-[#C8102E] hover:bg-[#A90D27] text-white" : ""}
+                                    >
+                                        {item}
+                                    </Button>
+                                )
+                            )}
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                            disabled={currentPage === pagination.totalPages || loading}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

@@ -15,7 +15,7 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { name } = await req.json();
+        const { name, nameEn } = await req.json();
 
         if (!name || typeof name !== "string" || name.trim().length === 0) {
             return NextResponse.json({ error: "Category name is required" }, { status: 400 });
@@ -27,7 +27,7 @@ export async function PATCH(
 
         const category = await prisma.category.update({
             where: { id },
-            data: { name: name.trim() },
+            data: { name: name.trim(), nameEn: nameEn?.trim() || null },
             include: { _count: { select: { products: true } } },
         });
 

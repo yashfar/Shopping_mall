@@ -86,7 +86,7 @@ export function CategoryDropdown({ categories }: { categories: Category[] }) {
                         return (
                             <DropdownMenuItem key={category.id} asChild className="focus:bg-red-50 focus:text-[#C8102E] rounded-lg cursor-pointer my-0.5">
                                 <Link
-                                    href={`/category/${category.name.toLowerCase()}`}
+                                    href={`/products?category=${encodeURIComponent(category.name)}`}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 group"
                                 >
                                     <div className="p-2 rounded-md bg-gray-50 text-[#A9A9A9] group-hover:bg-[#C8102E]/10 group-hover:text-[#C8102E] transition-colors">
