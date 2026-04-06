@@ -8,14 +8,20 @@ import Image from "next/image";
 import FilishopLogoLight from "@@/public/logo/Filishop-logo-light.png";
 import AdminNavbarLink from "@@/components/AdminNavbarLink";
 import LanguageSwitcher from "@@/components/LanguageSwitcher";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function Navbar() {
     const t = await getTranslations("navbar");
     const session = await auth();
-    const categories = await prisma.category.findMany({
+    const locale = await getLocale();
+    const rawCategories = await prisma.category.findMany({
         orderBy: { name: "asc" },
+        select: { id: true, name: true, nameEn: true },
     });
+    const categories = rawCategories.map((c) => ({
+        id: c.id,
+        name: locale === "en" && c.nameEn ? c.nameEn : c.name,
+    }));
 
     return (
         <nav className="sticky top-0 z-40 p-1 transition-all duration-300">

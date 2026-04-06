@@ -25,6 +25,7 @@ export async function GET(
             include: {
                 images: true,
                 category: true,
+                translations: true,
                 variants: { orderBy: { createdAt: "asc" } },
             },
         });
@@ -60,7 +61,7 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { title, description, price, salePrice, stock, isActive, images, thumbnail, category } = await req.json();
+        const { title, description, titleEn, descriptionEn, price, salePrice, stock, isActive, images, thumbnail, category, categoryNameEn } = await req.json();
 
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
@@ -71,19 +72,29 @@ export async function PATCH(
             updateData.category = {
                 connectOrCreate: {
                     where: { name: category },
-                    create: { name: category },
+                    create: { name: category, nameEn: categoryNameEn?.trim() || null },
                 },
             };
+            // If EN name provided and category already exists, update it too
+            if (categoryNameEn !== undefined) {
+                (async () => {
+                    try {
+                        await prisma.category.updateMany({
+                            where: { name: category },
+                            data: { nameEn: categoryNameEn?.trim() || null },
+                        });
+                    } catch {}
+                })();
+            }
         }
         if (thumbnail !== undefined) updateData.thumbnail = thumbnail;
 
-        // Handle stock updates with auto-toggle of isActive
         if (stock !== undefined) {
             updateData.stock = stock;
             if (stock <= 0) {
                 updateData.isActive = false;
             } else {
-                updateData.isActive = true; // Auto-activate if stock added? Maybe not always desired, but safe default
+                updateData.isActive = true;
             }
         }
 
@@ -91,28 +102,40 @@ export async function PATCH(
             updateData.isActive = isActive;
         }
 
-        // Database transaction to handle product update and image sync
         const product = await prisma.$transaction(async (tx) => {
-            // Update basic fields
             const updated = await tx.product.update({
                 where: { id },
                 data: updateData,
             });
 
-            // Handle image updates if provided
             if (images && Array.isArray(images)) {
-                // Delete existing images
-                await tx.productImage.deleteMany({
-                    where: { productId: id },
-                });
-
-                // Create new images
+                await tx.productImage.deleteMany({ where: { productId: id } });
                 if (images.length > 0) {
                     await tx.productImage.createMany({
-                        data: images.map((url: string) => ({
+                        data: images.map((url: string) => ({ productId: id, url })),
+                    });
+                }
+            }
+
+            // Handle English translation upsert
+            if (titleEn !== undefined) {
+                if (titleEn?.trim()) {
+                    await tx.productTranslation.upsert({
+                        where: { productId_locale: { productId: id, locale: "en" } },
+                        create: {
                             productId: id,
-                            url: url,
-                        })),
+                            locale: "en",
+                            title: titleEn.trim(),
+                            description: descriptionEn?.trim() ?? null,
+                        },
+                        update: {
+                            title: titleEn.trim(),
+                            description: descriptionEn?.trim() ?? null,
+                        },
+                    });
+                } else {
+                    await tx.productTranslation.deleteMany({
+                        where: { productId: id, locale: "en" },
                     });
                 }
             }
@@ -178,11 +201,25 @@ export async function DELETE(
     const { id } = await params;
 
     try {
-        await prisma.product.delete({
-            where: { id },
+        // Check if product has orders
+        const orderCount = await prisma.orderItem.count({
+            where: { productId: id },
         });
 
-        return NextResponse.json({ message: "Product deleted" });
+        if (orderCount > 0) {
+            // Can't delete — has order history. Deactivate instead.
+            await prisma.product.update({
+                where: { id },
+                data: { isActive: false },
+            });
+            return NextResponse.json({
+                message: "deactivated",
+                reason: "Product has orders and cannot be permanently deleted. It has been deactivated instead.",
+            });
+        }
+
+        await prisma.product.delete({ where: { id } });
+        return NextResponse.json({ message: "deleted" });
     } catch (error) {
         console.error("Error deleting product:", error);
         return NextResponse.json(

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { getLocale } from "next-intl/server";
 import ProductDetailClient from "./ProductDetailClient";
 
 interface ProductPageProps {
@@ -9,20 +10,15 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
     const { id } = await params;
+    const locale = await getLocale();
 
-    // Fetch product with images and reviews
     const product = await prisma.product.findUnique({
         where: { id },
         include: {
-            images: {
-                orderBy: {
-                    createdAt: "asc",
-                },
-            },
+            images: { orderBy: { createdAt: "asc" } },
             category: true,
-            variants: {
-                orderBy: { createdAt: "asc" },
-            },
+            translations: true,
+            variants: { orderBy: { createdAt: "asc" } },
             reviews: {
                 include: {
                     user: {
@@ -34,9 +30,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                         },
                     },
                 },
-                orderBy: {
-                    createdAt: "desc",
-                },
+                orderBy: { createdAt: "desc" },
             },
         },
     });
@@ -45,24 +39,32 @@ export default async function ProductPage({ params }: ProductPageProps) {
         notFound();
     }
 
-    // Calculate average rating
+    // Apply locale translation if available, fallback to default fields
+    const translation = product.translations.find((t) => t.locale === locale);
+    const localizedProduct = {
+        ...product,
+        title: translation?.title ?? product.title,
+        description: translation?.description ?? product.description,
+        category: product.category ? {
+            ...product.category,
+            name: locale === "en" && product.category.nameEn ? product.category.nameEn : product.category.name,
+        } : null,
+    };
+
     const averageRating =
         product.reviews.length > 0
-            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
-            product.reviews.length
+            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
             : 0;
 
-    // Get current user session
     const session = await auth();
 
-    // Check if current user has reviewed this product
     const userReview = (session
         ? product.reviews.find((review) => review.userId === session.user.id)
         : null) || null;
 
     return (
         <ProductDetailClient
-            product={product}
+            product={localizedProduct}
             averageRating={averageRating}
             userReview={userReview}
             isAuthenticated={!!session}

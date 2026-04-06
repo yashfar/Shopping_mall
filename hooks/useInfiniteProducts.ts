@@ -24,12 +24,14 @@ interface QueryParams {
 interface UseInfiniteProductsProps {
     initialProducts: Product[];
     queryParams: QueryParams;
+    locale?: string;
     pageSize?: number;
 }
 
 export function useInfiniteProducts({
     initialProducts,
     queryParams,
+    locale = "tr",
     pageSize = 12,
 }: UseInfiniteProductsProps) {
     const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -63,6 +65,7 @@ export function useInfiniteProducts({
             const params = new URLSearchParams({
                 page: String(currentPage + 1),
                 pageSize: String(pageSize),
+                locale,
                 ...queryParams,
             });
 

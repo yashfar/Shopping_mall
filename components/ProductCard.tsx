@@ -85,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         >
             {/* Image Container */}
             <div className="relative aspect-[3/4] h-[200px] md:h-auto w-full bg-[#f9f9f9] overflow-hidden">
-                {product.thumbnail ? (
+                {product.thumbnail && (product.thumbnail.startsWith("/") || product.thumbnail.startsWith("http")) ? (
                     <Image
                         src={product.thumbnail}
                         alt={product.title}

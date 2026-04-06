@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 interface ProductsPageProps {
     searchParams: Promise<{
@@ -18,6 +18,7 @@ interface ProductsPageProps {
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
     const t = await getTranslations("catalog");
+    const locale = await getLocale();
     const params = await searchParams;
     const query = params.q || "";
     const category = params.category || "";
@@ -41,13 +42,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         ];
     }
 
-    // Category filter
+    // Category filter (match TR or EN name)
     if (category) {
         whereClause.category = {
-            name: {
-                equals: category,
-                mode: "insensitive"
-            }
+            OR: [
+                { name: { equals: category, mode: "insensitive" } },
+                { nameEn: { equals: category, mode: "insensitive" } },
+            ],
         };
     }
 
@@ -69,21 +70,26 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     }
 
     // Fetch initial page of products (12 items)
-    const products = await prisma.product.findMany({
+    const rawProducts = await prisma.product.findMany({
         where: whereClause,
         include: {
-            reviews: {
-                select: {
-                    id: true,
-                    rating: true,
-                },
-            },
-            variants: {
-                select: { id: true, color: true, colorHex: true, stock: true },
-            },
+            reviews: { select: { id: true, rating: true } },
+            variants: { select: { id: true, color: true, colorHex: true, stock: true } },
+            category: { select: { id: true, name: true, nameEn: true } },
+            translations: { where: { locale }, select: { title: true, description: true } },
         },
         orderBy: getSortOrder(sort),
         take: 12,
+    });
+
+    const products = rawProducts.map(({ translations, category, ...p }) => {
+        const tr = translations[0];
+        return {
+            ...p,
+            title: tr?.title ?? p.title,
+            description: tr?.description ?? p.description,
+            category: category ? { ...category, name: locale === "en" && category.nameEn ? category.nameEn : category.name } : null,
+        };
     });
 
     // Filter by rating (client-side)
@@ -100,18 +106,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     // Apply sorting
     filteredProducts = sortProducts(filteredProducts, sort);
 
-    // Fetch all categories for the sidebar
+    // Fetch all categories for the sidebar (locale-aware)
     const allCategories = await prisma.category.findMany({
-        select: { name: true },
+        select: { name: true, nameEn: true },
         orderBy: { name: "asc" },
     });
 
-    const categories = allCategories.map((c) => c.name);
+    const categories = allCategories.map((c) => locale === "en" && c.nameEn ? c.nameEn : c.name);
 
     return (
         <ProductCatalog
             initialProducts={filteredProducts}
             categories={categories}
+            locale={locale}
             queryParams={{
                 q: query,
                 category,

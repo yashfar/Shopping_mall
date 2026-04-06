@@ -61,6 +61,7 @@ model Address {
 model Category {
   id       String    @id @default(cuid())
   name     String    @unique
+  nameEn   String?
   products Product[]
 }
 
@@ -75,7 +76,8 @@ model Product {
   categoryId  String?
   category    Category?      @relation(fields: [categoryId], references: [id])
   thumbnail   String?        // selected main image
-  images      ProductImage[]
+  images        ProductImage[]
+  translations  ProductTranslation[]
   reviews       Review[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
@@ -85,6 +87,19 @@ model Product {
   variants      ProductVariant[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+model ProductTranslation {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  locale      String   // "tr", "en"
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([productId, locale])
 }
 
 model ProductImage {
