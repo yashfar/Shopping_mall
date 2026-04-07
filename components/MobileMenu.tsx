@@ -55,10 +55,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-white">
                 <SheetHeader className="p-4 border-b border-gray-100 bg-gray-50/30">
-                    <div className="flex items-center justify-between">
-                        <SheetTitle className="text-left font-bold text-lg text-[#1A1A1A]">{t("menu")}</SheetTitle>
-                        <LanguageSwitcher compact />
-                    </div>
+                    <SheetTitle className="text-left font-bold text-lg text-[#1A1A1A]">{t("menu")}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto py-4">
@@ -154,34 +151,43 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                 </div>
 
                 {/* Footer / User Profile */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-                    {user ? (
-                        <Link href="/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200">
-                            <div className="w-10 h-10 rounded-full bg-[#C8102E]/10 flex items-center justify-center text-[#C8102E] overflow-hidden">
-                                {user.image ? (
-                                    <img src={user.image} alt={user.name || t("user")} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="font-bold text-sm">{(user.name || user.email || "U").charAt(0).toUpperCase()}</span>
-                                )}
+                <div className="border-t border-gray-100 bg-gray-50/50">
+                    {/* Language Switcher */}
+                    <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("language")}</span>
+                        <LanguageSwitcher />
+                    </div>
+
+                    {/* User Profile / Auth */}
+                    <div className="p-4">
+                        {user ? (
+                            <Link href="/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200">
+                                <div className="w-10 h-10 rounded-full bg-[#C8102E]/10 flex items-center justify-center text-[#C8102E] overflow-hidden">
+                                    {user.image ? (
+                                        <img src={user.image} alt={user.name || t("user")} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="font-bold text-sm">{(user.name || user.email || "U").charAt(0).toUpperCase()}</span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm text-[#1A1A1A] truncate">{user.name || t("user")}</p>
+                                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                </div>
+                            </Link>
+                        ) : (
+                            <div className="grid gap-2">
+                                <Button asChild className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
+                                    <Link href="/login">
+                                        <LogIn className="w-4 h-4 mr-2" />
+                                        {t("signIn")}
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline" className="w-full">
+                                    <Link href="/register">{t("createAccount")}</Link>
+                                </Button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm text-[#1A1A1A] truncate">{user.name || t("user")}</p>
-                                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                            </div>
-                        </Link>
-                    ) : (
-                        <div className="grid gap-2">
-                            <Button asChild className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white">
-                                <Link href="/login">
-                                    <LogIn className="w-4 h-4 mr-2" />
-                                    {t("signIn")}
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline" className="w-full">
-                                <Link href="/register">{t("createAccount")}</Link>
-                            </Button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </SheetContent>
         </Sheet>

@@ -71,10 +71,11 @@
     "admin": "Yönetici",
     "signIn": "Giriş Yap",
     "createAccount": "Hesap Oluştur",
-    "user": "Kullanıcı"
+    "user": "Kullanıcı",
+    "language": "Dil"
   },
   "footer": {
-    "storeName": "My Store",
+    "storeName": "Creative Aventus",
     "storeDescription": "Kaliteli ürünler için güvenilir online alışveriş adresiniz.",
     "quickLinks": "Hızlı Bağlantılar",
     "products": "Ürünler",
@@ -88,7 +89,7 @@
     "privacyPolicy": "Gizlilik Politikası",
     "termsOfService": "Kullanım Koşulları",
     "returns": "İadeler",
-    "copyright": "© {year} My Store. Tüm hakları saklıdır."
+    "copyright": "© {year} Creative Aventus. Tüm hakları saklıdır."
   },
   "login": {
     "welcomeBack": "Tekrar Hoş Geldiniz",
