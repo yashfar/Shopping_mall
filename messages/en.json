@@ -47,7 +47,7 @@
     "products": "Products",
     "login": "Login",
     "register": "Register",
-    "logoAlt": "My Store Logo",
+    "logoAlt": "Creative Aventus Logo",
     "userMenu": "User menu",
     "userAvatar": "User avatar"
   },
@@ -71,10 +71,11 @@
     "admin": "Admin",
     "signIn": "Sign In",
     "createAccount": "Create Account",
-    "user": "User"
+    "user": "User",
+    "language": "Language"
   },
   "footer": {
-    "storeName": "My Store",
+    "storeName": "Creative Aventus",
     "storeDescription": "Your trusted online shopping destination for quality products.",
     "quickLinks": "Quick Links",
     "products": "Products",
@@ -88,7 +89,7 @@
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "returns": "Returns",
-    "copyright": "© {year} My Store. All rights reserved."
+    "copyright": "© {year} Creative Aventus. All rights reserved."
   },
   "login": {
     "welcomeBack": "Welcome Back",
