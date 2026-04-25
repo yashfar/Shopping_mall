@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { toast } from "sonner";
 
 type User = {
     id: string;
@@ -9,6 +10,8 @@ type User = {
     role: "USER" | "ADMIN";
     createdAt: string;
 };
+
+const PAGE_SIZE = 10;
 
 export default function UserManagementTable() {
     const t = useTranslations("admin");
@@ -18,12 +21,33 @@ export default function UserManagementTable() {
     const [error, setError] = useState("");
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+    // Search & pagination state
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    // Debounce search input (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1); // reset to first page on new search
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
     // Fetch users
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async (currentPage: number, currentSearch: string) => {
         try {
             setLoading(true);
             setError("");
-            const response = await fetch("/api/admin/users");
+            const params = new URLSearchParams({
+                page: String(currentPage),
+                limit: String(PAGE_SIZE),
+                ...(currentSearch ? { search: currentSearch } : {}),
+            });
+            const response = await fetch(`/api/admin/users?${params}`);
 
             if (!response.ok) {
                 throw new Error("Failed to fetch users");
@@ -31,13 +55,19 @@ export default function UserManagementTable() {
 
             const data = await response.json();
             setUsers(data.users);
+            setTotal(data.total);
+            setTotalPages(data.totalPages);
         } catch (err) {
             setError(t("failedToLoadUsers"));
             console.error(err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
+
+    useEffect(() => {
+        fetchUsers(page, debouncedSearch);
+    }, [page, debouncedSearch, fetchUsers]);
 
     // Delete user
     const handleDelete = async (id: string, email: string) => {
@@ -56,10 +86,9 @@ export default function UserManagementTable() {
                 throw new Error(data.error || t("failedToDeleteUser"));
             }
 
-            // Refresh users list
-            await fetchUsers();
+            await fetchUsers(page, debouncedSearch);
         } catch (err: any) {
-            alert(err.message || t("failedToDeleteUser"));
+            toast.error(err.message || t("failedToDeleteUser"));
         } finally {
             setUpdatingId(null);
         }
@@ -82,20 +111,15 @@ export default function UserManagementTable() {
                 throw new Error(data.error || t("failedToUpdateRole"));
             }
 
-            // Refresh users list
-            await fetchUsers();
+            await fetchUsers(page, debouncedSearch);
         } catch (err: any) {
-            alert(err.message || t("failedToUpdateRole"));
+            toast.error(err.message || t("failedToUpdateRole"));
         } finally {
             setUpdatingId(null);
         }
     };
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    if (loading) {
+    if (loading && users.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
@@ -109,7 +133,7 @@ export default function UserManagementTable() {
             <div className="bg-red-50 border border-[#C8102E]/20 p-8 rounded-2xl text-center max-w-lg mx-auto">
                 <p className="text-[#C8102E] font-black mb-4">{error}</p>
                 <button
-                    onClick={fetchUsers}
+                    onClick={() => fetchUsers(page, debouncedSearch)}
                     className="px-6 py-2 bg-[#C8102E] text-white font-bold rounded-xl hover:bg-[#A90D27] transition-all"
                 >
                     {t("attemptRetry")}
@@ -120,17 +144,48 @@ export default function UserManagementTable() {
 
     return (
         <div className="space-y-6">
+            {/* Header row: title + search + refresh */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">{t("activeUsers", { count: users.length })}</h2>
-                <button
-                    onClick={fetchUsers}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#A9A9A9] rounded-xl hover:border-[#1A1A1A] text-[#1A1A1A] font-bold transition-all shadow-sm active:scale-95"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    {t("refreshDirectory")}
-                </button>
+                <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight shrink-0">
+                    {t("activeUsers", { count: total })}
+                </h2>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {/* Search input */}
+                    <div className="relative flex-1 sm:w-64">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t("searchUsersPlaceholder")}
+                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#A9A9A9] rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:border-[#1A1A1A] transition-all"
+                        />
+                        {loading && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
+                        )}
+                    </div>
+
+                    {/* Refresh button */}
+                    <button
+                        onClick={() => fetchUsers(page, debouncedSearch)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#A9A9A9] rounded-xl hover:border-[#1A1A1A] text-[#1A1A1A] font-bold transition-all shadow-sm active:scale-95 shrink-0"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        <span className="hidden sm:inline">{t("refreshDirectory")}</span>
+                    </button>
+                </div>
             </div>
 
             {/* Desktop Table View */}
@@ -242,7 +297,8 @@ export default function UserManagementTable() {
                 ))}
             </div>
 
-            {users.length === 0 && (
+            {/* Empty state */}
+            {!loading && users.length === 0 && (
                 <div className="py-20 text-center bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-400">
@@ -252,7 +308,37 @@ export default function UserManagementTable() {
                     <p className="text-gray-500 font-medium text-sm">{t("noUsersFound")}</p>
                 </div>
             )}
-        </div>
 
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                    <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1 || loading}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-gray-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                        </svg>
+                        {t("previousPage")}
+                    </button>
+
+                    <span className="text-sm text-gray-500 font-medium">
+                        {t("pageInfo", { current: page, total: totalPages })}
+                    </span>
+
+                    <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages || loading}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-gray-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        {t("nextPage")}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

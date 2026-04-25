@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 
 interface Banner {
@@ -31,6 +31,8 @@ interface BannerCarouselProps {
 export default function BannerCarousel({ banners, settings }: BannerCarouselProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const touchStartX = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
 
     const nextSlide = useCallback(() => {
         if (isTransitioning) return;
@@ -68,6 +70,25 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
         setIsTransitioning(true);
         setCurrentIndex(index);
         setTimeout(() => setIsTransitioning(false), settings.animationSpeed);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchEndX.current = null;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+        if (touchStartX.current === null || touchEndX.current === null) return;
+        const diff = touchStartX.current - touchEndX.current;
+        if (Math.abs(diff) > 50) {
+            diff > 0 ? nextSlide() : prevSlide();
+        }
+        touchStartX.current = null;
+        touchEndX.current = null;
     };
 
     // Auto-advance slides
@@ -112,7 +133,12 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
     };
 
     return (
-        <div className="relative w-full h-[300px] sm:h-[400px] md:h-auto md:aspect-video overflow-hidden mb-8 md:mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]">
+        <div
+            className="relative w-full h-[300px] sm:h-[400px] md:h-auto md:aspect-video overflow-hidden mb-8 md:mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             {/* Slides */}
             {settings.animationType === "slide" ? (
                 // Slide animation (horizontal scroll)

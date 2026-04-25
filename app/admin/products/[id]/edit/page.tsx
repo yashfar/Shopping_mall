@@ -83,6 +83,8 @@ export default function EditProductPage() {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const [shippingDays, setShippingDays] = useState("3-5");
+
     // Variant state
     const [variants, setVariants] = useState<Variant[]>([]);
     const [editingStock, setEditingStock] = useState<Record<string, string>>({});
@@ -111,6 +113,7 @@ export default function EditProductPage() {
                 setSalePrice(product.salePrice ? (product.salePrice / 100).toFixed(2) : "");
                 setCategory(product.category?.name || product.category || "");
                 setStock(product.stock.toString());
+                setShippingDays(product.shippingDays || "3-5");
                 setThumbnail(product.thumbnail || "");
 
                 if (product.images && Array.isArray(product.images)) {
@@ -385,6 +388,7 @@ export default function EditProductPage() {
                     category: category.trim(),
                     categoryNameEn: categoryNameEn.trim() || null,
                     stock: stockNumber,
+                    shippingDays: shippingDays.trim() || "3-5",
                     images: images.map((img) => img.url),
                     thumbnail,
                 }),
@@ -747,6 +751,41 @@ export default function EditProductPage() {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Shipping Days */}
+                                <div>
+                                    <label htmlFor="shippingDays" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Kargo Süresi (İş Günü) <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="text"
+                                            id="shippingDays"
+                                            value={shippingDays}
+                                            onChange={(e) => setShippingDays(e.target.value)}
+                                            className="w-40 h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                            placeholder="3-5"
+                                            disabled={submitting}
+                                        />
+                                        <span className="text-sm text-gray-500">iş günü</span>
+                                    </div>
+                                    <div className="flex gap-2 mt-2 flex-wrap">
+                                        {["1-2", "3-5", "7-10", "10-14"].map((preset) => (
+                                            <button
+                                                key={preset}
+                                                type="button"
+                                                onClick={() => setShippingDays(preset)}
+                                                className={`px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+                                                    shippingDays === preset
+                                                        ? "bg-[#C8102E] text-white border-[#C8102E]"
+                                                        : "bg-white text-gray-600 border-gray-200 hover:border-[#C8102E] hover:text-[#C8102E]"
+                                                }`}
+                                            >
+                                                {preset} gün
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

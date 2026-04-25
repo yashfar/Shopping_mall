@@ -61,11 +61,12 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { title, description, titleEn, descriptionEn, price, salePrice, stock, isActive, images, thumbnail, category, categoryNameEn } = await req.json();
+        const { title, description, titleEn, descriptionEn, price, salePrice, stock, isActive, images, thumbnail, category, categoryNameEn, shippingDays } = await req.json();
 
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
+        if (shippingDays !== undefined) updateData.shippingDays = shippingDays?.trim() || "3-5";
         if (price !== undefined) updateData.price = Math.round(price);
         if (salePrice !== undefined) updateData.salePrice = salePrice ? Math.round(salePrice) : null;
         if (category !== undefined) {

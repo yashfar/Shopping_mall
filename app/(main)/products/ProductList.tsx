@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@@/context/CurrencyContext";
+import { toast } from "sonner";
 
 type Product = {
     id: string;
@@ -42,11 +43,10 @@ export default function ProductList() {
                 throw new Error(errorMessage);
             }
 
-            // Show success message
-            alert("Product added to cart!");
-        } catch (err: any) {
+            toast.success("Product added to cart!");
+        } catch (err) {
             console.error("Error adding to cart:", err);
-            alert(err.message || "Failed to add to cart");
+            toast.error(err instanceof Error ? err.message : "Failed to add to cart");
         } finally {
             setAddingToCart(null);
         }

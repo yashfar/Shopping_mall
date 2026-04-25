@@ -124,6 +124,11 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const handleStatusUpdate = async () => {
         if (!selectedStatus || !order) return;
 
+        if (selectedStatus === "shipped" && !trackingNumber.trim()) {
+            toast.error("Kargoya verilen siparişler için takip numarası zorunludur.");
+            return;
+        }
+
         setUpdating(true);
         try {
             const response = await fetch(`/api/admin/orders/${orderId}/status`, {
@@ -514,14 +519,33 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                         </Select>
 
                         <div>
-                            <label className="text-xs font-bold text-gray-900 block mb-2">{t("trackingNumber")}</label>
+                            <label className="text-xs font-bold text-gray-900 block mb-2">
+                                {t("trackingNumber")}
+                                {selectedStatus === "shipped" && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                )}
+                            </label>
                             <input
                                 type="text"
                                 value={trackingNumber}
                                 onChange={(e) => setTrackingNumber(e.target.value)}
                                 placeholder={t("trackingPlaceholder")}
-                                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                className={`w-full h-10 px-3 rounded-xl border bg-white text-sm font-mono focus:outline-none focus:ring-2 transition-all ${
+                                    selectedStatus === "shipped" && !trackingNumber.trim()
+                                        ? "border-red-400 ring-red-200 focus:ring-red-200 focus:border-red-500"
+                                        : "border-gray-200 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
+                                }`}
                             />
+                            {selectedStatus === "shipped" && !trackingNumber.trim() && (
+                                <p className="text-xs text-red-500 mt-1 font-medium">
+                                    Kargo durumu için takip numarası girilmesi zorunludur.
+                                </p>
+                            )}
+                            {selectedStatus === "shipped" && trackingNumber.trim() && (
+                                <p className="text-xs text-emerald-600 mt-1 font-medium">
+                                    Kaydedilince müşteriye otomatik bildirim e-postası gönderilecek.
+                                </p>
+                            )}
                         </div>
 
                         <Button

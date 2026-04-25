@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@@/context/CurrencyContext";
+import { toast } from "sonner";
 
 type CartItem = {
     id: string;
@@ -68,7 +69,7 @@ export default function CheckoutContent() {
             router.push(`/checkout?orderId=${data.orderId}`);
         } catch (error) {
             console.error("Error creating order:", error);
-            alert(error instanceof Error ? error.message : "Failed to create order");
+            toast.error(error instanceof Error ? error.message : "Failed to create order");
         } finally {
             setCreating(false);
         }
