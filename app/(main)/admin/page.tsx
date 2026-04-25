@@ -182,6 +182,19 @@ export default async function AdminPage() {
                     <p className="text-sm text-gray-500 mt-1">{t("returnsDescription")}</p>
                 </Link>
 
+                <Link href="/admin/faqs" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-teal-50 text-teal-600 rounded-lg group-hover:bg-[#C8102E] group-hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 group-hover:text-[#C8102E]">{t("manage")}</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">{t("faq")}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t("faqDescription")}</p>
+                </Link>
+
                 <Link href="/admin/messages" className="group block p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#C8102E]/30 hover:shadow-md transition-all relative">
                     {unreadMessagesCount > 0 && (
                         <span className="absolute top-4 right-4 bg-sky-500 group-hover:bg-[#C8102E] text-white text-[0.7rem] font-bold px-1.5 py-1.5 rounded-full min-w-[16px] h-[21px] flex items-center justify-center shadow-sm border border-white leading-none animate-in fade-in zoom-in duration-300 z-10">

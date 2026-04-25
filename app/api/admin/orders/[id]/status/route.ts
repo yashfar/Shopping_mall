@@ -32,6 +32,14 @@ export async function PATCH(
             );
         }
 
+        // Tracking number is required when marking as SHIPPED
+        if (status === "SHIPPED" && !trackingNumber?.trim()) {
+            return NextResponse.json(
+                { error: "Kargo durumu için takip numarası zorunludur." },
+                { status: 400 }
+            );
+        }
+
         // Update order status and tracking number
         const updateData: any = { status };
         if (trackingNumber !== undefined) {

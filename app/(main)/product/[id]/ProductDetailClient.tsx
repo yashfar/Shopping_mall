@@ -64,6 +64,7 @@ interface Product {
   images: ProductImage[];
   reviews: Review[];
   variants: ProductVariant[];
+  shippingDays?: string | null;
 }
 
 interface ProductDetailClientProps {
@@ -98,12 +99,19 @@ export default function ProductDetailClient({
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants.length > 0 ? null : null,
   );
+  const [showColorWarning, setShowColorWarning] = useState(false);
+  const [shakeCart, setShakeCart] = useState(false);
+  const [colorWaveActive, setColorWaveActive] = useState(false);
 
   // Effective stock: use variant stock if a variant is selected, else product stock
   const effectiveStock = selectedVariant
     ? selectedVariant.stock
     : product.stock;
   const hasVariants = product.variants.length > 0;
+  // True if there is at least one purchasable unit (any variant or the product itself)
+  const hasAnyStock = hasVariants
+    ? product.variants.some((v) => v.stock > 0)
+    : product.stock > 0;
 
   // Check stock alert status for out-of-stock products
   useEffect(() => {
@@ -159,6 +167,7 @@ export default function ProductDetailClient({
     setSelectedVariant(variant);
     setSelectedImageIndex(0);
     setQuantity(1);
+    setShowColorWarning(false);
   };
 
   const handlePreviousImage = () => {
@@ -207,7 +216,13 @@ export default function ProductDetailClient({
 
     // If product has variants, require a variant selection
     if (hasVariants && !selectedVariant) {
-      toast.error(t("selectColorFirst"));
+      setShowColorWarning(true);
+      setShakeCart(true);
+      setColorWaveActive(false);
+      // small tick so animation re-triggers even if already active
+      requestAnimationFrame(() => setColorWaveActive(true));
+      setTimeout(() => setShakeCart(false), 500);
+      setTimeout(() => setColorWaveActive(false), 1200);
       return;
     }
 
@@ -282,6 +297,30 @@ export default function ProductDetailClient({
 
   return (
     <>
+      <style>{`
+        @keyframes cart-shake {
+          0%, 100% { transform: translateX(0); }
+          15%       { transform: translateX(-7px); }
+          30%       { transform: translateX(7px); }
+          45%       { transform: translateX(-5px); }
+          60%       { transform: translateX(5px); }
+          75%       { transform: translateX(-3px); }
+          90%       { transform: translateX(3px); }
+        }
+        .cart-shake { animation: cart-shake 0.5s ease-in-out; }
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.25s ease-out; }
+        @keyframes color-wave {
+          0%   { transform: translateY(0); }
+          25%  { transform: translateY(-6px); }
+          55%  { transform: translateY(2px); }
+          80%  { transform: translateY(-2px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
       <div className="bg-[#FAFAFA] min-h-screen pb-20 md:pb-12">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
           {/* Main Product Grid */}
@@ -424,7 +463,7 @@ export default function ProductDetailClient({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {product.variants.map((variant) => {
+                    {product.variants.map((variant, index) => {
                       const isSelected = selectedVariant?.id === variant.id;
                       const isOutOfStock = variant.stock === 0;
                       return (
@@ -441,6 +480,11 @@ export default function ProductDetailClient({
                           } ${isOutOfStock ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                           style={{
                             backgroundColor: variant.colorHex || "#ccc",
+                            ...(colorWaveActive && {
+                              animation: "color-wave 0.6s ease-in-out",
+                              animationDelay: `${index * 60}ms`,
+                              animationFillMode: "both",
+                            }),
                           }}
                         >
                           {isOutOfStock && (
@@ -458,7 +502,7 @@ export default function ProductDetailClient({
                     })}
                   </div>
                   {hasVariants && !selectedVariant && (
-                    <p className="mt-2 text-xs text-amber-600 font-medium">
+                    <p className={`mt-2 text-xs font-medium transition-all duration-200 ${showColorWarning ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
                       {t("selectColorFirst")}
                     </p>
                   )}
@@ -497,42 +541,57 @@ export default function ProductDetailClient({
                 </div>
               </div>
 
-              {/* Controls */}
-              {(!hasVariants || selectedVariant) && effectiveStock > 0 ? (
-                <div className="space-y-6">
-                  {/* Quantity */}
-                  <div className="flex items-center gap-6">
-                    <div className="w-32 flex items-center justify-between p-1 bg-white border border-[#A9A9A9] rounded-xl">
-                      <button
-                        onClick={() => updateQuantity(-1)}
-                        disabled={quantity <= 1}
-                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-30 text-[#1A1A1A] transition-colors"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="font-bold text-lg text-[#1A1A1A]">
-                        {quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(1)}
-                        disabled={quantity >= 10 || quantity >= effectiveStock}
-                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-30 text-[#1A1A1A] transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="text-sm font-medium text-emerald-600 flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      {t("inStockAvailable", { count: effectiveStock })}
-                    </div>
+              {/* Shipping Info */}
+              {product.shippingDays && (
+                <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-sky-50 border border-sky-100 rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-sky-500 shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                  </svg>
+                  <div>
+                    <span className="text-xs font-bold text-sky-700 uppercase tracking-wide">Tahmini Kargo Süresi</span>
+                    <p className="text-sm font-semibold text-sky-900">{product.shippingDays} iş günü</p>
                   </div>
+                </div>
+              )}
+
+              {/* Controls */}
+              {hasAnyStock ? (
+                <div className="space-y-6">
+                  {/* Quantity - only shown when a variant is selected or product has no variants */}
+                  {(!hasVariants || selectedVariant) && (
+                    <div className="flex items-center gap-6">
+                      <div className="w-32 flex items-center justify-between p-1 bg-white border border-[#A9A9A9] rounded-xl">
+                        <button
+                          onClick={() => updateQuantity(-1)}
+                          disabled={quantity <= 1}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-30 text-[#1A1A1A] transition-colors"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="font-bold text-lg text-[#1A1A1A]">
+                          {quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(1)}
+                          disabled={quantity >= 10 || quantity >= effectiveStock}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-30 text-[#1A1A1A] transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="text-sm font-medium text-emerald-600 flex items-center gap-1.5">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        {t("inStockAvailable", { count: effectiveStock })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Add to Cart + Wishlist */}
                   <div className="flex gap-3">
                     <button
                       onClick={handleAddToCart}
                       disabled={isAddingToCart}
-                      className="flex-1 py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                      className={`flex-1 py-4 bg-[#C8102E] hover:bg-[#A90D27] text-white rounded-xl font-black text-lg transition-all shadow-[0_4px_14px_rgba(200,16,46,0.3)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${shakeCart ? "cart-shake" : ""}`}
                     >
                       {isAddingToCart ? (
                         <Loader2 className="w-6 h-6 animate-spin" />
@@ -560,8 +619,18 @@ export default function ProductDetailClient({
                       />
                     </button>
                   </div>
+
+                  {/* Color selection note — appears when user clicks cart without selecting a color */}
+                  {showColorWarning && hasVariants && !selectedVariant && (
+                    <div className="flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm font-semibold animate-fade-in">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                      </svg>
+                      {t("selectColorNote")}
+                    </div>
+                  )}
                 </div>
-              ) : !hasVariants || selectedVariant ? (
+              ) : (
                 <div className="space-y-3">
                   <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-[#C8102E] font-bold flex items-center gap-2">
                     <User className="w-5 h-5" />
@@ -599,7 +668,7 @@ export default function ProductDetailClient({
                         : t("notifyWhenAvailable")}
                   </button>
                 </div>
-              ) : null}
+              )}
 
               {/* Description */}
               {product.description && (

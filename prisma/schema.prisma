@@ -85,6 +85,7 @@ model Product {
   wishlistItems Wishlist[]
   stockAlerts   StockAlert[]
   variants      ProductVariant[]
+  shippingDays  String         @default("3-5")
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -439,4 +440,19 @@ model PaymentConfig {
   iban                  String   @default("")
   bankTransferNote      String   @default("")   // optional extra instructions
   updatedAt             DateTime @updatedAt
+}
+
+// ============================================================================
+// FAQ System
+// ============================================================================
+model Faq {
+  id         String   @id @default(cuid())
+  question   String
+  questionEn String?
+  answer     String
+  answerEn   String?
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

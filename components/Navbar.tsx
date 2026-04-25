@@ -53,7 +53,7 @@ export default async function Navbar() {
         </div>
 
         {/* Right Side - Auth & Cart */}
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-2 md:gap-6">
           {/* Language Switcher - Desktop */}
           <div className="hidden md:flex items-center">
             <LanguageSwitcher />
@@ -77,7 +77,7 @@ export default async function Navbar() {
             </div>
           ) : (
             // Authenticated - show user info and cart
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-0 md:gap-6">
               <NavbarClient
                 user={{
                   email: session.user.email || "",

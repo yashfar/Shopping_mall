@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calculateCartTotals } from "@@/lib/payment-utils";
 import { useCurrency } from "@@/context/CurrencyContext";
+import { toast } from "sonner";
 
 import { useTranslations } from "next-intl";
 import Image from "next/image";
@@ -143,7 +144,7 @@ export default function CheckoutContent() {
             router.push(`/checkout?orderId=${data.orderId}`);
         } catch (error) {
             console.error("Error creating order:", error);
-            alert(error instanceof Error ? error.message : t("failedToCreateOrder"));
+            toast.error(error instanceof Error ? error.message : t("failedToCreateOrder"));
             setCreating(false); // Only reset on error
         }
         // Don't reset creating on success - let the redirect happen
