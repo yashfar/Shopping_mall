@@ -28,7 +28,7 @@ export async function PATCH(
                     include: {
                         items: true,
                         user: {
-                            select: { email: true, firstName: true },
+                            select: { email: true, firstName: true, locale: true },
                         },
                     },
                 },
@@ -72,6 +72,8 @@ export async function PATCH(
                 }
             });
 
+            const userLocale = (returnRequest.order.user.locale === "tr" ? "tr" : "en") as "tr" | "en";
+
             // Send email notification (non-blocking)
             try {
                 await sendReturnResultEmail(returnRequest.order.user.email, {
@@ -80,6 +82,7 @@ export async function PATCH(
                     approved: true,
                     adminNote: adminNote?.trim() || null,
                     total: returnRequest.order.total,
+                    locale: userLocale,
                 });
             } catch (emailErr) {
                 console.error("Failed to send return approval email:", emailErr);
@@ -91,6 +94,7 @@ export async function PATCH(
         } else {
             // Reject — restore order to its previous status
             const previousStatus = (returnRequest as any).previousStatus || "PAID";
+            const userLocale = (returnRequest.order.user.locale === "tr" ? "tr" : "en") as "tr" | "en";
 
             await prisma.$transaction(async (tx) => {
                 await tx.returnRequest.update({
@@ -115,6 +119,7 @@ export async function PATCH(
                     approved: false,
                     adminNote: adminNote?.trim() || null,
                     total: returnRequest.order.total,
+                    locale: userLocale,
                 });
             } catch (emailErr) {
                 console.error("Failed to send return rejection email:", emailErr);

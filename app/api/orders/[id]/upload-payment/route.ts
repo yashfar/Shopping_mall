@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getLocaleFromRequest } from "@@/lib/get-locale";
+import { sendPaymentUploadedAdminEmail, sendPaymentUploadedCustomerEmail } from "@@/lib/mail";
 
 /**
  * POST /api/orders/[id]/upload-payment
@@ -20,6 +22,7 @@ export async function POST(
     }
 
     const { id } = await params;
+    const locale = getLocaleFromRequest(req);
 
     try {
         const order = await prisma.order.findUnique({
@@ -102,6 +105,9 @@ export async function POST(
 
         // Update order status, clear cart, and decrement stock in a single transaction
         await prisma.$transaction(async (tx) => {
+            // Save customer locale so confirmation email uses the right language
+            await tx.user.update({ where: { id: session.user.id }, data: { locale } });
+
             // Update order with proof URL and new status
             await tx.order.update({
                 where: { id },
@@ -176,6 +182,37 @@ export async function POST(
                 });
             }
         });
+
+        // Send emails (non-blocking)
+        ;(async () => {
+            try {
+                const fullOrder = await prisma.order.findUnique({
+                    where: { id },
+                    select: {
+                        orderNumber: true,
+                        total: true,
+                        user: { select: { email: true, firstName: true } },
+                    },
+                });
+                if (!fullOrder) return;
+
+                const emailData = {
+                    orderNumber: fullOrder.orderNumber || id.substring(0, 8),
+                    firstName: fullOrder.user.firstName,
+                    customerEmail: fullOrder.user.email,
+                    total: fullOrder.total,
+                    proofUrl: publicUrl,
+                    locale,
+                };
+
+                await Promise.all([
+                    sendPaymentUploadedAdminEmail(emailData),
+                    sendPaymentUploadedCustomerEmail(fullOrder.user.email, emailData),
+                ]);
+            } catch (emailErr) {
+                console.error("Failed to send payment uploaded emails:", emailErr);
+            }
+        })();
 
         return NextResponse.json({
             message: "Payment proof uploaded successfully",

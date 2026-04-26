@@ -2,7 +2,7 @@ import { auth } from "@@/lib/auth-helper";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import WishlistContent from "./WishlistContent";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function WishlistPage() {
     const session = await auth();
@@ -11,20 +11,35 @@ export default async function WishlistPage() {
         redirect("/login?callbackUrl=/wishlist");
     }
 
+    const locale = await getLocale();
+
     const items = await prisma.wishlist.findMany({
         where: { userId: session.user.id },
         include: {
             product: {
                 include: {
                     reviews: { select: { rating: true } },
-                    category: { select: { name: true } },
+                    category: { select: { name: true, nameEn: true } },
+                    translations: { where: { locale }, select: { title: true, description: true } },
+                    variants: { select: { id: true, color: true, colorHex: true, stock: true } },
                 },
             },
         },
         orderBy: { createdAt: "desc" },
     });
 
-    const products = items.map((item) => item.product);
+    const products = items.map(({ product }) => {
+        const { translations, category, ...p } = product;
+        const tr = translations[0];
+        return {
+            ...p,
+            title: tr?.title ?? p.title,
+            description: tr?.description ?? p.description,
+            category: category
+                ? { ...category, name: locale === "en" && category.nameEn ? category.nameEn : category.name }
+                : null,
+        };
+    });
 
     const t = await getTranslations("wishlist");
 

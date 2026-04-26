@@ -28,6 +28,8 @@ export async function GET(
                 status: true,
                 createdAt: true,
                 trackingNumber: true,
+                shippingCompany: true,
+                trackingUrl: true,
                 paymentProofUrl: true,
                 discountAmount: true,
                 user: {

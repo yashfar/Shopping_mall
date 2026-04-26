@@ -3,23 +3,27 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma_v3: PrismaClient | undefined;
-  pool_v3: Pool | undefined;
+    prisma: PrismaClient | undefined;
+    pool: Pool | undefined;
 };
 
-const pool = globalForPrisma.pool_v3 ?? new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 20000,       // 20s — bağlantıyı DB kapatmadan önce biz kapatalım
-  connectionTimeoutMillis: 10000, // 10s bağlantı kuramazsa hata ver
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-});
+function createPool() {
+    return new Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 5,
+        idleTimeoutMillis: 0,          // never close idle connections → Neon stays awake
+        connectionTimeoutMillis: 30_000,
+        keepAlive: true,               // TCP keepalive probes keep Neon compute active
+        keepAliveInitialDelayMillis: 10_000,
+    });
+}
+
+const pool = globalForPrisma.pool ?? createPool();
 const adapter = new PrismaPg(pool);
 
-export const prisma = globalForPrisma.prisma_v3 ?? new PrismaClient({ adapter });
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.pool_v3 = pool;
-  globalForPrisma.prisma_v3 = prisma;
+    globalForPrisma.pool = pool;
+    globalForPrisma.prisma = prisma;
 }

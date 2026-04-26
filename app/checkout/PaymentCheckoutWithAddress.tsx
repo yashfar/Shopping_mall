@@ -249,7 +249,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                     <p>{t("noAddressDesc")}</p>
                     <button
                         className="btn-add-address-primary"
-                        onClick={() => router.push("/profile/addresses")}
+                        onClick={() => router.push(`/profile/addresses?callbackUrl=${encodeURIComponent(`/checkout?orderId=${orderId}`)}`)}
                     >
                         {t("addAddress")}
                     </button>

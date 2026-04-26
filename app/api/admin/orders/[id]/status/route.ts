@@ -21,7 +21,7 @@ export async function PATCH(
 
     try {
         const body = await req.json();
-        const { status, trackingNumber } = body;
+        const { status, trackingNumber, shippingCompany, trackingUrl } = body;
 
         // Validate status
         const validStatuses = ["PENDING", "PAYMENT_UPLOADED", "PAYMENT_REJECTED", "PAID", "SHIPPED", "COMPLETED", "CANCELED"];
@@ -40,10 +40,16 @@ export async function PATCH(
             );
         }
 
-        // Update order status and tracking number
+        // Update order status, tracking number, shipping company and tracking URL
         const updateData: any = { status };
         if (trackingNumber !== undefined) {
             updateData.trackingNumber = trackingNumber.trim() || null;
+        }
+        if (shippingCompany !== undefined) {
+            updateData.shippingCompany = shippingCompany.trim() || null;
+        }
+        if (trackingUrl !== undefined) {
+            updateData.trackingUrl = trackingUrl.trim() || null;
         }
 
         const order = await prisma.order.update({
@@ -58,15 +64,19 @@ export async function PATCH(
                     const fullOrder = await prisma.order.findUnique({
                         where: { id },
                         include: {
-                            user: { select: { email: true, firstName: true } },
+                            user: { select: { email: true, firstName: true, locale: true } },
                         },
                     });
 
                     if (fullOrder?.user) {
+                        const userLocale = (fullOrder.user.locale === "tr" ? "tr" : "en") as "tr" | "en";
                         await sendOrderShippedEmail(fullOrder.user.email, {
                             orderNumber: fullOrder.orderNumber || id.substring(0, 8),
                             firstName: fullOrder.user.firstName,
                             trackingNumber: fullOrder.trackingNumber,
+                            shippingCompany: fullOrder.shippingCompany,
+                            trackingUrl: fullOrder.trackingUrl,
+                            locale: userLocale,
                         });
                     }
                 } catch (emailErr) {

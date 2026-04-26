@@ -151,35 +151,27 @@ export const authOptions = {
       account: Account | null;
       profile?: Profile;
     }) {
-      if (account?.provider === "google" && profile) {
+      if (account?.provider === "google" && profile && user.id) {
         try {
-          const existingUser = await prisma.user.findFirst({
-            where: {
-              OR: [{ id: user.id }, { email: user.email ?? "" }],
-            },
-            select: { id: true, avatar: true },
-          });
+          const gp = profile as Profile & {
+            picture?: string;
+            given_name?: string;
+            family_name?: string;
+            email_verified?: boolean;
+          };
 
-          if (existingUser) {
-            const googleProfile = profile as Profile & {
-              picture?: string;
-              given_name?: string;
-              family_name?: string;
-              email_verified?: boolean;
-            };
-
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: {
-                name: profile.name,
-                image: googleProfile.picture,
-                emailVerified: googleProfile.email_verified ? new Date() : null,
-                firstName: googleProfile.given_name || null,
-                lastName: googleProfile.family_name || null,
-                avatar: existingUser.avatar || googleProfile.picture || null,
-              },
-            });
-          }
+          // Single query: COALESCE keeps existing avatar when already set
+          await prisma.$executeRaw`
+            UPDATE "User"
+            SET
+              name             = ${profile.name ?? null},
+              image            = ${gp.picture ?? null},
+              "emailVerified"  = ${gp.email_verified ? new Date() : null},
+              "firstName"      = ${gp.given_name ?? null},
+              "lastName"       = ${gp.family_name ?? null},
+              avatar           = COALESCE(avatar, ${gp.picture ?? null})
+            WHERE id = ${user.id}
+          `;
         } catch (error) {
           console.error("Error syncing Google profile:", error);
         }

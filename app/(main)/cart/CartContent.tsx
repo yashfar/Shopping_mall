@@ -487,7 +487,7 @@ export default function CartContent() {
                                     <div className="text-sm font-bold">{t("addAddressWarning")}</div>
                                 </div>
                                 <button
-                                    onClick={() => router.push("/profile/addresses")}
+                                    onClick={() => router.push(`/profile/addresses?callbackUrl=${encodeURIComponent("/cart/checkout")}`)}
                                     className="w-full py-4 bg-[#1A1A1A] text-white rounded-xl font-bold transition-all hover:bg-[#333] active:scale-95 shadow-lg group relative overflow-hidden"
                                 >
                                     {t("addAddress")}

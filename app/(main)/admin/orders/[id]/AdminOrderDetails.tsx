@@ -48,6 +48,7 @@ type ReturnRequest = {
     id: string;
     reason: string;
     note: string | null;
+    photos: string[];
     status: string;
     adminNote: string | null;
     createdAt: string;
@@ -63,6 +64,8 @@ type Order = {
     items?: OrderItem[];
     returnRequest?: ReturnRequest | null;
     trackingNumber?: string | null;
+    shippingCompany?: string | null;
+    trackingUrl?: string | null;
     paymentProofUrl?: string | null;
 };
 
@@ -98,8 +101,12 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [downloading, setDownloading] = useState<"invoice" | "label" | null>(null);
     const [processingReturn, setProcessingReturn] = useState(false);
     const [returnAdminNote, setReturnAdminNote] = useState("");
+    const [returnConfirm, setReturnConfirm] = useState<"approve" | "reject" | null>(null);
     const [trackingNumber, setTrackingNumber] = useState("");
+    const [shippingCompany, setShippingCompany] = useState("");
+    const [trackingUrl, setTrackingUrl] = useState("");
     const [verifyingPayment, setVerifyingPayment] = useState(false);
+    const [paymentConfirm, setPaymentConfirm] = useState<"approve" | "reject" | null>(null);
 
     useEffect(() => {
         fetchOrder();
@@ -114,6 +121,8 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             setAddress(data.address);
             setSelectedStatus(REVERSE_STATUS_MAP[data.order.status] || "pending");
             setTrackingNumber(data.order.trackingNumber || "");
+            setShippingCompany(data.order.shippingCompany || "");
+            setTrackingUrl(data.order.trackingUrl || "");
         } catch (err: any) {
             setError(err.message || "Failed to load order");
         } finally {
@@ -134,7 +143,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             const response = await fetch(`/api/admin/orders/${orderId}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: STATUS_MAP[selectedStatus], trackingNumber }),
+                body: JSON.stringify({ status: STATUS_MAP[selectedStatus], trackingNumber, shippingCompany, trackingUrl }),
             });
 
             if (!response.ok) {
@@ -153,6 +162,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     };
 
     const handleVerifyPayment = async (action: "approve" | "reject") => {
+        setPaymentConfirm(null);
         setVerifyingPayment(true);
         try {
             const response = await fetch(`/api/admin/orders/${orderId}/verify-payment`, {
@@ -226,6 +236,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
 
     const handleReturnAction = async (action: "approve" | "reject") => {
         if (!order?.returnRequest) return;
+        setReturnConfirm(null);
         setProcessingReturn(true);
         try {
             const res = await fetch(`/api/admin/returns/${order.returnRequest.id}`, {
@@ -356,14 +367,14 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
 
                             <div className="flex gap-3">
                                 <Button
-                                    onClick={() => handleVerifyPayment("approve")}
+                                    onClick={() => setPaymentConfirm("approve")}
                                     disabled={verifyingPayment}
                                     className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl py-6"
                                 >
                                     {verifyingPayment ? t("processing") : t("approvePayment")}
                                 </Button>
                                 <Button
-                                    onClick={() => handleVerifyPayment("reject")}
+                                    onClick={() => setPaymentConfirm("reject")}
                                     disabled={verifyingPayment}
                                     variant="outline"
                                     className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl py-6"
@@ -371,6 +382,48 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                     {t("reject")}
                                 </Button>
                             </div>
+
+                            {/* Payment Confirmation Modal */}
+                            {paymentConfirm && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPaymentConfirm(null)} />
+                                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${paymentConfirm === "approve" ? "bg-emerald-50" : "bg-red-50"}`}>
+                                            {paymentConfirm === "approve"
+                                                ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-emerald-600"><path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" /></svg>
+                                                : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-red-600"><path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                                            }
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
+                                            {paymentConfirm === "approve" ? t("confirmPaymentApproveTitle") : t("confirmPaymentRejectTitle")}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 text-center mb-6">
+                                            {paymentConfirm === "approve" ? t("confirmPaymentApproveDesc") : t("confirmPaymentRejectDesc")}
+                                            {" "}<span className="font-semibold text-gray-700">#{order.orderNumber || order.id.substring(0, 8)}</span>
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1"
+                                                onClick={() => setPaymentConfirm(null)}
+                                                disabled={verifyingPayment}
+                                            >
+                                                {t("cancelAction")}
+                                            </Button>
+                                            <Button
+                                                className={`flex-1 text-white font-bold ${paymentConfirm === "approve" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#C8102E] hover:bg-[#A90D27]"}`}
+                                                onClick={() => handleVerifyPayment(paymentConfirm)}
+                                                disabled={verifyingPayment}
+                                            >
+                                                {verifyingPayment
+                                                    ? t("processing")
+                                                    : paymentConfirm === "approve" ? t("confirmPaymentApproveBtn") : t("confirmPaymentRejectBtn")
+                                                }
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -548,9 +601,35 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             )}
                         </div>
 
+                        <div>
+                            <label className="text-xs font-bold text-gray-900 block mb-2">
+                                {t("shippingCompany")}
+                            </label>
+                            <input
+                                type="text"
+                                value={shippingCompany}
+                                onChange={(e) => setShippingCompany(e.target.value)}
+                                placeholder={t("shippingCompanyPlaceholder")}
+                                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold text-gray-900 block mb-2">
+                                {t("trackingUrl")}
+                            </label>
+                            <input
+                                type="url"
+                                value={trackingUrl}
+                                onChange={(e) => setTrackingUrl(e.target.value)}
+                                placeholder={t("trackingUrlPlaceholder")}
+                                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                            />
+                        </div>
+
                         <Button
                             onClick={handleStatusUpdate}
-                            disabled={updating || (selectedStatus === REVERSE_STATUS_MAP[order.status] && trackingNumber === (order.trackingNumber || ""))}
+                            disabled={updating || (selectedStatus === REVERSE_STATUS_MAP[order.status] && trackingNumber === (order.trackingNumber || "") && shippingCompany === (order.shippingCompany || "") && trackingUrl === (order.trackingUrl || ""))}
                             className="w-full bg-[#1A1A1A] hover:bg-[#333] text-white font-bold rounded-xl py-6 transition-all active:scale-95"
                         >
                             {updating ? t("updating") : t("updateStatus")}
@@ -566,6 +645,15 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                 {order.returnRequest.note && (
                                     <p className="text-xs text-gray-500 mt-1">{order.returnRequest.note}</p>
                                 )}
+                                {order.returnRequest.photos && order.returnRequest.photos.length > 0 && (
+                                    <div className="mt-2 flex gap-2 flex-wrap">
+                                        {order.returnRequest.photos.map((url, i) => (
+                                            <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-14 h-14 rounded-lg overflow-hidden border border-orange-200 hover:opacity-80 transition-opacity">
+                                                <img src={url} alt={`Fotoğraf ${i + 1}`} className="w-full h-full object-cover" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
                                 <p className="text-[10px] text-gray-400 mt-2">
                                     {new Date(order.returnRequest.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                                 </p>
@@ -580,7 +668,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                             <div className="flex gap-2">
                                 <Button
                                     className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm"
-                                    onClick={() => handleReturnAction("approve")}
+                                    onClick={() => setReturnConfirm("approve")}
                                     disabled={processingReturn}
                                 >
                                     {processingReturn ? t("processing") : t("approve")}
@@ -588,7 +676,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                 <Button
                                     variant="outline"
                                     className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm"
-                                    onClick={() => handleReturnAction("reject")}
+                                    onClick={() => setReturnConfirm("reject")}
                                     disabled={processingReturn}
                                 >
                                     {t("reject")}
@@ -616,6 +704,48 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                         </div>
                     )}
                 </div>
+
+                {/* Return Confirmation Modal */}
+                {returnConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setReturnConfirm(null)} />
+                        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${returnConfirm === "approve" ? "bg-emerald-50" : "bg-red-50"}`}>
+                                {returnConfirm === "approve"
+                                    ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-emerald-600"><path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" /></svg>
+                                    : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-red-600"><path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                                }
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
+                                {returnConfirm === "approve" ? t("confirmApproveTitle") : t("confirmRejectTitle")}
+                            </h3>
+                            <p className="text-sm text-gray-500 text-center mb-6">
+                                {returnConfirm === "approve" ? t("confirmApproveDesc") : t("confirmRejectDesc")}
+                                {" "}<span className="font-semibold text-gray-700">#{order?.orderNumber || ""}</span>
+                            </p>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => setReturnConfirm(null)}
+                                    disabled={processingReturn}
+                                >
+                                    {t("cancelAction")}
+                                </Button>
+                                <Button
+                                    className={`flex-1 text-white font-bold ${returnConfirm === "approve" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#C8102E] hover:bg-[#A90D27]"}`}
+                                    onClick={() => handleReturnAction(returnConfirm)}
+                                    disabled={processingReturn}
+                                >
+                                    {processingReturn
+                                        ? t("processing")
+                                        : returnConfirm === "approve" ? t("confirmApproveBtn") : t("confirmRejectBtn")
+                                    }
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Customer Details */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 p-6">

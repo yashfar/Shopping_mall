@@ -1,30 +1,23 @@
-
 /**
- * Generates a unique 9-digit order number.
- * Strategy: Find the latest order number and increment it.
- * Fallback: If no orders exist, start from 100000001.
+ * Generates a unique random 9-digit order number.
+ * Format: 100000000–999999999 (never starts with 0)
+ * Collision is astronomically unlikely (~1 in 900M per attempt),
+ * but we retry up to 10 times to be safe.
  */
 export async function generateOrderNumber(tx: any): Promise<string> {
-    const lastOrder = await tx.order.findFirst({
-        orderBy: {
-            createdAt: "desc",
-        },
-        where: {
-            orderNumber: { not: null }
-        },
-        select: {
-            orderNumber: true,
-        },
-    });
+    for (let attempt = 0; attempt < 10; attempt++) {
+        // Random integer in [100000000, 999999999]
+        const num = Math.floor(100_000_000 + Math.random() * 900_000_000);
+        const candidate = num.toString();
 
-    if (lastOrder && lastOrder.orderNumber) {
-        const lastNumber = parseInt(lastOrder.orderNumber, 10);
-        if (!isNaN(lastNumber)) {
-            // Increment and pad
-            return (lastNumber + 1).toString().padStart(9, '0');
-        }
+        const existing = await tx.order.findUnique({
+            where: { orderNumber: candidate },
+            select: { id: true },
+        });
+
+        if (!existing) return candidate;
     }
 
-    // Default start
-    return "000000001";
+    // Absolute fallback: timestamp-based (guaranteed unique within a millisecond)
+    return (Date.now() % 900_000_000 + 100_000_000).toString();
 }

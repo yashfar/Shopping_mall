@@ -150,17 +150,19 @@ export async function PATCH(
                 try {
                     const alerts = await prisma.stockAlert.findMany({
                         where: { productId: id, notified: false },
-                        include: { user: { select: { email: true, firstName: true } } },
+                        include: { user: { select: { email: true, firstName: true, locale: true } } },
                     });
 
                     if (alerts.length > 0) {
                         const storeUrl = process.env.NEXT_PUBLIC_URL ?? "";
                         for (const alert of alerts) {
+                            const userLocale = (alert.user.locale === "tr" ? "tr" : "en") as "tr" | "en";
                             await sendStockAlertEmail(alert.user.email, {
                                 productTitle: product.title,
                                 productUrl: `${storeUrl}/product/${id}`,
                                 thumbnail: product.thumbnail,
                                 firstName: alert.user.firstName,
+                                locale: userLocale,
                             });
                         }
 

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@@/components/ui/select";
 import "./address-modal.css";
 
 export interface Address {
@@ -26,6 +33,22 @@ interface AddressModalProps {
     onSuccess?: () => void;
 }
 
+interface GeoItem {
+    id: number;
+    name: string;
+}
+
+const emptyForm = {
+    title: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    city: "",
+    district: "",
+    neighborhood: "",
+    fullAddress: "",
+};
+
 export default function AddressModal({
     isOpen,
     onClose,
@@ -34,56 +57,133 @@ export default function AddressModal({
     onSuccess,
 }: AddressModalProps) {
     const t = useTranslations("address");
-    const [formData, setFormData] = useState({
-        title: "",
-        firstName: "",
-        lastName: "",
-        phone: "",
-        city: "",
-        district: "",
-        neighborhood: "",
-        fullAddress: "",
-    });
+    const [formData, setFormData] = useState({ ...emptyForm });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    // Reset form when modal opens or mode/address changes
+    const [provinces, setProvinces] = useState<GeoItem[]>([]);
+    const [districts, setDistricts] = useState<GeoItem[]>([]);
+    const [neighborhoods, setNeighborhoods] = useState<GeoItem[]>([]);
+    const [loadingDistricts, setLoadingDistricts] = useState(false);
+    const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+
+    // Select value'ları artık isimler — formData.city/district/neighborhood'dan direkt okunur.
+    // ID'ler sadece API çağrıları için ref'te tutulur.
+    const provinceIdRef = useRef("");
+    const districtIdRef = useRef("");
+    const cascadeLoadedRef = useRef<string | null>(null); // hangi adres için yüklendi
+
+    // Load provinces once on mount
     useEffect(() => {
-        if (isOpen) {
-            if (mode === "edit" && existingAddress) {
-                setFormData({
-                    title: existingAddress.title,
-                    firstName: existingAddress.firstName,
-                    lastName: existingAddress.lastName,
-                    phone: existingAddress.phone,
-                    city: existingAddress.city,
-                    district: existingAddress.district,
-                    neighborhood: existingAddress.neighborhood,
-                    fullAddress: existingAddress.fullAddress,
-                });
-            } else {
-                setFormData({
-                    title: "",
-                    firstName: "",
-                    lastName: "",
-                    phone: "",
-                    city: "",
-                    district: "",
-                    neighborhood: "",
-                    fullAddress: "",
-                });
-            }
-            setError("");
+        fetch("/api/address/provinces")
+            .then((r) => r.json())
+            .then((data) => setProvinces(Array.isArray(data) ? data : []))
+            .catch(() => {});
+    }, []);
+
+    // Modal açılınca form sıfırla
+    useEffect(() => {
+        if (!isOpen) return;
+        setError("");
+        setDistricts([]);
+        setNeighborhoods([]);
+        provinceIdRef.current = "";
+        districtIdRef.current = "";
+        cascadeLoadedRef.current = null;
+
+        if (mode === "edit" && existingAddress) {
+            setFormData({
+                title: existingAddress.title,
+                firstName: existingAddress.firstName,
+                lastName: existingAddress.lastName,
+                phone: existingAddress.phone,
+                city: existingAddress.city,
+                district: existingAddress.district,
+                neighborhood: existingAddress.neighborhood,
+                fullAddress: existingAddress.fullAddress,
+            });
+        } else {
+            setFormData({ ...emptyForm });
         }
     }, [isOpen, mode, existingAddress]);
+
+    // Edit modunda seçenek listelerini yükle (formData'yı değiştirmez, sadece options)
+    useEffect(() => {
+        if (!isOpen || mode !== "edit" || !existingAddress || provinces.length === 0) return;
+        if (cascadeLoadedRef.current === existingAddress.id) return;
+        cascadeLoadedRef.current = existingAddress.id;
+
+        const norm = (s: string) => s.toLocaleLowerCase("tr");
+        const province = provinces.find((p) => norm(p.name) === norm(existingAddress.city));
+        if (!province) return;
+
+        provinceIdRef.current = province.id.toString();
+        setLoadingDistricts(true);
+
+        fetch(`/api/address/districts?provinceId=${province.id}`)
+            .then((r) => r.json())
+            .then((raw) => {
+                const data: GeoItem[] = Array.isArray(raw) ? raw : [];
+                setDistricts(data);
+
+                const district = data.find((d) => norm(d.name) === norm(existingAddress.district));
+                if (!district) return;
+
+                districtIdRef.current = district.id.toString();
+                setLoadingNeighborhoods(true);
+
+                fetch(`/api/address/neighborhoods?districtId=${district.id}`)
+                    .then((r2) => r2.json())
+                    .then((raw2) => setNeighborhoods(Array.isArray(raw2) ? raw2 : []))
+                    .finally(() => setLoadingNeighborhoods(false));
+            })
+            .finally(() => setLoadingDistricts(false));
+    }, [isOpen, provinces, mode, existingAddress]);
+
+    const handleProvinceChange = async (name: string) => {
+        const province = provinces.find((p) => p.name === name);
+        if (!province) return;
+        provinceIdRef.current = province.id.toString();
+        districtIdRef.current = "";
+        setDistricts([]);
+        setNeighborhoods([]);
+        setFormData((prev) => ({ ...prev, city: name, district: "", neighborhood: "" }));
+
+        setLoadingDistricts(true);
+        try {
+            const res = await fetch(`/api/address/districts?provinceId=${province.id}`);
+            const data = await res.json();
+            setDistricts(Array.isArray(data) ? data : []);
+        } finally {
+            setLoadingDistricts(false);
+        }
+    };
+
+    const handleDistrictChange = async (name: string) => {
+        const district = districts.find((d) => d.name === name);
+        if (!district) return;
+        districtIdRef.current = district.id.toString();
+        setNeighborhoods([]);
+        setFormData((prev) => ({ ...prev, district: name, neighborhood: "" }));
+
+        setLoadingNeighborhoods(true);
+        try {
+            const res = await fetch(`/api/address/neighborhoods?districtId=${district.id}`);
+            const data = await res.json();
+            setNeighborhoods(Array.isArray(data) ? data : []);
+        } finally {
+            setLoadingNeighborhoods(false);
+        }
+    };
+
+    const handleNeighborhoodChange = (name: string) => {
+        setFormData((prev) => ({ ...prev, neighborhood: name }));
+    };
 
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -93,9 +193,7 @@ export default function AddressModal({
 
         try {
             const url =
-                mode === "add"
-                    ? "/api/address/add"
-                    : `/api/address/${existingAddress?.id}`;
+                mode === "add" ? "/api/address/add" : `/api/address/${existingAddress?.id}`;
             const method = mode === "add" ? "POST" : "PUT";
 
             const response = await fetch(url, {
@@ -111,7 +209,7 @@ export default function AddressModal({
                 const data = await response.json();
                 setError(data.error || t("failedToSave"));
             }
-        } catch (err) {
+        } catch {
             setError(t("genericError"));
         } finally {
             setIsSubmitting(false);
@@ -119,9 +217,7 @@ export default function AddressModal({
     };
 
     const handleOverlayClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
+        if (e.target === e.currentTarget) onClose();
     };
 
     if (!isOpen) return null;
@@ -219,50 +315,93 @@ export default function AddressModal({
                         />
                     </div>
 
+                    {/* Cascade: Şehir → İlçe */}
                     <div className="address-form-row">
                         <div className="address-form-group">
-                            <label htmlFor="city">
+                            <label>
                                 {t("city")} <span className="required">*</span>
                             </label>
-                            <input
-                                type="text"
-                                id="city"
-                                name="city"
+                            <Select
                                 value={formData.city}
-                                onChange={handleInputChange}
+                                onValueChange={handleProvinceChange}
                                 required
-                                className="address-form-input"
-                            />
+                            >
+                                <SelectTrigger className="address-form-input">
+                                    <SelectValue placeholder={t("selectCity")} />
+                                </SelectTrigger>
+                                <SelectContent className="z-1100">
+                                    {provinces.map((p) => (
+                                        <SelectItem key={p.id} value={p.name}>
+                                            {p.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="address-form-group">
-                            <label htmlFor="district">
+                            <label>
                                 {t("district")} <span className="required">*</span>
                             </label>
-                            <input
-                                type="text"
-                                id="district"
-                                name="district"
+                            <Select
+                                key={districts.length > 0 ? `d-${formData.city}` : "d-empty"}
                                 value={formData.district}
-                                onChange={handleInputChange}
+                                onValueChange={handleDistrictChange}
+                                disabled={!formData.city || loadingDistricts}
                                 required
-                                className="address-form-input"
-                            />
+                            >
+                                <SelectTrigger className="address-form-input">
+                                    <SelectValue
+                                        placeholder={
+                                            loadingDistricts
+                                                ? t("loadingDistricts")
+                                                : t("selectDistrict")
+                                        }
+                                    />
+                                </SelectTrigger>
+                                <SelectContent className="z-1100">
+                                    {districts
+                                        .filter((d, i, arr) => arr.findIndex((x) => x.name === d.name) === i)
+                                        .map((d) => (
+                                            <SelectItem key={d.id} value={d.name}>
+                                                {d.name}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
+                    {/* Mahalle */}
                     <div className="address-form-group">
-                        <label htmlFor="neighborhood">
+                        <label>
                             {t("neighborhood")} <span className="required">*</span>
                         </label>
-                        <input
-                            type="text"
-                            id="neighborhood"
-                            name="neighborhood"
+                        <Select
+                            key={neighborhoods.length > 0 ? `nh-${formData.district}` : "nh-empty"}
                             value={formData.neighborhood}
-                            onChange={handleInputChange}
+                            onValueChange={handleNeighborhoodChange}
+                            disabled={!formData.district || loadingNeighborhoods}
                             required
-                            className="address-form-input"
-                        />
+                        >
+                            <SelectTrigger className="address-form-input">
+                                <SelectValue
+                                    placeholder={
+                                        loadingNeighborhoods
+                                            ? t("loadingNeighborhoods")
+                                            : t("selectNeighborhood")
+                                    }
+                                />
+                            </SelectTrigger>
+                            <SelectContent className="z-1100">
+                                {neighborhoods
+                                    .filter((n, i, arr) => arr.findIndex((x) => x.name === n.name) === i)
+                                    .map((n) => (
+                                        <SelectItem key={n.id} value={n.name}>
+                                            {n.name}
+                                        </SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="address-form-group">

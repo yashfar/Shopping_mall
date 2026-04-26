@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendResetPasswordEmail } from "@@/lib/mail";
+import { getLocaleFromRequest } from "@@/lib/get-locale";
 import { rateLimit, getClientIp } from "@@/lib/rate-limit";
 import crypto from "crypto";
 
@@ -64,8 +65,9 @@ export async function POST(req: Request) {
                 },
             });
 
-            // Send reset email
-            await sendResetPasswordEmail(normalizedEmail, token);
+            // Send reset email in user's language
+            const locale = getLocaleFromRequest(req);
+            await sendResetPasswordEmail(normalizedEmail, token, locale);
         }
 
         // Always return success (even if user doesn't exist)

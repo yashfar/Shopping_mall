@@ -13,8 +13,8 @@ export default async function ProfilePage() {
     const t = await getTranslations("profile");
 
     return (
-        <div style={{ maxWidth: "900px", margin: "50px auto", padding: "20px" }}>
-            <h1 style={{ marginBottom: "30px", fontSize: "2rem", fontWeight: "700" }}>
+        <div className="max-w-225 mx-auto mt-6 mb-10 px-4 sm:px-6 md:mt-12 md:px-5">
+            <h1 className="mb-6 text-2xl font-bold md:text-[2rem] md:mb-8">
                 {t("myProfile")}
             </h1>
             <ProfileContent />
