@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import AddressModal, { Address } from "@@/components/AddressModal";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import "./addresses.css";
 
-export default function AddressesPage() {
+function AddressesContent() {
     const t = useTranslations("addresses");
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get("callbackUrl");
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -119,23 +123,33 @@ export default function AddressesPage() {
             <div className="addresses-container">
                 <div className="addresses-header">
                     <h1>{t("title")}</h1>
-                    <button className="btn-add-address" onClick={openAddModal}>
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2}
-                            stroke="currentColor"
-                            className="icon"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4.5v15m7.5-7.5h-15"
-                            />
-                        </svg>
-                        {t("addNewAddress")}
-                    </button>
+                    <div className="addresses-header-actions">
+                        {callbackUrl && addresses.length > 0 && (
+                            <button
+                                className="btn-continue-checkout"
+                                onClick={() => router.push(callbackUrl)}
+                            >
+                                {t("continueToCheckout")}
+                            </button>
+                        )}
+                        <button className="btn-add-address" onClick={openAddModal}>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                                className="icon"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 4.5v15m7.5-7.5h-15"
+                                />
+                            </svg>
+                            {t("addNewAddress")}
+                        </button>
+                    </div>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}
@@ -223,7 +237,6 @@ export default function AddressesPage() {
                     </div>
                 )}
 
-                {/* Reusable Address Modal */}
                 <AddressModal
                     isOpen={isModalOpen}
                     onClose={closeModal}
@@ -233,5 +246,13 @@ export default function AddressesPage() {
                 />
             </div>
         </div>
+    );
+}
+
+export default function AddressesPage() {
+    return (
+        <Suspense>
+            <AddressesContent />
+        </Suspense>
     );
 }

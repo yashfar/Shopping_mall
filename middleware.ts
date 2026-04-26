@@ -1,35 +1,38 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
-/**
- * Middleware configuration for NextAuth v4 with Role-Based Access Control
- * 
- * - /dashboard routes: require any authenticated user
- * - /admin routes: require authenticated user with role === "ADMIN"
- */
 export default withAuth(
   function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Check if accessing admin routes
+    // Redirect authenticated users away from login/register
+    if ((path === "/login" || path === "/register") && token) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
+    // Admin routes require ADMIN role
     if (path.startsWith("/admin")) {
-      // Require ADMIN role
       if (token?.role !== "ADMIN") {
         return new NextResponse("Access denied", { status: 403 });
       }
     }
 
-    // All other protected routes just need authentication (handled by withAuth)
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        // Login and register are publicly accessible (redirect handled in proxy)
+        if (path === "/login" || path === "/register") return true;
+        // All other matched routes require authentication
+        return !!token;
+      },
     },
   }
 );
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/login", "/register", "/dashboard/:path*", "/admin/:path*"],
 };

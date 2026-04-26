@@ -12,7 +12,6 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -61,9 +60,9 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 relative md:-top-20 overflow-hidden p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 relative overflow-visible p-4">
       {/* Decorative background gradients using theme primary color */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-visible pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]" />
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-primary/10 blur-[100px]" />
         <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
@@ -71,7 +70,9 @@ function LoginForm() {
 
       <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8 relative z-10 backdrop-blur-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{t("welcomeBack")}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
+            {t("welcomeBack")}
+          </h1>
           <p className="text-gray-500">{t("subtitle")}</p>
         </div>
 
@@ -84,7 +85,10 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-gray-700 block">
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-700 block"
+            >
               {t("email")}
             </label>
             <div className="relative group">
@@ -104,7 +108,10 @@ function LoginForm() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700"
+              >
                 {t("password")}
               </label>
               <Link
@@ -150,7 +157,9 @@ function LoginForm() {
             <span className="w-full border-t border-gray-200"></span>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400">{t("orContinueWith")}</span>
+            <span className="bg-white px-2 text-gray-400">
+              {t("orContinueWith")}
+            </span>
           </div>
         </div>
 
@@ -206,15 +215,17 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
-        <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+          <div className="w-full max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-8">
+            <div className="flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

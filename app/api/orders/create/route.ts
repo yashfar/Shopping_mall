@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/payment-config";
 import { calculateCartTotals } from "@@/lib/payment-utils";
 import { generateOrderNumber } from "@@/lib/order-utils";
+import { getLocaleFromRequest } from "@@/lib/get-locale";
 
 /**
  * POST /api/orders/create
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const locale = getLocaleFromRequest(req);
+
     try {
         const body = await req.json().catch(() => ({}));
         const couponCode: string | undefined = body?.couponCode?.trim().toUpperCase() || undefined;
@@ -27,6 +30,9 @@ export async function POST(req: Request) {
         const config = await getPaymentConfig();
 
         const order = await prisma.$transaction(async (tx) => {
+            // Save customer locale so all future emails use the right language
+            await tx.user.update({ where: { id: session.user.id }, data: { locale } });
+
             // Re-fetch the cart inside the transaction so we're reading
             // consistent data for both validation and order creation.
             const cart = await tx.cart.findUnique({

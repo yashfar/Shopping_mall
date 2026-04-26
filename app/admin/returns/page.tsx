@@ -12,6 +12,7 @@ type ReturnRequest = {
     id: string;
     reason: string;
     note: string | null;
+    photos: string[];
     status: string;
     adminNote: string | null;
     createdAt: string;
@@ -35,6 +36,12 @@ type ReturnRequest = {
     };
 };
 
+type PendingConfirm = {
+    id: string;
+    action: "approve" | "reject";
+    orderNumber: string;
+};
+
 export default function ReturnsPage() {
     const t = useTranslations("adminReturns");
     const { formatPrice } = useCurrency();
@@ -42,6 +49,7 @@ export default function ReturnsPage() {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+    const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
 
     const reasonLabels: Record<string, string> = {
         DAMAGED: t("reasonDamaged"),
@@ -75,6 +83,7 @@ export default function ReturnsPage() {
     }, []);
 
     const handleAction = async (id: string, action: "approve" | "reject") => {
+        setConfirm(null);
         setProcessingId(id);
         try {
             const res = await fetch(`/api/admin/returns/${id}`, {
@@ -159,6 +168,20 @@ export default function ReturnsPage() {
                                             {r.note && <p className="text-xs text-gray-500 mt-1">{r.note}</p>}
                                         </div>
 
+                                        {/* Photos */}
+                                        {r.photos && r.photos.length > 0 && (
+                                            <div className="mb-4">
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Müşteri Fotoğrafları</p>
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {r.photos.map((url, i) => (
+                                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity">
+                                                            <img src={url} alt={`Fotoğraf ${i + 1}`} className="w-full h-full object-cover" />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Items */}
                                         <div className="space-y-2 mb-4">
                                             {r.order.items.map((item, idx) => (
@@ -185,7 +208,7 @@ export default function ReturnsPage() {
                                         <div className="flex gap-3">
                                             <Button
                                                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-2"
-                                                onClick={() => handleAction(r.id, "approve")}
+                                                onClick={() => setConfirm({ id: r.id, action: "approve", orderNumber: r.order.orderNumber || r.order.id.substring(0, 8) })}
                                                 disabled={processingId === r.id}
                                             >
                                                 <Check className="w-4 h-4" />
@@ -194,7 +217,7 @@ export default function ReturnsPage() {
                                             <Button
                                                 variant="outline"
                                                 className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold gap-2"
-                                                onClick={() => handleAction(r.id, "reject")}
+                                                onClick={() => setConfirm({ id: r.id, action: "reject", orderNumber: r.order.orderNumber || r.order.id.substring(0, 8) })}
                                                 disabled={processingId === r.id}
                                             >
                                                 <X className="w-4 h-4" />
@@ -235,6 +258,48 @@ export default function ReturnsPage() {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {confirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirm(null)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${confirm.action === "approve" ? "bg-emerald-50" : "bg-red-50"}`}>
+                            {confirm.action === "approve"
+                                ? <Check className="w-6 h-6 text-emerald-600" />
+                                : <X className="w-6 h-6 text-red-600" />
+                            }
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
+                            {confirm.action === "approve" ? t("confirmApproveTitle") : t("confirmRejectTitle")}
+                        </h3>
+                        <p className="text-sm text-gray-500 text-center mb-6">
+                            {confirm.action === "approve" ? t("confirmApproveDesc") : t("confirmRejectDesc")}
+                            {" "}<span className="font-semibold text-gray-700">#{confirm.orderNumber}</span>
+                        </p>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setConfirm(null)}
+                                disabled={processingId === confirm.id}
+                            >
+                                {t("cancelAction")}
+                            </Button>
+                            <Button
+                                className={`flex-1 text-white font-bold ${confirm.action === "approve" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#C8102E] hover:bg-[#A90D27]"}`}
+                                onClick={() => handleAction(confirm.id, confirm.action)}
+                                disabled={processingId === confirm.id}
+                            >
+                                {processingId === confirm.id
+                                    ? t("processing")
+                                    : confirm.action === "approve" ? t("confirmApproveBtn") : t("confirmRejectBtn")
+                                }
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -35,33 +35,33 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
   }
 
   return (
-    <div className={`relative flex items-center bg-[#F3F3F3] rounded-full p-[3px] transition-opacity duration-200 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
+    <div className={`relative flex items-center bg-[#EFEFEF] rounded-full p-[3px] border border-[#E0E0E0] transition-opacity duration-200 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
       {/* Sliding pill background */}
       <div
-        className="absolute top-[3px] h-[calc(100%-6px)] w-[calc(50%-3px)] bg-white rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        className="absolute top-[3px] h-[calc(100%-6px)] w-[calc(50%-3px)] bg-white rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out"
         style={{ left: locale === "en" ? "3px" : "calc(50%)" }}
       />
 
       <button
         onClick={() => switchLocale("en")}
-        className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.8rem] font-bold transition-colors duration-300 ${
+        className={`relative z-10 cursor-pointer flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[0.78rem] font-bold tracking-wide transition-all duration-300 ${
           locale === "en"
-            ? "text-[#1A1A1A]"
-            : "text-[#A9A9A9] hover:text-[#666]"
+            ? "text-[#C8102E]"
+            : "text-[#888] hover:text-[#444]"
         }`}
       >
-        <span className="text-sm leading-none">EN</span>
+        EN
       </button>
 
       <button
         onClick={() => switchLocale("tr")}
-        className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.8rem] font-bold transition-colors duration-300 ${
+        className={`relative z-10 cursor-pointer flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[0.78rem] font-bold tracking-wide transition-all duration-300 ${
           locale === "tr"
-            ? "text-[#1A1A1A]"
-            : "text-[#A9A9A9] hover:text-[#666]"
+            ? "text-[#C8102E]"
+            : "text-[#888] hover:text-[#444]"
         }`}
       >
-        <span className="text-sm leading-none">TR</span>
+        TR
       </button>
     </div>
   );

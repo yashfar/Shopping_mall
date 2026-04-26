@@ -26,6 +26,7 @@ model User {
   phone         String?
   birthdate     DateTime?
   role          Role      @default(USER)
+  locale        String    @default("en")
   createdAt     DateTime  @default(now())
   carts         Cart[]
   orders        Order[]
@@ -180,6 +181,8 @@ model Order {
   coupon           Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
   discountAmount   Int?
   trackingNumber   String?
+  shippingCompany  String?
+  trackingUrl      String?
   paymentProofUrl  String?      // URL of uploaded payment receipt
   paymentProofPath String?      // Storage path for deletion
   couponUsage      CouponUsage?
@@ -240,6 +243,7 @@ model ReturnRequest {
   userId         String
   reason         ReturnReason
   note           String?      // user's explanation
+  photos         String[]     // uploaded photo URLs
   status         ReturnStatus @default(PENDING)
   previousStatus String?      // order status before return request
   adminNote      String?      // admin's response
