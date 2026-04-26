@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 type Locale = "tr" | "en";
 
 const STORE_NAME = process.env.STORE_NAME || "My Store";
-const FROM_EMAIL = `${STORE_NAME} <onboarding@resend.dev>`;
+const FROM_EMAIL = `${STORE_NAME} <noreply@mail.creativeaventus.com>`;
 
 function formatPrice(kurus: number): string {
     return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(kurus / 100);
