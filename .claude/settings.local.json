@@ -18,7 +18,15 @@
       "Bash(ls c:/My-Store/online_shop/app/\\\\\\(main\\\\\\)/admin/)",
       "Bash(find c:/My-Store/online_shop/app/admin -name *.tsx -type f)",
       "Bash(find c:/My-Store/online_shop -name *.tsx -type f)",
-      "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)"
+      "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)",
+      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\\\\app\\\\admin\\\\products\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const p=JSON.parse\\(d\\); console.log\\('test runner:', p.scripts?.test\\); console.log\\('jest:', p.devDependencies?.jest||p.dependencies?.jest\\); console.log\\('vitest:', p.devDependencies?.vitest||p.dependencies?.vitest\\); console.log\\('ts-node:', p.devDependencies?.['ts-node']\\); console.log\\('tsx:', p.devDependencies?.tsx\\);\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\({test:p.scripts?.test, jest:p.devDependencies?.jest||p.dependencies?.jest, vitest:p.devDependencies?.vitest||p.dependencies?.vitest, tsNode:p.devDependencies?.['ts-node'], tsx:p.devDependencies?.tsx},null,2\\)\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\({scripts:p.scripts, prismaVersion:p.dependencies?.['@prisma/client']},null,2\\)\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\(Object.keys\\(p.dependencies||{}\\),null,2\\)\")",
+      "Bash(node --require tsx/cjs --test app/lib/csv/__tests__/serializer.test.ts)"
     ]
   }
 }
