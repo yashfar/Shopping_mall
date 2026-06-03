@@ -1,11 +1,24 @@
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CSV_HEADER, serializeRow } from "./serializer";
 import type { ProductCsvRow } from "./types";
 
-type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: { category: true; translations: true };
-}>;
+// Explicit shape matching the Prisma schema — avoids Prisma v7 generic inference issues.
+type ProductWithRelations = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  salePrice: number | null;
+  stock: number;
+  isActive: boolean;
+  thumbnail: string | null;
+  category: { id: string; name: string } | null;
+  translations: Array<{
+    locale: string;
+    title: string;
+    description: string | null;
+  }>;
+};
 
 /**
  * Maps a fully-hydrated Prisma product to the flat ProductCsvRow shape.
@@ -63,14 +76,13 @@ export function createProductExportStream(): ReadableStream<Uint8Array> {
         let cursor: string | undefined = undefined;
 
         while (true) {
-          const batch = await prisma.product.findMany({
+          const batch: ProductWithRelations[] = await prisma.product.findMany({
             take: BATCH_SIZE,
-            ...(cursor !== undefined
-              ? { skip: 1, cursor: { id: cursor } }
-              : {}),
+            skip: cursor !== undefined ? 1 : undefined,
+            cursor: cursor !== undefined ? { id: cursor } : undefined,
             include: { category: true, translations: true },
             orderBy: { id: "asc" },
-          });
+          }) as ProductWithRelations[];
 
           if (batch.length === 0) break;
 
