@@ -1013,7 +1013,18 @@
     "deleteImageTitle": "Emin misiniz?",
     "deleteImageDesc": "Bu görsel depodan kalıcı olarak silinecek. Bu işlem geri alınamaz.",
     "deleting": "Siliniyor...",
-    "delete": "Sil"
+    "delete": "Sil",
+    "colorVariants": "Renk Varyantları",
+    "hasColorVariants": "Bu üründe renk varyantları var",
+    "stockAutoFromVariants": "{count} (varyantlardan otomatik)",
+    "variantStockDisplay": "Stok: {stock}",
+    "variantColorName": "Renk Adı",
+    "variantColor": "Renk",
+    "variantStockField": "Stok",
+    "addVariant": "Ekle",
+    "variantStockNote": "Varyant eklenince Stok alanı otomatik olarak yok sayılır.",
+    "newCategoryNotice": "🆕 Yeni kategori",
+    "newCategoryEnterEnglish": "— İngilizce ismini de gir:"
   },
   "adminBanners": {
     "featuredContent": "Öne Çıkan İçerik",

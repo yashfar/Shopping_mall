@@ -1013,7 +1013,18 @@
     "deleteImageTitle": "Are you sure?",
     "deleteImageDesc": "This will permanently delete this image from storage. This action cannot be undone.",
     "deleting": "Deleting...",
-    "delete": "Delete"
+    "delete": "Delete",
+    "colorVariants": "Color Variants",
+    "hasColorVariants": "This product has color variants",
+    "stockAutoFromVariants": "{count} (auto from variants)",
+    "variantStockDisplay": "Stock: {stock}",
+    "variantColorName": "Color Name",
+    "variantColor": "Color",
+    "variantStockField": "Stock",
+    "addVariant": "Add",
+    "variantStockNote": "Once a variant is added, the Stock field is automatically ignored.",
+    "newCategoryNotice": "🆕 New category",
+    "newCategoryEnterEnglish": "— Also enter the English name:"
   },
   "adminBanners": {
     "featuredContent": "Featured Content",

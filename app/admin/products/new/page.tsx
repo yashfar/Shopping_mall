@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -35,12 +35,13 @@ interface VariantDraft {
 export default function NewProductPage() {
     const router = useRouter();
     const t = useTranslations("adminProductForm");
+    const locale = useLocale();
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [titleEn, setTitleEn] = useState("");
     const [descriptionEn, setDescriptionEn] = useState("");
-    const [contentTab, setContentTab] = useState<"tr" | "en">("tr");
+    const [contentTab, setContentTab] = useState<"tr" | "en">(locale === "tr" ? "tr" : "en");
     const [price, setPrice] = useState("");
     const [salePrice, setSalePrice] = useState("");
     const [category, setCategory] = useState("");
@@ -328,9 +329,9 @@ export default function NewProductPage() {
                     {/* Left Column: Images */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("productImages")}</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{contentTab === "tr" ? "Ürün Görselleri" : "Product Images"}</h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                {t("imagesDesc")}
+                                {contentTab === "tr" ? "Ürün görsellerini yükleyin. Küçük resmi ayarlamak için yıldız simgesini seçin." : "Upload product images. Select the star icon to set the thumbnail."}
                             </p>
 
                             {/* Image Upload Area */}
@@ -357,9 +358,9 @@ export default function NewProductPage() {
                                         <Upload className="h-8 w-8 text-gray-400 mb-2" />
                                     )}
                                     <span className="text-sm font-medium text-gray-700">
-                                        {uploading ? t("uploading") : t("clickToUpload")}
+                                        {uploading ? (contentTab === "tr" ? "Yükleniyor..." : "Uploading...") : (contentTab === "tr" ? "Yüklemek için tıklayın" : "Click to upload")}
                                     </span>
-                                    <span className="text-xs text-gray-500 mt-1">{t("maxFileSize")}</span>
+                                    <span className="text-xs text-gray-500 mt-1">{contentTab === "tr" ? "Dosya başına MAX 5MB" : "MAX 5MB per file"}</span>
                                 </label>
                             </div>
 
@@ -391,7 +392,7 @@ export default function NewProductPage() {
                                                         className="bg-white/90 hover:bg-white text-gray-900 shadow-sm backdrop-blur-[2px]"
                                                         onClick={() => handleSetThumbnail(img.url)}
                                                     >
-                                                        {t("setThumbnail")}
+                                                        {contentTab === "tr" ? "Küçük Resim Yap" : "Set Thumbnail"}
                                                     </Button>
                                                 </div>
                                                 <Button
@@ -400,7 +401,7 @@ export default function NewProductPage() {
                                                     className="lg:hidden absolute bottom-2 right-12 h-8 px-3 rounded-full shadow-md z-20 bg-white hover:bg-yellow-50 text-yellow-600 border border-gray-200 text-xs font-medium"
                                                     onClick={() => handleSetThumbnail(img.url)}
                                                 >
-                                                    {t("thumbnailBtn")}
+                                                    {contentTab === "tr" ? "Küçük Resim" : "Thumbnail"}
                                                 </Button>
                                             </>
                                         )}
@@ -417,7 +418,7 @@ export default function NewProductPage() {
 
                                         {thumbnail === img.url && (
                                             <div className="absolute top-2 right-2 bg-[#C8102E] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-                                                {t("main")}
+                                                {contentTab === "tr" ? "ANA" : "MAIN"}
                                             </div>
                                         )}
                                     </div>
@@ -456,7 +457,7 @@ export default function NewProductPage() {
                                         <div className="space-y-4">
                                             <div>
                                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    {t("productTitle")} <span className="text-red-500">*</span>
+                                                    Ürün Başlığı <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
@@ -464,14 +465,14 @@ export default function NewProductPage() {
                                                     value={title}
                                                     onChange={(e) => setTitle(e.target.value)}
                                                     className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                    placeholder={t("productTitlePlaceholder")}
+                                                    placeholder="Örn. Kablosuz Gürültü Önleyici Kulaklık"
                                                     required
                                                     disabled={submitting}
                                                 />
                                             </div>
                                             <div>
                                                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    {t("description")} <span className="text-red-500">*</span>
+                                                    Açıklama <span className="text-red-500">*</span>
                                                 </label>
                                                 <textarea
                                                     id="description"
@@ -479,7 +480,7 @@ export default function NewProductPage() {
                                                     onChange={(e) => setDescription(e.target.value)}
                                                     rows={6}
                                                     className="w-full p-3 rounded-md border border-gray-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                    placeholder={t("descriptionPlaceholder")}
+                                                    placeholder="Ürün özelliklerini, teknik bilgileri vb. açıklayın."
                                                     required
                                                     disabled={submitting}
                                                 />
@@ -525,7 +526,7 @@ export default function NewProductPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div>
                                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("priceUSD")} <span className="text-red-500">*</span>
+                                            {contentTab === "tr" ? "Fiyat (USD)" : "Price (USD)"} <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -546,7 +547,7 @@ export default function NewProductPage() {
 
                                     <div>
                                         <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("salePrice")} <span className="text-gray-400 font-normal">{t("optional")}</span>
+                                            {contentTab === "tr" ? "İndirimli Fiyat" : "Sale Price"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -566,11 +567,11 @@ export default function NewProductPage() {
 
                                     <div>
                                         <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("stockQuantity")} {!hasVariants && <span className="text-red-500">*</span>}
+                                            {contentTab === "tr" ? "Stok Miktarı" : "Stock Quantity"} {!hasVariants && <span className="text-red-500">*</span>}
                                         </label>
                                         {hasVariants ? (
                                             <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
-                                                {variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0)} (varyantlardan otomatik)
+                                                {t("stockAutoFromVariants", { count: variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0) })}
                                             </div>
                                         ) : (
                                             <input
@@ -591,7 +592,7 @@ export default function NewProductPage() {
                                 {/* Category */}
                                 <div>
                                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                                        {t("category")} <span className="text-red-500">*</span>
+                                        {contentTab === "tr" ? "Kategori" : "Category"} <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
                                         <input
@@ -607,7 +608,7 @@ export default function NewProductPage() {
                                                 }
                                             }}
                                             className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder={t("categoryPlaceholder")}
+                                            placeholder={contentTab === "tr" ? "Kategori seçin veya yazın..." : "Select or type a category..."}
                                             required
                                             disabled={submitting}
                                             autoComplete="off"
@@ -622,8 +623,8 @@ export default function NewProductPage() {
                                     {category.trim() && !categories.some(c => c.name.toLowerCase() === category.trim().toLowerCase()) && (
                                         <div className="mt-2">
                                             <div className="flex items-center gap-1 mb-1">
-                                                <span className="text-xs font-medium text-amber-600">🆕 Yeni kategori</span>
-                                                <span className="text-xs text-gray-400">— İngilizce ismini de gir:</span>
+                                                <span className="text-xs font-medium text-amber-600">{t("newCategoryNotice")}</span>
+                                                <span className="text-xs text-gray-400">{t("newCategoryEnterEnglish")}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm shrink-0">🇬🇧</span>
@@ -648,7 +649,7 @@ export default function NewProductPage() {
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <Palette className="w-5 h-5 text-gray-400" />
-                                    <h2 className="text-lg font-semibold text-gray-900">Renk Varyantları</h2>
+                                    <h2 className="text-lg font-semibold text-gray-900">{t("colorVariants")}</h2>
                                 </div>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <div
@@ -657,7 +658,7 @@ export default function NewProductPage() {
                                     >
                                         <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hasVariants ? "translate-x-5" : ""}`} />
                                     </div>
-                                    <span className="text-sm text-gray-600">Bu üründe renk varyantları var</span>
+                                    <span className="text-sm text-gray-600">{t("hasColorVariants")}</span>
                                 </label>
                             </div>
 
@@ -670,7 +671,7 @@ export default function NewProductPage() {
                                                 <div key={v.tempId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                                     <div className="w-6 h-6 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex }} />
                                                     <span className="font-medium text-gray-900 flex-1">{v.color}</span>
-                                                    <span className="text-sm text-gray-500 w-20 text-right">Stok: {v.stock}</span>
+                                                    <span className="text-sm text-gray-500 w-20 text-right">{t("variantStockDisplay", { stock: v.stock })}</span>
                                                     <button type="button" onClick={() => removeVariant(v.tempId)} className="text-red-500 hover:text-red-700 p-1">
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -682,7 +683,7 @@ export default function NewProductPage() {
                                     {/* Add New Variant Row */}
                                     <div className="flex items-end gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">Renk Adı</label>
+                                            <label className="text-xs font-medium text-gray-600">{t("variantColorName")}</label>
                                             <input
                                                 type="text"
                                                 value={newVariant.color}
@@ -692,7 +693,7 @@ export default function NewProductPage() {
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">Renk</label>
+                                            <label className="text-xs font-medium text-gray-600">{t("variantColor")}</label>
                                             <input
                                                 type="color"
                                                 value={newVariant.colorHex}
@@ -701,7 +702,7 @@ export default function NewProductPage() {
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">Stok</label>
+                                            <label className="text-xs font-medium text-gray-600">{t("variantStockField")}</label>
                                             <input
                                                 type="number"
                                                 value={newVariant.stock}
@@ -711,10 +712,10 @@ export default function NewProductPage() {
                                             />
                                         </div>
                                         <Button type="button" onClick={addVariant} className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0">
-                                            <Plus className="w-4 h-4 mr-1" /> Ekle
+                                            <Plus className="w-4 h-4 mr-1" /> {t("addVariant")}
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-gray-400">Varyant eklenince Stok alanı otomatik olarak yok sayılır.</p>
+                                    <p className="text-xs text-gray-400">{t("variantStockNote")}</p>
                                 </div>
                             )}
                         </div>

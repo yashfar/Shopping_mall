@@ -18,7 +18,9 @@
       "Bash(ls c:/My-Store/online_shop/app/\\\\\\(main\\\\\\)/admin/)",
       "Bash(find c:/My-Store/online_shop/app/admin -name *.tsx -type f)",
       "Bash(find c:/My-Store/online_shop -name *.tsx -type f)",
-      "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)"
+      "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)",
+      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\\\\app\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }
