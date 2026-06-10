@@ -19,8 +19,21 @@
       "Bash(find c:/My-Store/online_shop/app/admin -name *.tsx -type f)",
       "Bash(find c:/My-Store/online_shop -name *.tsx -type f)",
       "Bash(find c:/My-Store/online_shop/app/[locale] -name *.tsx -o -name *.ts -o -name *.json)",
-      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\\\\app\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\\\\app\\\\admin\\\\products\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const p=JSON.parse\\(d\\); console.log\\('test runner:', p.scripts?.test\\); console.log\\('jest:', p.devDependencies?.jest||p.dependencies?.jest\\); console.log\\('vitest:', p.devDependencies?.vitest||p.dependencies?.vitest\\); console.log\\('ts-node:', p.devDependencies?.['ts-node']\\); console.log\\('tsx:', p.devDependencies?.tsx\\);\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\({test:p.scripts?.test, jest:p.devDependencies?.jest||p.dependencies?.jest, vitest:p.devDependencies?.vitest||p.dependencies?.vitest, tsNode:p.devDependencies?.['ts-node'], tsx:p.devDependencies?.tsx},null,2\\)\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\({scripts:p.scripts, prismaVersion:p.dependencies?.['@prisma/client']},null,2\\)\")",
+      "Bash(node -p \"const p=require\\('./package.json'\\); JSON.stringify\\(Object.keys\\(p.dependencies||{}\\),null,2\\)\")",
+      "Bash(node --require tsx/cjs --test app/lib/csv/__tests__/serializer.test.ts)",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/app/generated/prisma/index.d.ts','utf8'\\); const lines=s.split\\('\\\\n'\\); lines.slice\\(0,40\\).forEach\\(\\(l,i\\)=>console.log\\(i+1,l\\)\\);\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/app/generated/prisma/index.d.ts','utf8'\\); const m=s.match\\(/export namespace Prisma/\\); console.log\\('has namespace:', !!m\\); const m2=s.match\\(/ProductGetPayload/g\\); console.log\\('ProductGetPayload occurrences:', m2?.length\\); console.log\\(s.substring\\(s.indexOf\\('namespace Prisma'\\), s.indexOf\\('namespace Prisma'\\)+200\\)\\);\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/app/generated/prisma/index.d.ts','utf8'\\); const start=s.indexOf\\('export type Product ='\\); const end=s.indexOf\\('\\\\n\\\\n', start\\); console.log\\(s.slice\\(start, start+600\\)\\);\")",
+      "Bash(node -e 'const s=require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''c:/My-Store/online_shop/app/generated/prisma/index.d.ts'\\\\'','\\\\''utf8'\\\\''\\); const start=s.indexOf\\('\\\\''$ProductPayload'\\\\''\\); const chunk=s.slice\\(start, start+1200\\); console.log\\(chunk\\);')",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/prisma/schema.prisma','utf8'\\); const start=s.indexOf\\('model Product'\\); const end=s.indexOf\\('\\\\nmodel ', start+1\\); console.log\\(s.slice\\(start,end\\)\\);\")",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/prisma/schema.prisma','utf8'\\); const start=s.indexOf\\('model ProductTranslation'\\); const end=s.indexOf\\('\\\\nmodel ', start+1\\); console.log\\(s.slice\\(start,end\\)\\);\")",
+      "Bash(pnpm run *)"
     ]
   }
 }
