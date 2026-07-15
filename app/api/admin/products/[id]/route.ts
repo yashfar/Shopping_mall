@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { sendStockAlertEmail } from "@@/lib/mail";
+import { translateToEnglish } from "@@/lib/translate";
 
 /**
  * GET /api/admin/products/[id]
@@ -27,6 +28,7 @@ export async function GET(
                 category: true,
                 translations: true,
                 variants: { orderBy: { createdAt: "asc" } },
+                prices: { orderBy: { currencyCode: "asc" } },
             },
         });
 
@@ -61,32 +63,35 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        const { title, description, titleEn, descriptionEn, price, salePrice, stock, isActive, images, thumbnail, category, categoryNameEn, shippingDays } = await req.json();
+        const { title, description, titleEn, descriptionEn, prices, stock, isActive, images, thumbnail, categoryId, shippingDays } = await req.json();
+
+        // Resolve English translation before opening DB transaction (avoids network call inside tx)
+        let resolvedTitleEn: string | null | undefined = titleEn;
+        let resolvedDescriptionEn: string | null | undefined = descriptionEn;
+        if (titleEn !== undefined && !titleEn?.trim()) {
+            const trTitle = (title ?? "").trim();
+            const trDesc = (description ?? "").trim();
+            const translated = await translateToEnglish(trTitle, trDesc);
+            resolvedTitleEn = translated.titleEn;
+            resolvedDescriptionEn = translated.descriptionEn;
+        }
 
         const updateData: any = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (shippingDays !== undefined) updateData.shippingDays = shippingDays?.trim() || "3-5";
-        if (price !== undefined) updateData.price = Math.round(price);
-        if (salePrice !== undefined) updateData.salePrice = salePrice ? Math.round(salePrice) : null;
-        if (category !== undefined) {
-            updateData.category = {
-                connectOrCreate: {
-                    where: { name: category },
-                    create: { name: category, nameEn: categoryNameEn?.trim() || null },
-                },
-            };
-            // If EN name provided and category already exists, update it too
-            if (categoryNameEn !== undefined) {
-                (async () => {
-                    try {
-                        await prisma.category.updateMany({
-                            where: { name: category },
-                            data: { nameEn: categoryNameEn?.trim() || null },
-                        });
-                    } catch {}
-                })();
+
+        // Sync TRY price to backward-compat Product fields
+        if (Array.isArray(prices)) {
+            const tryEntry = prices.find((p: any) => p.currencyCode === "TRY");
+            if (tryEntry) {
+                updateData.price = Math.round(tryEntry.price);
+                updateData.salePrice = tryEntry.salePrice ? Math.round(tryEntry.salePrice) : null;
             }
+        }
+
+        if (categoryId) {
+            updateData.category = { connect: { id: categoryId } };
         }
         if (thumbnail !== undefined) updateData.thumbnail = thumbnail;
 
@@ -118,25 +123,43 @@ export async function PATCH(
                 }
             }
 
-            // Handle English translation upsert
-            if (titleEn !== undefined) {
-                if (titleEn?.trim()) {
+            // Upsert ProductPrice rows
+            if (Array.isArray(prices)) {
+                for (const entry of prices as Array<{ currencyCode: string; price: number; salePrice?: number | null }>) {
+                    await tx.productPrice.upsert({
+                        where: { productId_currencyCode: { productId: id, currencyCode: entry.currencyCode } },
+                        create: {
+                            productId: id,
+                            currencyCode: entry.currencyCode,
+                            price: Math.round(entry.price),
+                            salePrice: entry.salePrice ? Math.round(entry.salePrice) : null,
+                        },
+                        update: {
+                            price: Math.round(entry.price),
+                            salePrice: entry.salePrice ? Math.round(entry.salePrice) : null,
+                        },
+                    });
+                }
+            }
+
+            // Handle English translation upsert (resolvedTitleEn is pre-translated if needed)
+            if (resolvedTitleEn !== undefined) {
+                const enTitle = resolvedTitleEn?.trim() || null;
+                const enDesc = resolvedDescriptionEn?.trim() || null;
+
+                if (enTitle) {
                     await tx.productTranslation.upsert({
                         where: { productId_locale: { productId: id, locale: "en" } },
                         create: {
                             productId: id,
                             locale: "en",
-                            title: titleEn.trim(),
-                            description: descriptionEn?.trim() ?? null,
+                            title: enTitle,
+                            description: enDesc,
                         },
                         update: {
-                            title: titleEn.trim(),
-                            description: descriptionEn?.trim() ?? null,
+                            title: enTitle,
+                            description: enDesc,
                         },
-                    });
-                } else {
-                    await tx.productTranslation.deleteMany({
-                        where: { productId: id, locale: "en" },
                     });
                 }
             }

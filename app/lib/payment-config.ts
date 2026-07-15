@@ -8,6 +8,13 @@ export type PaymentConfigData = {
     accountHolder?: string;
     iban?: string;
     bankTransferNote?: string;
+    usdBankName?: string;
+    usdAccountHolder?: string;
+    usdIban?: string;
+    usdSwiftCode?: string;
+    usdBankTransferNote?: string;
+    usdShippingFee?: number;
+    usdFreeShippingThreshold?: number;
 };
 
 export type CartTotals = {

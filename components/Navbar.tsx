@@ -8,6 +8,7 @@ import Image from "next/image";
 import CreativeAventusLogo from "@@/public/logo/Creative_Aventus_Logo_6.png";
 import AdminNavbarLink from "@@/components/AdminNavbarLink";
 import LanguageSwitcher from "@@/components/LanguageSwitcher";
+import CurrencySwitcher from "@@/components/CurrencySwitcher";
 import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function Navbar() {
@@ -54,9 +55,10 @@ export default async function Navbar() {
 
         {/* Right Side - Auth & Cart */}
         <div className="flex items-center gap-2 md:gap-6">
-          {/* Language Switcher - Desktop */}
-          <div className="hidden md:flex items-center">
+          {/* Language + Currency Switchers - Desktop */}
+          <div className="hidden md:flex items-center gap-2">
             <LanguageSwitcher />
+            <CurrencySwitcher />
           </div>
 
           {!session ? (

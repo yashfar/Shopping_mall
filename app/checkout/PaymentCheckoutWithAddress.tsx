@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AddressModal from "@@/components/AddressModal";
 import "./address-selection.css";
 import { useTranslations } from "next-intl";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { formatPrice as formatPriceFixed, type SupportedCurrency } from "@@/lib/format-price";
 import { useCart } from "@@/context/CartContext";
 
 interface Address {
@@ -34,20 +34,22 @@ interface OrderItem {
 interface Order {
     id: string;
     total: number;
+    currencyCode: string;
     status: string;
     items: OrderItem[];
 }
 
 interface BankDetails {
+    available: boolean;
     bankName: string;
     accountHolder: string;
     iban: string;
+    swiftCode: string | null;
     bankTransferNote: string;
 }
 
 export default function PaymentCheckoutWithAddress({ orderId }: { orderId: string }) {
     const t = useTranslations("paymentCheckout");
-    const { formatPrice } = useCurrency();
     const { refreshCart } = useCart();
     const router = useRouter();
     const [order, setOrder] = useState<Order | null>(null);
@@ -82,6 +84,18 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                 if (!["PENDING", "PAYMENT_REJECTED"].includes(data.order.status)) {
                     router.push(`/orders/${orderId}`);
                 }
+
+                // Fetch bank details for the order's currency
+                const orderCurrency = data.order.currencyCode ?? "TRY";
+                try {
+                    const bdResponse = await fetch(`/api/bank-details?currency=${orderCurrency}`);
+                    if (bdResponse.ok) {
+                        const bdData = await bdResponse.json();
+                        setBankDetails(bdData);
+                    }
+                } catch (bdErr) {
+                    console.error("Error fetching bank details:", bdErr);
+                }
             } catch (error) {
                 console.error("Error fetching order:", error);
                 router.push("/orders");
@@ -105,21 +119,8 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
             }
         };
 
-        const fetchBankDetails = async () => {
-            try {
-                const response = await fetch("/api/bank-details");
-                if (response.ok) {
-                    const data = await response.json();
-                    setBankDetails(data);
-                }
-            } catch (error) {
-                console.error("Error fetching bank details:", error);
-            }
-        };
-
         fetchOrder();
         fetchAddresses();
-        fetchBankDetails();
     }, [orderId, router]);
 
     const maskPhone = (phone: string) => {
@@ -422,31 +423,35 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                 </tr>
                             </thead>
                             <tbody>
-                                {order.items.map((item) => (
-                                    <tr key={item.id}>
-                                        <td>{item.product.title}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>{formatPrice(item.price * item.quantity)}</td>
-                                    </tr>
-                                ))}
+                                {order.items.map((item) => {
+                                        const orderCcy = (order.currencyCode ?? "TRY") as SupportedCurrency;
+                                        return (
+                                            <tr key={item.id}>
+                                                <td>{item.product.title}</td>
+                                                <td>{item.quantity}</td>
+                                                <td>{formatPriceFixed(item.price * item.quantity, orderCcy)}</td>
+                                            </tr>
+                                        );
+                                    })}
                             </tbody>
                             <tfoot>
                                 {(() => {
+                                    const orderCcy = (order.currencyCode ?? "TRY") as SupportedCurrency;
                                     const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
                                     const shipping = order.total - subtotal;
                                     return (
                                         <>
                                             <tr>
                                                 <td colSpan={2}>{t("subtotal")}</td>
-                                                <td>{formatPrice(subtotal)}</td>
+                                                <td>{formatPriceFixed(subtotal, orderCcy)}</td>
                                             </tr>
                                             <tr>
                                                 <td colSpan={2}>{t("shipping")}</td>
-                                                <td>{shipping > 0 ? formatPrice(shipping) : t("free")}</td>
+                                                <td>{shipping > 0 ? formatPriceFixed(shipping, orderCcy) : t("free")}</td>
                                             </tr>
                                             <tr>
                                                 <td colSpan={2}>{t("total")}</td>
-                                                <td className="total-amount">{formatPrice(order.total)}</td>
+                                                <td className="total-amount">{formatPriceFixed(order.total, orderCcy)}</td>
                                             </tr>
                                         </>
                                     );
@@ -456,7 +461,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                     </div>
 
                     {/* Bank Transfer Details */}
-                    {bankDetails && (bankDetails.bankName || bankDetails.iban) && (
+                    {bankDetails && bankDetails.available && (
                         <div style={{
                             backgroundColor: "#f0f9ff",
                             padding: "24px",
@@ -467,10 +472,9 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                             <h3 style={{ margin: "0 0 12px 0", color: "#0369a1", fontSize: "16px" }}>
                                 {t("bankTransferDetails")}
                             </h3>
-                            <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}>
-                                Please transfer <strong>{formatPrice(order.total)}</strong> to the
-                                following account, then upload your receipt below.
-                            </p>
+                            <p style={{ margin: "0 0 16px 0", fontSize: "14px", color: "#555" }}
+                                dangerouslySetInnerHTML={{ __html: t("bankTransferInstruction").replace("${amount}", `<strong>${formatPriceFixed(order.total, (order.currencyCode ?? "TRY") as SupportedCurrency)}</strong>`) }}
+                            />
 
                             <div style={{ display: "grid", gap: "10px" }}>
                                 {bankDetails.bankName && (
@@ -498,6 +502,15 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                                             <div style={{ fontSize: "14px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", wordBreak: "break-all", letterSpacing: "0.5px" }}>{bankDetails.iban}</div>
                                         </div>
                                         <button onClick={() => copyToClipboard(bankDetails.iban)} style={{ flexShrink: 0, background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666", marginTop: "2px" }}>{t("copy")}</button>
+                                    </div>
+                                )}
+                                {bankDetails.swiftCode && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 14px", backgroundColor: "white", borderRadius: "6px", border: "1px solid #e0f2fe" }}>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{t("swiftCode")}</div>
+                                            <div style={{ fontSize: "14px", fontWeight: 600, color: "#1a1a1a", fontFamily: "monospace", letterSpacing: "1px" }}>{bankDetails.swiftCode}</div>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(bankDetails.swiftCode!)} style={{ flexShrink: 0, background: "none", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#666" }}>{t("copy")}</button>
                                     </div>
                                 )}
                             </div>

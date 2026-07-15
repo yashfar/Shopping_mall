@@ -18,6 +18,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             images: { orderBy: { createdAt: "asc" } },
             category: true,
             translations: true,
+            prices: { select: { currencyCode: true, price: true, salePrice: true } },
             variants: { orderBy: { createdAt: "asc" } },
             reviews: {
                 include: {

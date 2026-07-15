@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
@@ -21,6 +21,7 @@ import {
     Upload,
     ChevronLeft,
     ChevronRight,
+    DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,12 +30,14 @@ type Product = {
     title: string;
     description: string | null;
     price: number;
+    salePrice?: number | null;
     stock: number;
     isActive: boolean;
     thumbnail?: string | null;
     createdAt: string;
     updatedAt: string;
     variants?: { id: string; stock: number }[];
+    prices?: PriceEntry[];
 };
 
 type Pagination = {
@@ -48,7 +51,8 @@ const PAGE_SIZE = 20;
 
 export default function ProductManagement() {
     const t = useTranslations("adminProducts");
-    const { formatPrice } = useCurrency();
+    const locale = useLocale();
+    const { formatResolvedPrice, resolveProductPrice } = useCurrency();
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -60,6 +64,10 @@ export default function ProductManagement() {
     const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "", title: "" });
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [importing, setImporting] = useState(false);
+    const [usdRate, setUsdRate] = useState("");
+    const [usdOverwrite, setUsdOverwrite] = useState(false);
+    const [migrating, setMigrating] = useState(false);
+    const [migrateResult, setMigrateResult] = useState<{ usdCreated: number; tryCreated: number; total: number } | null>(null);
 
     const fetchProducts = useCallback(async (page = 1, search = "") => {
         try {
@@ -68,6 +76,7 @@ export default function ProductManagement() {
             const params = new URLSearchParams({
                 page: String(page),
                 limit: String(PAGE_SIZE),
+                locale,
             });
             if (search) params.set("search", search);
 
@@ -83,7 +92,7 @@ export default function ProductManagement() {
         } finally {
             setLoading(false);
         }
-    }, [t]);
+    }, [t, locale]);
 
     useEffect(() => {
         fetchProducts(currentPage, searchTerm);
@@ -161,13 +170,30 @@ export default function ProductManagement() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C8102E]"></div>
-            </div>
-        );
-    }
+    const handleMigratePrices = async () => {
+        const rate = parseFloat(usdRate);
+        if (!usdRate || isNaN(rate) || rate <= 0) {
+            toast.error(t("usdMigrateError"));
+            return;
+        }
+        setMigrating(true);
+        setMigrateResult(null);
+        try {
+            const res = await fetch("/api/admin/migrate-prices", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ usdRate: rate, overwrite: usdOverwrite }),
+            });
+            const data = await res.json();
+            if (!res.ok) { toast.error(data.error || t("usdMigrateFailed")); return; }
+            setMigrateResult({ usdCreated: data.usdCreated, tryCreated: data.tryCreated, total: data.total });
+            toast.success(t("usdMigrateSuccess", { usdCreated: data.usdCreated, tryCreated: data.tryCreated, total: data.total }));
+        } catch {
+            toast.error(t("usdMigrateFailed"));
+        } finally {
+            setMigrating(false);
+        }
+    };
 
     if (error) {
         return (
@@ -251,8 +277,60 @@ export default function ProductManagement() {
                 </p>
             )}
 
+            {/* USD Price Migration */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <DollarSign className="w-5 h-5 text-amber-600 shrink-0" />
+                    <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-800">{t("usdMigrateTitle")}</p>
+                        <p className="text-xs text-amber-600 mt-0.5">{t("usdMigrateDesc")}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-medium">₺/$</span>
+                            <input
+                                type="number"
+                                min="1"
+                                step="0.01"
+                                placeholder="38.50"
+                                value={usdRate}
+                                onChange={(e) => setUsdRate(e.target.value)}
+                                className="w-28 pl-8 pr-3 py-2 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-500 bg-white"
+                            />
+                        </div>
+                        <Button
+                            onClick={handleMigratePrices}
+                            disabled={migrating || !usdRate}
+                            className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+                            size="sm"
+                        >
+                            {migrating ? <RefreshCw className="w-4 h-4 animate-spin" /> : t("usdMigrateApply")}
+                        </Button>
+                    </div>
+                </div>
+                <label className="flex items-center gap-2 mt-3 cursor-pointer w-fit">
+                    <input
+                        type="checkbox"
+                        checked={usdOverwrite}
+                        onChange={(e) => setUsdOverwrite(e.target.checked)}
+                        className="w-4 h-4 rounded border-amber-400 accent-amber-600 cursor-pointer"
+                    />
+                    <span className="text-xs text-amber-700">{t("usdMigrateOverwrite")}</span>
+                </label>
+                {migrateResult && (
+                    <p className="mt-2 text-xs text-amber-700 font-medium">
+                        ✓ {t("usdMigrateSuccess", { usdCreated: migrateResult.usdCreated, tryCreated: migrateResult.tryCreated, total: migrateResult.total })}
+                    </p>
+                )}
+            </div>
+
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {loading && products.length === 0 && (
+                <div className="flex justify-center items-center min-h-100">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C8102E]" />
+                </div>
+            )}
+            <div className={`relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-150 ${loading ? "opacity-50 pointer-events-none" : ""}`}>
                 {products.map((product) => (
                     <div
                         key={product.id}
@@ -288,7 +366,12 @@ export default function ProductManagement() {
                             <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                                 <div className="flex flex-col">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("price")}</span>
-                                    <span className="font-bold text-lg text-gray-900">{formatPrice(product.price)}</span>
+                                    {(() => {
+                                        const resolved = resolveProductPrice(product);
+                                        return resolved
+                                            ? <span className="font-bold text-lg text-gray-900">{formatResolvedPrice(resolved)}</span>
+                                            : <span className="font-bold text-lg text-gray-400">—</span>;
+                                    })()}
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("stock")}</span>

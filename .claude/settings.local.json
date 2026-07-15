@@ -33,7 +33,13 @@
       "Bash(node -e 'const s=require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''c:/My-Store/online_shop/app/generated/prisma/index.d.ts'\\\\'','\\\\''utf8'\\\\''\\); const start=s.indexOf\\('\\\\''$ProductPayload'\\\\''\\); const chunk=s.slice\\(start, start+1200\\); console.log\\(chunk\\);')",
       "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/prisma/schema.prisma','utf8'\\); const start=s.indexOf\\('model Product'\\); const end=s.indexOf\\('\\\\nmodel ', start+1\\); console.log\\(s.slice\\(start,end\\)\\);\")",
       "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('c:/My-Store/online_shop/prisma/schema.prisma','utf8'\\); const start=s.indexOf\\('model ProductTranslation'\\); const end=s.indexOf\\('\\\\nmodel ', start+1\\); console.log\\(s.slice\\(start,end\\)\\);\")",
-      "Bash(pnpm run *)"
+      "Bash(pnpm run *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"c:\\\\My-Store\\\\online_shop\" -Recurse -Depth 2 -Directory)",
+      "Bash(Start-Sleep -Seconds 20)",
+      "Bash(Get-Content \"C:\\\\Users\\\\yasha\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--My-Store-online-shop\\\\90bd00db-6ce7-4fa0-a3a5-b0f7b2ef4fed\\\\tasks\\\\bupfwz6kz.output\")",
+      "Bash(npx tsx *)"
     ]
   }
 }

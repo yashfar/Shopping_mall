@@ -25,6 +25,7 @@ export async function GET(
                 id: true,
                 orderNumber: true,
                 total: true,
+                currencyCode: true,
                 status: true,
                 createdAt: true,
                 trackingNumber: true,

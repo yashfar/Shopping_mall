@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { translateText } from "@@/lib/translate";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,7 +38,7 @@ export async function POST(req: Request, { params }: Params) {
     const { id } = await params;
 
     try {
-        const { color, colorHex, stock, images } = await req.json();
+        const { color, colorEn, colorHex, stock, images } = await req.json();
 
         if (!color?.trim()) {
             return NextResponse.json({ error: "Color name is required" }, { status: 400 });
@@ -46,10 +47,14 @@ export async function POST(req: Request, { params }: Params) {
             return NextResponse.json({ error: "Stock must be a non-negative number" }, { status: 400 });
         }
 
+        // Auto-translate missing color name
+        const resolvedColorEn = colorEn?.trim() || await translateText(color.trim());
+
         const variant = await prisma.productVariant.create({
             data: {
                 productId: id,
                 color: color.trim(),
+                colorEn: resolvedColorEn || null,
                 colorHex: colorHex?.trim() || null,
                 stock,
                 images: Array.isArray(images) ? images : [],
@@ -84,7 +89,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const { id: productId } = await params;
 
     try {
-        const { variantId, color, colorHex, stock, images } = await req.json();
+        const { variantId, color, colorEn, colorHex, stock, images } = await req.json();
 
         if (!variantId) {
             return NextResponse.json({ error: "variantId is required" }, { status: 400 });
@@ -92,6 +97,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
         const updateData: any = {};
         if (color !== undefined) updateData.color = color.trim();
+        if (colorEn !== undefined) updateData.colorEn = colorEn?.trim() || null;
         if (colorHex !== undefined) updateData.colorHex = colorHex?.trim() || null;
         if (stock !== undefined) updateData.stock = stock;
         if (images !== undefined) updateData.images = Array.isArray(images) ? images : [];

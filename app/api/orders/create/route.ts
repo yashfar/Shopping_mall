@@ -2,13 +2,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/payment-config";
-import { calculateCartTotals } from "@@/lib/payment-utils";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
 import { generateOrderNumber } from "@@/lib/order-utils";
 import { getLocaleFromRequest } from "@@/lib/get-locale";
+import { formatPrice } from "@@/lib/format-price";
 
 /**
  * POST /api/orders/create
  * Creates an order from the user's cart.
+ *
+ * Body: { couponCode?: string, currencyCode?: "TRY" | "USD" }
+ *
+ * Total is calculated entirely on the backend from ProductPrice records —
+ * the frontend total is never trusted.
  *
  * Stock validation is performed INSIDE the transaction so that two
  * concurrent checkouts cannot both pass the availability check and
@@ -22,12 +28,30 @@ export async function POST(req: Request) {
     }
 
     const locale = getLocaleFromRequest(req);
+    let currencyCode: "TRY" | "USD" = "TRY";
 
     try {
         const body = await req.json().catch(() => ({}));
         const couponCode: string | undefined = body?.couponCode?.trim().toUpperCase() || undefined;
+        const rawCurrency: string = body?.currencyCode ?? "TRY";
+        currencyCode = rawCurrency === "USD" ? "USD" : "TRY";
 
         const config = await getPaymentConfig();
+
+        // Verify USD bank account is configured before allowing a USD order
+        if (currencyCode === "USD") {
+            if (!config.usdBankName || !config.usdIban) {
+                return NextResponse.json(
+                    { error: "USD payments are not available at this time" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // Shipping config for the chosen currency
+        const effectiveShipping = currencyCode === "USD"
+            ? { shippingFee: config.usdShippingFee, freeShippingThreshold: config.usdFreeShippingThreshold }
+            : { shippingFee: config.shippingFee, freeShippingThreshold: config.freeShippingThreshold };
 
         const order = await prisma.$transaction(async (tx) => {
             // Save customer locale so all future emails use the right language
@@ -39,7 +63,16 @@ export async function POST(req: Request) {
                 where: { userId: session.user.id },
                 include: {
                     items: {
-                        include: { product: true, variant: true },
+                        include: {
+                            product: {
+                                include: {
+                                    prices: {
+                                        select: { currencyCode: true, price: true, salePrice: true },
+                                    },
+                                },
+                            },
+                            variant: true,
+                        },
                     },
                 },
             });
@@ -48,8 +81,7 @@ export async function POST(req: Request) {
                 throw new Error("CART_EMPTY");
             }
 
-            // Validate stock inside the transaction — this prevents the race
-            // condition where two simultaneous requests both pass an external check.
+            // Validate stock inside the transaction — prevents race conditions
             for (const item of cart.items) {
                 if (!item.product.isActive) {
                     throw new Error(`PRODUCT_INACTIVE:${item.product.title}`);
@@ -62,7 +94,35 @@ export async function POST(req: Request) {
                 }
             }
 
-            const totals = calculateCartTotals(cart.items, config);
+            // Resolve the effective price for each item in the chosen currency.
+            // Snapshot happens here — changing product prices later will NOT
+            // affect this order because we write the resolved price to OrderItem.
+            const resolvedItems: {
+                productId: string;
+                variantId: string | null;
+                variantColor: string | null;
+                quantity: number;
+                price: number; // minor units in the chosen currency
+            }[] = [];
+
+            for (const item of cart.items) {
+                const priceEntry = item.product.prices.find((p) => p.currencyCode === currencyCode);
+                if (!priceEntry) {
+                    throw new Error(`NO_PRICE_FOR_CURRENCY:${item.product.title}:${currencyCode}`);
+                }
+                resolvedItems.push({
+                    productId: item.productId,
+                    variantId: item.variantId ?? null,
+                    variantColor: item.variant?.color ?? null,
+                    quantity: item.quantity,
+                    price: priceEntry.salePrice ?? priceEntry.price,
+                });
+            }
+
+            const totals = calculateTotalsFromPrices(
+                resolvedItems.map((i) => ({ price: i.price, quantity: i.quantity })),
+                { taxPercent: config.taxPercent, ...effectiveShipping }
+            );
 
             // Validate coupon inside transaction
             let discountAmount = 0;
@@ -105,19 +165,22 @@ export async function POST(req: Request) {
                     userId: session.user.id,
                     orderNumber: await generateOrderNumber(tx),
                     total: finalTotal,
+                    currencyCode,
                     status: "PENDING",
                     ...(coupon ? { couponId: coupon.id, discountAmount } : {}),
                 },
             });
 
+            // Snapshot resolved prices — changes to product prices later will
+            // not alter this order's line items
             await tx.orderItem.createMany({
-                data: cart.items.map((item) => ({
+                data: resolvedItems.map((item) => ({
                     orderId: newOrder.id,
                     productId: item.productId,
-                    variantId: item.variantId ?? null,
-                    variantColor: item.variant?.color ?? null,
+                    variantId: item.variantId,
+                    variantColor: item.variantColor,
                     quantity: item.quantity,
-                    price: item.product.price,
+                    price: item.price,
                 })),
             });
 
@@ -164,7 +227,10 @@ export async function POST(req: Request) {
             }
             if (error.message.startsWith("COUPON_MIN_AMOUNT:")) {
                 const minAmount = parseInt(error.message.split(":")[1]);
-                return NextResponse.json({ error: `Minimum order amount of ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(minAmount / 100)} required` }, { status: 400 });
+                return NextResponse.json(
+                    { error: `Minimum order amount of ${formatPrice(minAmount, currencyCode)} required` },
+                    { status: 400 }
+                );
             }
             if (error.message.startsWith("PRODUCT_INACTIVE:")) {
                 const title = error.message.split(":")[1];
@@ -176,9 +242,14 @@ export async function POST(req: Request) {
             if (error.message.startsWith("INSUFFICIENT_STOCK:")) {
                 const [, title, available, requested] = error.message.split(":");
                 return NextResponse.json(
-                    {
-                        error: `Insufficient stock for "${title}". Available: ${available}, Requested: ${requested}`,
-                    },
+                    { error: `Insufficient stock for "${title}". Available: ${available}, Requested: ${requested}` },
+                    { status: 400 }
+                );
+            }
+            if (error.message.startsWith("NO_PRICE_FOR_CURRENCY:")) {
+                const [, title, currency] = error.message.split(":");
+                return NextResponse.json(
+                    { error: `Product "${title}" does not have a ${currency} price. Please switch to TRY or contact support.` },
                     { status: 400 }
                 );
             }

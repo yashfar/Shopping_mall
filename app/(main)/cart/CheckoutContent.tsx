@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { calculateCartTotals } from "@@/lib/payment-utils";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import { toast } from "sonner";
 
 import { useTranslations } from "next-intl";
@@ -18,6 +18,7 @@ type CartItem = {
         title: string;
         price: number;
         thumbnail: string | null;
+        prices?: PriceEntry[];
     };
 };
 
@@ -35,12 +36,18 @@ type AppliedCoupon = {
 
 export default function CheckoutContent() {
     const router = useRouter();
-    const { formatPrice } = useCurrency();
+    const { formatPrice, currency, resolveProductPrice } = useCurrency();
 
     const t = useTranslations("checkout");
     const tc = useTranslations("common");
     const [cart, setCart] = useState<Cart | null>(null);
-    const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
+    const [config, setConfig] = useState<{
+        taxPercent: number;
+        shippingFee: number;
+        freeShippingThreshold: number;
+        usdShippingFee: number;
+        usdFreeShippingThreshold: number;
+    } | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [hasAddresses, setHasAddresses] = useState(true);
@@ -94,18 +101,28 @@ export default function CheckoutContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run once on mount
 
+    const computedTotals = useMemo(() => {
+        if (!cart || !config) return null;
+        const effectiveConfig = currency === "USD"
+            ? { taxPercent: config.taxPercent, shippingFee: config.usdShippingFee ?? 0, freeShippingThreshold: config.usdFreeShippingThreshold ?? 0 }
+            : { taxPercent: config.taxPercent, shippingFee: config.shippingFee, freeShippingThreshold: config.freeShippingThreshold };
+        const itemPrices = cart.items.map((item) => {
+            const r = resolveProductPrice(item.product);
+            return { price: r ? (r.salePrice ?? r.price) : 0, quantity: item.quantity };
+        });
+        return calculateTotalsFromPrices(itemPrices, effectiveConfig);
+    }, [cart, config, currency, resolveProductPrice]);
+
     const applyCoupon = async () => {
-        if (!couponInput.trim() || !cart || !config) return;
+        if (!couponInput.trim() || !cart || !config || !computedTotals) return;
         setCouponLoading(true);
         setCouponError("");
-
-        const totals = calculateCartTotals(cart.items, config);
 
         try {
             const res = await fetch("/api/coupon/validate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: couponInput.trim(), subtotal: totals.subtotal }),
+                body: JSON.stringify({ code: couponInput.trim(), subtotal: computedTotals.subtotal }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -129,7 +146,7 @@ export default function CheckoutContent() {
             const response = await fetch("/api/orders/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ couponCode: appliedCoupon?.code ?? null }),
+                body: JSON.stringify({ couponCode: appliedCoupon?.code ?? null, currencyCode: currency }),
             });
 
             if (!response.ok) {
@@ -164,7 +181,7 @@ export default function CheckoutContent() {
         return null; // Will redirect
     }
 
-    const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
+    const totals = computedTotals;
     const discountAmount = appliedCoupon?.discountAmount ?? 0;
     const finalTotal = totals ? Math.max(0, totals.total - discountAmount) : 0;
 
@@ -217,11 +234,11 @@ export default function CheckoutContent() {
                                             <p className="text-sm text-gray-500 mt-1">{t("quantity", { count: item.quantity })}</p>
                                         </div>
                                         <div className="font-extrabold text-[#1A1A1A]">
-                                            {formatPrice(item.product.price)}
+                                            {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice(r.salePrice ?? r.price) : "—"; })()}
                                         </div>
                                     </div>
                                     <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
-                                        {t("subtotal")} <span className="text-[#C8102E]">{formatPrice(item.product.price * item.quantity)}</span>
+                                        {t("subtotal")} <span className="text-[#C8102E]">{(() => { const r = resolveProductPrice(item.product); return r ? formatPrice((r.salePrice ?? r.price) * item.quantity) : "—"; })()}</span>
                                     </div>
                                 </div>
                             </div>
@@ -240,7 +257,7 @@ export default function CheckoutContent() {
                         <p className="text-sm text-gray-600 leading-relaxed">
                             {totals.shippingAmount === 0
                                 ? t("freeShippingMessage")
-                                : t("standardShipping", { fee: (config.shippingFee / 100).toFixed(2) })}
+                                : t("standardShipping", { fee: ((currency === "USD" ? config.usdShippingFee : config.shippingFee) / 100).toFixed(2) })}
                         </p>
                     </div>
                 </div>

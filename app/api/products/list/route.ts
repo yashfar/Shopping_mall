@@ -54,6 +54,7 @@ export async function GET(req: Request) {
                     where: { locale },
                     select: { title: true, description: true },
                 },
+                prices: { select: { currencyCode: true, price: true, salePrice: true } },
             },
             orderBy: getSortOrder(sort),
             skip,

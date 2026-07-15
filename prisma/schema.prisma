@@ -60,18 +60,40 @@ model Address {
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  nameEn   String?
-  products Product[]
+  id           String                @id @default(cuid())
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  products     Product[]
+  translations CategoryTranslation[]
+
+  // Legacy fields — kept for backward compatibility; will be removed after full API migration
+  name         String                @unique
+  nameEn       String?
+}
+
+// ============================================================================
+// Category Translation
+// ============================================================================
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  locale     String   // "tr", "en"
+  name       String
+  slug       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, locale])
 }
 
 model Product {
   id          String         @id @default(cuid())
   title       String
   description String?
-  price       Int            // Keep as Int for cents (backward compatibility)
-  salePrice   Int?           // Optional sale price in cents (null = no sale)
+  price       Int            // TRY cents — kept for backward compat (cart/orders/checkout)
+  salePrice   Int?           // TRY cents — optional sale price (null = no sale)
   stock       Int            @default(0)
   isActive    Boolean        @default(true)
   categoryId  String?
@@ -79,6 +101,7 @@ model Product {
   thumbnail   String?        // selected main image
   images        ProductImage[]
   translations  ProductTranslation[]
+  prices        ProductPrice[]
   reviews       Review[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
@@ -89,6 +112,24 @@ model Product {
   shippingDays  String         @default("3-5")
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+// ============================================================================
+// Per-currency product prices (TRY and USD)
+// Product.price / Product.salePrice stay as TRY backward-compat fields.
+// This table is the canonical source for admin UI and storefront display.
+// ============================================================================
+model ProductPrice {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currencyCode String   // "TRY" | "USD"
+  price        Int      // smallest unit (kuruş for TRY, cents for USD)
+  salePrice    Int?     // optional sale price
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([productId, currencyCode])
 }
 
 model ProductTranslation {
@@ -119,7 +160,8 @@ model ProductVariant {
   id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  color     String   // e.g. "Siyah", "Beyaz"
+  color     String   // TR name e.g. "Siyah", "Beyaz"
+  colorEn   String?  // EN name e.g. "Black", "White"
   colorHex  String?  // e.g. "#1A1A1A" for color swatch display
   stock     Int      @default(0)
   images    String[] // optional per-color image URLs
@@ -174,6 +216,7 @@ model Order {
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   items            OrderItem[]
   total            Int
+  currencyCode     String       @default("TRY")
   status           OrderStatus  @default(PENDING)
   createdAt        DateTime     @default(now())
   orderNumber      String?      @unique
@@ -434,16 +477,25 @@ model CarouselItem {
 // Payment Configuration System
 // ============================================================================
 model PaymentConfig {
-  id                    String   @id @default(cuid())
-  taxPercent            Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
-  shippingFee           Int      @default(0)    // in cents
-  freeShippingThreshold Int      @default(0)    // in cents
-  // Bank transfer details shown to customers
-  bankName              String   @default("")
-  accountHolder         String   @default("")
-  iban                  String   @default("")
-  bankTransferNote      String   @default("")   // optional extra instructions
-  updatedAt             DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  taxPercent               Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
+  shippingFee              Int      @default(0)    // TRY — in kuruş
+  freeShippingThreshold    Int      @default(0)    // TRY — in kuruş
+  // TRY bank transfer details
+  bankName                 String   @default("")
+  accountHolder            String   @default("")
+  iban                     String   @default("")
+  bankTransferNote         String   @default("")
+  // USD bank transfer details (leave empty to disable USD checkout)
+  usdBankName              String   @default("")
+  usdAccountHolder         String   @default("")
+  usdIban                  String   @default("")
+  usdSwiftCode             String   @default("")
+  usdBankTransferNote      String   @default("")
+  // USD shipping settings — in cents
+  usdShippingFee           Int      @default(0)
+  usdFreeShippingThreshold Int      @default(0)
+  updatedAt                DateTime @updatedAt
 }
 
 // ============================================================================

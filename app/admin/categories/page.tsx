@@ -7,11 +7,32 @@ import { Button } from "@@/components/ui/button";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
+interface CategoryTranslation {
+    id: string;
+    locale: string;
+    name: string;
+    slug: string;
+}
+
 interface Category {
     id: string;
-    name: string;
-    nameEn?: string | null;
+    isActive: boolean;
+    translations: CategoryTranslation[];
     _count: { products: number };
+}
+
+function getTrName(cat: Category): string {
+    return cat.translations.find((t) => t.locale === "tr")?.name ?? "";
+}
+
+function getEnName(cat: Category): string | null {
+    return cat.translations.find((t) => t.locale === "en")?.name ?? null;
+}
+
+function buildTranslationsBody(trName: string, enName: string) {
+    const arr: { locale: string; name: string }[] = [{ locale: "tr", name: trName }];
+    if (enName.trim()) arr.push({ locale: "en", name: enName.trim() });
+    return arr;
 }
 
 export default function CategoriesPage() {
@@ -55,14 +76,16 @@ export default function CategoriesPage() {
             const res = await fetch("/api/admin/categories", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newName.trim(), nameEn: newNameEn.trim() || undefined }),
+                body: JSON.stringify({ translations: buildTranslationsBody(newName.trim(), newNameEn) }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+            setCategories((prev) =>
+                [...prev, data].sort((a, b) => getTrName(a).localeCompare(getTrName(b)))
+            );
             setNewName("");
             setNewNameEn("");
-            toast.success(t("categoryAdded", { name: data.name }));
+            toast.success(t("categoryAdded", { name: getTrName(data) }));
         } catch (err: any) {
             toast.error(err.message || t("failedToAdd"));
         } finally {
@@ -72,8 +95,8 @@ export default function CategoriesPage() {
 
     function startEdit(cat: Category) {
         setEditingId(cat.id);
-        setEditName(cat.name);
-        setEditNameEn(cat.nameEn ?? "");
+        setEditName(getTrName(cat));
+        setEditNameEn(getEnName(cat) ?? "");
     }
 
     function cancelEdit() {
@@ -89,12 +112,12 @@ export default function CategoriesPage() {
             const res = await fetch(`/api/admin/categories/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: editName.trim(), nameEn: editNameEn.trim() || undefined }),
+                body: JSON.stringify({ translations: buildTranslationsBody(editName.trim(), editNameEn) }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCategories((prev) =>
-                prev.map((c) => (c.id === id ? data : c)).sort((a, b) => a.name.localeCompare(b.name))
+                prev.map((c) => (c.id === id ? data : c)).sort((a, b) => getTrName(a).localeCompare(getTrName(b)))
             );
             setEditingId(null);
             toast.success(t("categoryUpdated"));
@@ -112,7 +135,7 @@ export default function CategoriesPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-            toast.success(t("categoryDeleted", { name: cat.name }));
+            toast.success(t("categoryDeleted", { name: getTrName(cat) }));
         } catch (err: any) {
             toast.error(err.message || t("failedToDelete"));
         } finally {
@@ -139,7 +162,7 @@ export default function CategoriesPage() {
             <form onSubmit={handleAdd} className="mb-8 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
                 <p className="text-xs font-semibold text-[#A9A9A9] uppercase tracking-wide">{t("add")}</p>
                 <div className="flex items-center gap-2">
-                    <span className="text-base shrink-0">🇹🇷</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0 leading-none">TR</span>
                     <input
                         type="text"
                         value={newName}
@@ -151,7 +174,7 @@ export default function CategoriesPage() {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-base shrink-0">🇬🇧</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0 leading-none">EN</span>
                     <input
                         type="text"
                         value={newNameEn}
@@ -189,107 +212,116 @@ export default function CategoriesPage() {
                     </div>
                 ) : (
                     <ul className="divide-y divide-gray-100">
-                        {categories.map((cat) => (
-                            <li key={cat.id} className="px-4 py-3">
-                                {editingId === cat.id ? (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base shrink-0">🇹🇷</span>
-                                            <input
-                                                type="text"
-                                                value={editName}
-                                                onChange={(e) => setEditName(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Escape") cancelEdit();
-                                                }}
-                                                maxLength={100}
-                                                autoFocus
-                                                className="flex-1 h-9 px-3 rounded-md border border-[#C8102E] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base shrink-0">🇬🇧</span>
-                                            <input
-                                                type="text"
-                                                value={editNameEn}
-                                                onChange={(e) => setEditNameEn(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") handleSave(cat.id);
-                                                    if (e.key === "Escape") cancelEdit();
-                                                }}
-                                                placeholder="English name (optional)"
-                                                maxLength={100}
-                                                className="flex-1 h-9 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2 justify-end">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleSave(cat.id)}
-                                                disabled={saving || !editName.trim()}
-                                                className="text-green-600 hover:bg-green-50"
-                                            >
-                                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Kaydet</>}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={cancelEdit}
-                                                disabled={saving}
-                                                className="text-gray-400 hover:bg-gray-100"
-                                            >
-                                                <X className="h-4 w-4 mr-1" /> İptal
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-sm font-medium text-[#1A1A1A]">
-                                                    🇹🇷 {cat.name}
-                                                </span>
-                                                {cat.nameEn ? (
-                                                    <span className="text-sm text-blue-600 font-medium">
-                                                        🇬🇧 {cat.nameEn}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-xs text-amber-500 font-medium">🇬🇧 eksik</span>
-                                                )}
+                        {categories.map((cat) => {
+                            const trName = getTrName(cat);
+                            const enName = getEnName(cat);
+                            return (
+                                <li key={cat.id} className="px-4 py-3">
+                                    {editingId === cat.id ? (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0 leading-none">TR</span>
+                                                <input
+                                                    type="text"
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Escape") cancelEdit();
+                                                    }}
+                                                    maxLength={100}
+                                                    autoFocus
+                                                    className="flex-1 h-9 px-3 rounded-md border border-[#C8102E] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
+                                                />
                                             </div>
-                                            <span className="text-xs text-[#A9A9A9]">
-                                                {cat._count.products !== 1
-                                                    ? t("productCountPlural", { count: cat._count.products })
-                                                    : t("productCount", { count: cat._count.products })}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0 leading-none">EN</span>
+                                                <input
+                                                    type="text"
+                                                    value={editNameEn}
+                                                    onChange={(e) => setEditNameEn(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") handleSave(cat.id);
+                                                        if (e.key === "Escape") cancelEdit();
+                                                    }}
+                                                    placeholder="English name (optional)"
+                                                    maxLength={100}
+                                                    className="flex-1 h-9 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 transition-all"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2 justify-end">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => handleSave(cat.id)}
+                                                    disabled={saving || !editName.trim()}
+                                                    className="text-green-600 hover:bg-green-50"
+                                                >
+                                                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Kaydet</>}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={cancelEdit}
+                                                    disabled={saving}
+                                                    className="text-gray-400 hover:bg-gray-100"
+                                                >
+                                                    <X className="h-4 w-4 mr-1" /> İptal
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => startEdit(cat)}
-                                            className="h-8 w-8 text-gray-400 hover:text-[#1A1A1A] hover:bg-gray-100"
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleDelete(cat)}
-                                            disabled={deletingId === cat.id || cat._count.products > 0}
-                                            title={cat._count.products > 0 ? t("deleteTitleDisabled") : t("deleteTitle")}
-                                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            {deletingId === cat.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                )}
-                            </li>
-                        ))}
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-sm font-medium text-[#1A1A1A] inline-flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-gray-100 text-gray-500 leading-none">TR</span>
+                                                        {trName}
+                                                    </span>
+                                                    {enName ? (
+                                                        <span className="text-sm text-blue-600 font-medium inline-flex items-center gap-1.5">
+                                                            <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-100 text-blue-500 leading-none">EN</span>
+                                                            {enName}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-amber-500 font-medium inline-flex items-center gap-1">
+                                                            <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-amber-50 text-amber-500 leading-none">EN</span>
+                                                            eksik
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-xs text-[#A9A9A9]">
+                                                    {cat._count.products !== 1
+                                                        ? t("productCountPlural", { count: cat._count.products })
+                                                        : t("productCount", { count: cat._count.products })}
+                                                </span>
+                                            </div>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => startEdit(cat)}
+                                                className="h-8 w-8 text-gray-400 hover:text-[#1A1A1A] hover:bg-gray-100"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => handleDelete(cat)}
+                                                disabled={deletingId === cat.id || cat._count.products > 0}
+                                                title={cat._count.products > 0 ? t("deleteTitleDisabled") : t("deleteTitle")}
+                                                className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                {deletingId === cat.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
             </div>

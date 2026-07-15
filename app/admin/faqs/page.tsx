@@ -251,22 +251,22 @@ export default function FaqsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">🇹🇷 {t("question")}</label>
+                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">TR {t("question")}</label>
                         <input value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} placeholder={t("questionPlaceholder")} className={inputClass} disabled={adding} />
                     </div>
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">🇬🇧 {t("questionEn")}</label>
+                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">EN {t("questionEn")}</label>
                         <input value={form.questionEn} onChange={(e) => setForm({ ...form, questionEn: e.target.value })} placeholder={t("questionEnPlaceholder")} className={inputClass} disabled={adding} />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">🇹🇷 {t("answer")}</label>
+                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">TR {t("answer")}</label>
                         <textarea value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} placeholder={t("answerPlaceholder")} rows={3} className={`${inputClass} resize-none`} disabled={adding} />
                     </div>
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">🇬🇧 {t("answerEn")}</label>
+                        <label className="text-xs font-medium text-gray-500 flex items-center gap-1">EN {t("answerEn")}</label>
                         <textarea value={form.answerEn} onChange={(e) => setForm({ ...form, answerEn: e.target.value })} placeholder={t("answerEnPlaceholder")} rows={3} className={`${inputClass} resize-none`} disabled={adding} />
                     </div>
                 </div>
@@ -296,21 +296,21 @@ export default function FaqsPage() {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <label className="text-xs font-medium text-gray-500">🇹🇷 {t("question")}</label>
+                                                <label className="text-xs font-medium text-gray-500">TR {t("question")}</label>
                                                 <input value={editForm.question} onChange={(e) => setEditForm({ ...editForm, question: e.target.value })} className={inputClass} autoFocus />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-xs font-medium text-gray-500">🇬🇧 {t("questionEn")}</label>
+                                                <label className="text-xs font-medium text-gray-500">EN {t("questionEn")}</label>
                                                 <input value={editForm.questionEn} onChange={(e) => setEditForm({ ...editForm, questionEn: e.target.value })} className={inputClass} />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <label className="text-xs font-medium text-gray-500">🇹🇷 {t("answer")}</label>
+                                                <label className="text-xs font-medium text-gray-500">TR {t("answer")}</label>
                                                 <textarea value={editForm.answer} onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })} rows={3} className={`${inputClass} resize-none`} />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-xs font-medium text-gray-500">🇬🇧 {t("answerEn")}</label>
+                                                <label className="text-xs font-medium text-gray-500">EN {t("answerEn")}</label>
                                                 <textarea value={editForm.answerEn} onChange={(e) => setEditForm({ ...editForm, answerEn: e.target.value })} rows={3} className={`${inputClass} resize-none`} />
                                             </div>
                                         </div>
@@ -338,10 +338,13 @@ export default function FaqsPage() {
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                <span className="text-sm font-semibold text-[#1A1A1A]">🇹🇷 {faq.question}</span>
-                                                {!faq.questionEn && <span className="text-[10px] text-amber-500 font-medium">🇬🇧 {t("missing")}</span>}
+                                                <span className="text-sm font-semibold text-[#1A1A1A] inline-flex items-center gap-1.5">
+                                                    <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-gray-100 text-gray-500 leading-none">TR</span>
+                                                    {faq.question}
+                                                </span>
+                                                {!faq.questionEn && <span className="text-[10px] text-amber-500 font-medium inline-flex items-center gap-1"><span className="text-[10px] font-bold px-1 py-0.5 rounded bg-amber-50 text-amber-500 leading-none">EN</span>{t("missing")}</span>}
                                             </div>
-                                            {faq.questionEn && <p className="text-xs text-blue-600 font-medium mb-1">🇬🇧 {faq.questionEn}</p>}
+                                            {faq.questionEn && <p className="text-xs text-blue-600 font-medium mb-1 inline-flex items-center gap-1.5"><span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-100 text-blue-500 leading-none">EN</span>{faq.questionEn}</p>}
                                             <p className="text-xs text-gray-500 line-clamp-2">{faq.answer}</p>
                                         </div>
 

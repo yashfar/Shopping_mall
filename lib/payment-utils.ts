@@ -1,4 +1,3 @@
-
 export type CartTotals = {
     subtotal: number;
     taxAmount: number;
@@ -13,6 +12,22 @@ export type CartTotals = {
  * @param items List of cart items with price and quantity
  * @param config Payment configuration (taxPercent, shippingFee, freeShippingThreshold)
  */
+/**
+ * Calculates totals from pre-resolved item prices (already in the correct
+ * currency's minor units). Use this instead of calculateCartTotals when the
+ * effective per-item price is known (e.g. after resolving from ProductPrice).
+ */
+export function calculateTotalsFromPrices(
+    itemPrices: { price: number; quantity: number }[],
+    config: { taxPercent: number; shippingFee: number; freeShippingThreshold: number }
+): CartTotals {
+    const subtotal = itemPrices.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const taxAmount = Math.round(subtotal * (config.taxPercent / 100));
+    const shippingAmount = subtotal >= config.freeShippingThreshold ? 0 : config.shippingFee;
+    const total = subtotal + shippingAmount;
+    return { subtotal, taxAmount, shippingAmount, total };
+}
+
 export function calculateCartTotals(
     items: { product: { price: number }; quantity: number }[],
     config: { taxPercent: number; shippingFee: number; freeShippingThreshold: number }

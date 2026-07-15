@@ -37,14 +37,18 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         console.log("Updating Payment Config:", body);
-        const { taxPercent, shippingFee, freeShippingThreshold, bankName, accountHolder, iban, bankTransferNote } = body;
+        const {
+            taxPercent, shippingFee, freeShippingThreshold,
+            bankName, accountHolder, iban, bankTransferNote,
+            usdBankName, usdAccountHolder, usdIban, usdSwiftCode, usdBankTransferNote,
+            usdShippingFee, usdFreeShippingThreshold,
+        } = body;
 
         // Validation
         if (typeof taxPercent !== "number" || typeof shippingFee !== "number" || typeof freeShippingThreshold !== "number") {
             return NextResponse.json({ error: "Invalid input" }, { status: 400 });
         }
 
-        // We assume input is in correct units (Shipping/Threshold in cents, Tax in %)
         const updated = await updatePaymentConfig({
             taxPercent,
             shippingFee,
@@ -53,6 +57,13 @@ export async function POST(request: Request) {
             ...(typeof accountHolder === "string" ? { accountHolder } : {}),
             ...(typeof iban === "string" ? { iban } : {}),
             ...(typeof bankTransferNote === "string" ? { bankTransferNote } : {}),
+            ...(typeof usdBankName === "string" ? { usdBankName } : {}),
+            ...(typeof usdAccountHolder === "string" ? { usdAccountHolder } : {}),
+            ...(typeof usdIban === "string" ? { usdIban } : {}),
+            ...(typeof usdSwiftCode === "string" ? { usdSwiftCode } : {}),
+            ...(typeof usdBankTransferNote === "string" ? { usdBankTransferNote } : {}),
+            ...(typeof usdShippingFee === "number" ? { usdShippingFee } : {}),
+            ...(typeof usdFreeShippingThreshold === "number" ? { usdFreeShippingThreshold } : {}),
         });
 
         return NextResponse.json({ config: updated });

@@ -671,7 +671,8 @@
     "total": "Toplam",
     "action": "İşlem",
     "details": "Detaylar",
-    "viewDetails": "Detayları Görüntüle"
+    "viewDetails": "Detayları Görüntüle",
+    "currency": "Para Birimi"
   },
   "adminOrderDetails": {
     "backToOrders": "Siparişlere Dön",
@@ -747,7 +748,6 @@
     "confirmRejectTitle": "İadeyi Reddet?",
     "confirmRejectDesc": "Bu işlem iade talebini reddedecek. Sipariş:",
     "confirmRejectBtn": "Evet, Reddet",
-    "cancelAction": "İptal",
     "customerDetails": "Müşteri Bilgileri",
     "guest": "Misafir",
     "user": "Kullanıcı",
@@ -800,7 +800,14 @@
     "noProductsFound": "Ürün bulunamadı",
     "noProductsSearchDesc": "Arama kriterlerinize uyan ürün bulunamadı.",
     "noProductsEmptyDesc": "Mağazanıza ilk ürününüzü ekleyerek başlayın.",
-    "createNewProduct": "Yeni Ürün Oluştur"
+    "createNewProduct": "Yeni Ürün Oluştur",
+    "usdMigrateTitle": "Toplu USD Fiyat Ekle",
+    "usdMigrateDesc": "USD fiyatı olmayan tüm ürünlere, girdiğiniz kur üzerinden otomatik USD fiyatı oluşturur.",
+    "usdMigrateApply": "Uygula",
+    "usdMigrateSuccess": "{usdCreated} ürüne USD fiyatı eklendi · {tryCreated} TRY oluşturuldu · Toplam {total} ürün",
+    "usdMigrateError": "Geçerli bir USD/TRY kuru girin (örn: 38.50)",
+    "usdMigrateFailed": "Migrasyon sırasında hata oluştu",
+    "usdMigrateOverwrite": "Tüm ürünlere uygula (mevcut USD fiyatlarını da güncelle)"
   },
   "paymentManagement": {
     "title": "Ödeme Yönetimi",
@@ -825,7 +832,18 @@
     "additionalNote": "Ek Not",
     "additionalNoteHint": "Banka bilgileriyle birlikte müşterilere gösterilen isteğe bağlı not.",
     "saving": "Kaydediliyor...",
-    "saveConfiguration": "Yapılandırmayı Kaydet"
+    "saveConfiguration": "Yapılandırmayı Kaydet",
+    "tryBankTransferDetails": "TRY Banka Havalesi Bilgileri",
+    "tryBankTransferDesc": "Türk Lirası ile ödeme yapan müşterilere gösterilir.",
+    "usdBankTransferDetails": "USD Banka Havalesi Bilgileri",
+    "usdBankTransferDesc": "ABD Doları ile ödeme yapan müşterilere gösterilir. USD ödemeyi devre dışı bırakmak için IBAN alanını boş bırakın.",
+    "swiftCode": "SWIFT / BIC Kodu",
+    "usdAdditionalNote": "USD Ek Not",
+    "usdShippingFee": "USD Kargo Ücreti",
+    "usdFreeShippingThreshold": "USD Ücretsiz Kargo Eşiği",
+    "usdShippingFeeNote": "Eşiğin altındaki USD siparişler için sabit kargo ücreti.",
+    "usdThresholdNote": "Ücretsiz kargoya hak kazanmak için gereken USD sepet tutarı.",
+    "usdAvailableHint": "USD ödeme yalnızca Banka Adı ve IBAN doldurulduğunda etkinleşir."
   },
   "saleAnalysis": {
     "title": "Satış Analizi",
@@ -930,7 +948,8 @@
     "addAnotherAddress": "+ Başka adres ekle",
     "subtotal": "Ürün Toplamı",
     "shipping": "Kargo",
-    "free": "Ücretsiz"
+    "free": "Ücretsiz",
+    "swiftCode": "SWIFT / BIC"
   },
   "checkoutSuccess": {
     "confirming": "Siparişiniz doğrulanıyor...",

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
-import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette, Languages } from "lucide-react";
+import { CategoryCombobox, type CategoryOption } from "@@/components/CategoryCombobox";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -28,6 +29,7 @@ interface UploadedImage {
 interface VariantDraft {
     tempId: string;
     color: string;
+    colorEn: string;
     colorHex: string;
     stock: string;
 }
@@ -42,19 +44,23 @@ export default function NewProductPage() {
     const [titleEn, setTitleEn] = useState("");
     const [descriptionEn, setDescriptionEn] = useState("");
     const [contentTab, setContentTab] = useState<"tr" | "en">(locale === "tr" ? "tr" : "en");
-    const [price, setPrice] = useState("");
-    const [salePrice, setSalePrice] = useState("");
-    const [category, setCategory] = useState("");
-    const [categoryNameEn, setCategoryNameEn] = useState("");
+    const [priceTRY, setPriceTRY] = useState("");
+    const [salePriceTRY, setSalePriceTRY] = useState("");
+    const [priceUSD, setPriceUSD] = useState("");
+    const [salePriceUSD, setSalePriceUSD] = useState("");
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
-    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+    const [categories, setCategories] = useState<CategoryOption[]>([]);
     const [thumbnail, setThumbnail] = useState<string>("");
 
     // Loading states
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [translating, setTranslating] = useState(false);
     const [error, setError] = useState("");
+    const [bannerHighlighted, setBannerHighlighted] = useState(false);
+    const translateBannerRef = useRef<HTMLDivElement>(null);
 
     // Delete confirmation state
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -63,16 +69,23 @@ export default function NewProductPage() {
     // Variant state
     const [hasVariants, setHasVariants] = useState(false);
     const [variants, setVariants] = useState<VariantDraft[]>([]);
-    const [newVariant, setNewVariant] = useState<VariantDraft>({ tempId: "", color: "", colorHex: "#000000", stock: "0" });
+    const [newVariant, setNewVariant] = useState<VariantDraft>({ tempId: "", color: "", colorEn: "", colorHex: "#000000", stock: "0" });
+    const [variantTranslating, setVariantTranslating] = useState(false);
 
-    // Fetch categories
+    // Fetch categories (admin endpoint for full TR+EN data needed by the combobox search)
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await fetch("/api/categories");
+                const response = await fetch("/api/admin/categories");
                 if (response.ok) {
                     const data = await response.json();
-                    setCategories(data);
+                    setCategories(
+                        data.map((cat: any) => ({
+                            id: cat.id,
+                            name: cat.name,
+                            nameEn: cat.nameEn ?? null,
+                        }))
+                    );
                 }
             } catch (error) {
                 console.error("Failed to fetch categories", error);
@@ -180,11 +193,64 @@ export default function NewProductPage() {
     const addVariant = () => {
         if (!newVariant.color.trim()) return;
         setVariants(prev => [...prev, { ...newVariant, tempId: crypto.randomUUID() }]);
-        setNewVariant({ tempId: "", color: "", colorHex: "#000000", stock: "0" });
+        setNewVariant({ tempId: "", color: "", colorEn: "", colorHex: "#000000", stock: "0" });
+    };
+
+    const handleTranslateVariantColor = async (direction: "toEn" | "toTr") => {
+        const sourceText = direction === "toEn" ? newVariant.color.trim() : newVariant.colorEn.trim();
+        if (!sourceText) return;
+        setVariantTranslating(true);
+        try {
+            const res = await fetch("/api/admin/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    texts: [sourceText],
+                    from: direction === "toEn" ? "TR" : "EN",
+                    to: direction === "toEn" ? "EN" : "TR",
+                }),
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            if (direction === "toEn") {
+                setNewVariant(v => ({ ...v, colorEn: data.translations[0] ?? "" }));
+            } else {
+                setNewVariant(v => ({ ...v, color: data.translations[0] ?? "" }));
+            }
+        } catch {
+            toast.error("Çeviri başarısız.");
+        } finally {
+            setVariantTranslating(false);
+        }
     };
 
     const removeVariant = (tempId: string) => {
         setVariants(prev => prev.filter(v => v.tempId !== tempId));
+    };
+
+    const handleTranslateToTurkish = async () => {
+        if (!titleEn.trim()) return;
+        setTranslating(true);
+        try {
+            const res = await fetch("/api/admin/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    texts: [titleEn.trim(), descriptionEn.trim() || titleEn.trim()],
+                    from: "EN",
+                    to: "TR",
+                }),
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            setTitle(data.translations[0] ?? "");
+            setDescription(data.translations[1] ?? "");
+            toast.success("Türkçeye çevrildi! Kontrol edip düzenleyebilirsiniz.");
+        } catch {
+            toast.error("Çeviri sırasında bir hata oluştu.");
+        } finally {
+            setTranslating(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -204,31 +270,56 @@ export default function NewProductPage() {
             return;
         }
 
-        if (!title.trim() || !description.trim() || !category.trim()) {
-            setError(t("errorRequiredFields"));
-            toast.error(t("errorRequiredFields"));
+        if (!title.trim() || !description.trim() || !selectedCategoryId) {
+            if (!title.trim() && titleEn.trim()) {
+                setContentTab("tr");
+                setTimeout(() => {
+                    translateBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    setBannerHighlighted(true);
+                    setTimeout(() => setBannerHighlighted(false), 1500);
+                }, 50);
+                toast.error("Please fill in Turkish fields or use the Translate button.");
+            } else {
+                setError(t("errorRequiredFields"));
+                toast.error(t("errorRequiredFields"));
+            }
             return;
         }
 
-        const priceInCents = Math.round(parseFloat(price) * 100);
-        if (isNaN(priceInCents) || priceInCents <= 0) {
-            setError(t("errorInvalidPrice"));
-            toast.error(t("errorInvalidPrice"));
+        const tryPriceInCents = Math.round(parseFloat(priceTRY) * 100);
+        if (isNaN(tryPriceInCents) || tryPriceInCents <= 0) {
+            setError("TRY fiyatı geçersiz.");
+            toast.error("TRY fiyatı geçersiz.");
             return;
         }
-
-        let salePriceInCents: number | null = null;
-        if (salePrice.trim()) {
-            salePriceInCents = Math.round(parseFloat(salePrice) * 100);
-            if (isNaN(salePriceInCents) || salePriceInCents <= 0) {
-                setError(t("errorInvalidSalePrice"));
-                return;
-            }
-            if (salePriceInCents >= priceInCents) {
-                setError(t("errorSalePriceTooHigh"));
+        let trySalePriceInCents: number | null = null;
+        if (salePriceTRY.trim()) {
+            trySalePriceInCents = Math.round(parseFloat(salePriceTRY) * 100);
+            if (isNaN(trySalePriceInCents) || trySalePriceInCents <= 0 || trySalePriceInCents >= tryPriceInCents) {
+                setError("TRY indirimli fiyat geçersiz (normal fiyattan küçük olmalı).");
                 return;
             }
         }
+
+        const usdPriceInCents = Math.round(parseFloat(priceUSD) * 100);
+        if (isNaN(usdPriceInCents) || usdPriceInCents <= 0) {
+            setError("USD fiyatı geçersiz.");
+            toast.error("USD fiyatı geçersiz.");
+            return;
+        }
+        let usdSalePriceInCents: number | null = null;
+        if (salePriceUSD.trim()) {
+            usdSalePriceInCents = Math.round(parseFloat(salePriceUSD) * 100);
+            if (isNaN(usdSalePriceInCents) || usdSalePriceInCents <= 0 || usdSalePriceInCents >= usdPriceInCents) {
+                setError("USD indirimli fiyat geçersiz (normal fiyattan küçük olmalı).");
+                return;
+            }
+        }
+
+        const prices = [
+            { currencyCode: "TRY", price: tryPriceInCents, salePrice: trySalePriceInCents },
+            { currencyCode: "USD", price: usdPriceInCents, salePrice: usdSalePriceInCents },
+        ];
 
         const stockNumber = hasVariants
             ? variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0)
@@ -252,10 +343,8 @@ export default function NewProductPage() {
                     description: description.trim(),
                     titleEn: titleEn.trim() || null,
                     descriptionEn: descriptionEn.trim() || null,
-                    price: priceInCents,
-                    salePrice: salePriceInCents,
-                    category: category.trim(),
-                    categoryNameEn: categoryNameEn.trim() || null,
+                    prices,
+                    categoryId: selectedCategoryId,
                     stock: stockNumber,
                     images: images.map((img) => img.url),
                     thumbnail,
@@ -281,6 +370,7 @@ export default function NewProductPage() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             color: v.color,
+                            colorEn: v.colorEn || null,
                             colorHex: v.colorHex,
                             stock: parseInt(v.stock) || 0,
                         }),
@@ -439,22 +529,49 @@ export default function NewProductPage() {
                                         <button
                                             type="button"
                                             onClick={() => setContentTab("tr")}
-                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${contentTab === "tr" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${contentTab === "tr" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                                         >
-                                            🇹🇷 Türkçe
+                                            TR Türkçe
+                                            {!title && titleEn && <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />}
+                                            {title && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setContentTab("en")}
                                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${contentTab === "en" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                                         >
-                                            🇬🇧 English
+                                            EN English
                                             {titleEn && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
                                         </button>
                                     </div>
 
                                     {contentTab === "tr" && (
                                         <div className="space-y-4">
+                                            {!title.trim() && titleEn.trim() && (
+                                                <div
+                                                    ref={translateBannerRef}
+                                                    className={`flex items-center gap-3 p-3.5 bg-blue-50 border rounded-lg transition-all duration-300 ${bannerHighlighted ? "border-blue-500 ring-2 ring-blue-400 ring-offset-2 scale-[1.01]" : "border-blue-200"}`}
+                                                >
+                                                    <Languages className="h-4 w-4 text-blue-500 shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-blue-900">Turkish fields are empty</p>
+                                                        <p className="text-xs text-blue-600 mt-0.5">Auto-translate from your English content.</p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleTranslateToTurkish}
+                                                        disabled={translating || submitting}
+                                                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-3"
+                                                    >
+                                                        {translating ? (
+                                                            <><Loader2 className="h-3 w-3 animate-spin mr-1.5" />Translating...</>
+                                                        ) : (
+                                                            <><Languages className="h-3 w-3 mr-1.5" />Translate to Turkish</>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            )}
                                             <div>
                                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                                                     Ürün Başlığı <span className="text-red-500">*</span>
@@ -522,124 +639,128 @@ export default function NewProductPage() {
                                     )}
                                 </div>
 
-                                {/* Row: Price, Sale Price & Stock */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div>
-                                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {contentTab === "tr" ? "Fiyat (USD)" : "Price (USD)"} <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                                            <input
-                                                type="number"
-                                                id="price"
-                                                value={price}
-                                                onChange={(e) => setPrice(e.target.value)}
-                                                step="0.01"
-                                                min="0"
-                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0.00"
-                                                required
-                                                disabled={submitting}
-                                            />
-                                        </div>
-                                    </div>
+                                {/* Pricing Section */}
+                                <div className="space-y-4 p-4 rounded-lg border border-gray-200 bg-gray-50/50">
+                                    <h3 className="text-sm font-semibold text-gray-800">{contentTab === "tr" ? "Fiyatlandırma" : "Pricing"}</h3>
 
-                                    <div>
-                                        <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {contentTab === "tr" ? "İndirimli Fiyat" : "Sale Price"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                                            <input
-                                                type="number"
-                                                id="salePrice"
-                                                value={salePrice}
-                                                onChange={(e) => setSalePrice(e.target.value)}
-                                                step="0.01"
-                                                min="0"
-                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0.00"
-                                                disabled={submitting}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {contentTab === "tr" ? "Stok Miktarı" : "Stock Quantity"} {!hasVariants && <span className="text-red-500">*</span>}
-                                        </label>
-                                        {hasVariants ? (
-                                            <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
-                                                {t("stockAutoFromVariants", { count: variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0) })}
+                                    {/* TRY */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "TRY Fiyat" : "TRY Price"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₺</span>
+                                                <input
+                                                    type="number"
+                                                    value={priceTRY}
+                                                    onChange={(e) => setPriceTRY(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    required disabled={submitting}
+                                                />
                                             </div>
-                                        ) : (
-                                            <input
-                                                type="number"
-                                                id="stock"
-                                                value={stock}
-                                                onChange={(e) => setStock(e.target.value)}
-                                                min="0"
-                                                className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0"
-                                                required
-                                                disabled={submitting}
-                                            />
-                                        )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "TRY İndirimli" : "TRY Sale"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₺</span>
+                                                <input
+                                                    type="number"
+                                                    value={salePriceTRY}
+                                                    onChange={(e) => setSalePriceTRY(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    {/* USD */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "USD Fiyat" : "USD Price"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={priceUSD}
+                                                    onChange={(e) => setPriceUSD(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    required disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "USD İndirimli" : "USD Sale"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={salePriceUSD}
+                                                    onChange={(e) => setSalePriceUSD(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stock */}
+                                <div>
+                                    <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
+                                        {contentTab === "tr" ? "Stok Miktarı" : "Stock Quantity"} {!hasVariants && <span className="text-red-500">*</span>}
+                                    </label>
+                                    {hasVariants ? (
+                                        <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
+                                            {t("stockAutoFromVariants", { count: variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0) })}
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            id="stock"
+                                            value={stock}
+                                            onChange={(e) => setStock(e.target.value)}
+                                            min="0"
+                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                            placeholder="0"
+                                            required
+                                            disabled={submitting}
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Category */}
                                 <div>
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
                                         {contentTab === "tr" ? "Kategori" : "Category"} <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            id="category"
-                                            list="category-suggestions"
-                                            value={category}
-                                            onChange={(e) => {
-                                                setCategory(e.target.value);
-                                                // Clear EN name when category changes
-                                                if (categories.some(c => c.name.toLowerCase() === e.target.value.toLowerCase())) {
-                                                    setCategoryNameEn("");
-                                                }
-                                            }}
-                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder={contentTab === "tr" ? "Kategori seçin veya yazın..." : "Select or type a category..."}
-                                            required
-                                            disabled={submitting}
-                                            autoComplete="off"
-                                        />
-                                        <datalist id="category-suggestions">
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.name} />
-                                            ))}
-                                        </datalist>
-                                    </div>
-                                    {/* Show EN name field only for new categories */}
-                                    {category.trim() && !categories.some(c => c.name.toLowerCase() === category.trim().toLowerCase()) && (
-                                        <div className="mt-2">
-                                            <div className="flex items-center gap-1 mb-1">
-                                                <span className="text-xs font-medium text-amber-600">{t("newCategoryNotice")}</span>
-                                                <span className="text-xs text-gray-400">{t("newCategoryEnterEnglish")}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm shrink-0">🇬🇧</span>
-                                                <input
-                                                    type="text"
-                                                    value={categoryNameEn}
-                                                    onChange={(e) => setCategoryNameEn(e.target.value)}
-                                                    placeholder="English category name (optional)"
-                                                    maxLength={100}
-                                                    disabled={submitting}
-                                                    className="flex-1 h-9 px-3 rounded-md border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/40 focus:border-amber-400 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                    <CategoryCombobox
+                                        categories={categories}
+                                        value={selectedCategoryId}
+                                        onChange={setSelectedCategoryId}
+                                        locale={contentTab}
+                                        onCategoryCreated={(cat) =>
+                                            setCategories((prev) =>
+                                                [...prev, cat].sort((a, b) => a.name.localeCompare(b.name))
+                                            )
+                                        }
+                                        disabled={submitting}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -649,7 +770,7 @@ export default function NewProductPage() {
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <Palette className="w-5 h-5 text-gray-400" />
-                                    <h2 className="text-lg font-semibold text-gray-900">{t("colorVariants")}</h2>
+                                    <h2 className="text-lg font-semibold text-gray-900">{contentTab === "tr" ? "Renk Varyantları" : "Color Variants"}</h2>
                                 </div>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <div
@@ -658,7 +779,7 @@ export default function NewProductPage() {
                                     >
                                         <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hasVariants ? "translate-x-5" : ""}`} />
                                     </div>
-                                    <span className="text-sm text-gray-600">{t("hasColorVariants")}</span>
+                                    <span className="text-sm text-gray-600">{contentTab === "tr" ? "Bu üründe renk varyantları var" : "This product has color variants"}</span>
                                 </label>
                             </div>
 
@@ -670,8 +791,11 @@ export default function NewProductPage() {
                                             {variants.map(v => (
                                                 <div key={v.tempId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                                     <div className="w-6 h-6 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex }} />
-                                                    <span className="font-medium text-gray-900 flex-1">{v.color}</span>
-                                                    <span className="text-sm text-gray-500 w-20 text-right">{t("variantStockDisplay", { stock: v.stock })}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="font-medium text-gray-900">{v.color}</span>
+                                                        {v.colorEn && <span className="text-gray-400 text-sm ml-2">/ {v.colorEn}</span>}
+                                                    </div>
+                                                    <span className="text-sm text-gray-500 w-20 text-right">{contentTab === "tr" ? `Stok: ${v.stock}` : `Stock: ${v.stock}`}</span>
                                                     <button type="button" onClick={() => removeVariant(v.tempId)} className="text-red-500 hover:text-red-700 p-1">
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -681,41 +805,73 @@ export default function NewProductPage() {
                                     )}
 
                                     {/* Add New Variant Row */}
-                                    <div className="flex items-end gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">{t("variantColorName")}</label>
-                                            <input
-                                                type="text"
-                                                value={newVariant.color}
-                                                onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
-                                                placeholder="Siyah"
-                                                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 focus:outline-none focus:border-[#C8102E]"
-                                            />
+                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3">
+                                        <div className="flex items-end gap-3 flex-wrap">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-gray-600">TR {contentTab === "tr" ? "Renk Adı" : "Color Name"} <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    value={newVariant.color}
+                                                    onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
+                                                    placeholder="Siyah"
+                                                    className="h-9 px-3 rounded-md border border-gray-200 text-sm w-28 focus:outline-none focus:border-[#C8102E]"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-gray-600">EN {contentTab === "tr" ? "Renk Adı" : "Color Name"}</label>
+                                                <input
+                                                    type="text"
+                                                    value={newVariant.colorEn}
+                                                    onChange={e => setNewVariant(v => ({ ...v, colorEn: e.target.value }))}
+                                                    placeholder="Black"
+                                                    className="h-9 px-3 rounded-md border border-gray-200 text-sm w-28 focus:outline-none focus:border-[#C8102E]"
+                                                />
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleTranslateVariantColor("toEn")}
+                                                    disabled={variantTranslating || !newVariant.color.trim()}
+                                                    title={contentTab === "tr" ? "TR → EN çevir" : "Translate TR → EN"}
+                                                    className="h-9 px-2 rounded-md border border-gray-200 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                                                >
+                                                    {variantTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : "TR→EN"}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleTranslateVariantColor("toTr")}
+                                                    disabled={variantTranslating || !newVariant.colorEn.trim()}
+                                                    title={contentTab === "tr" ? "EN → TR çevir" : "Translate EN → TR"}
+                                                    className="h-9 px-2 rounded-md border border-gray-200 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                                                >
+                                                    {variantTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : "EN→TR"}
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-gray-600">{contentTab === "tr" ? "Renk" : "Color"}</label>
+                                                <input
+                                                    type="color"
+                                                    value={newVariant.colorHex}
+                                                    onChange={e => setNewVariant(v => ({ ...v, colorHex: e.target.value }))}
+                                                    className="h-9 w-14 rounded-md border border-gray-200 cursor-pointer p-0.5"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-gray-600">{contentTab === "tr" ? "Stok" : "Stock"}</label>
+                                                <input
+                                                    type="number"
+                                                    value={newVariant.stock}
+                                                    onChange={e => setNewVariant(v => ({ ...v, stock: e.target.value }))}
+                                                    min="0"
+                                                    className="h-9 px-3 rounded-md border border-gray-200 text-sm w-24 focus:outline-none focus:border-[#C8102E]"
+                                                />
+                                            </div>
+                                            <Button type="button" onClick={addVariant} className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0">
+                                                <Plus className="w-4 h-4 mr-1" /> {contentTab === "tr" ? "Ekle" : "Add"}
+                                            </Button>
                                         </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">{t("variantColor")}</label>
-                                            <input
-                                                type="color"
-                                                value={newVariant.colorHex}
-                                                onChange={e => setNewVariant(v => ({ ...v, colorHex: e.target.value }))}
-                                                className="h-9 w-14 rounded-md border border-gray-200 cursor-pointer p-0.5"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-gray-600">{t("variantStockField")}</label>
-                                            <input
-                                                type="number"
-                                                value={newVariant.stock}
-                                                onChange={e => setNewVariant(v => ({ ...v, stock: e.target.value }))}
-                                                min="0"
-                                                className="h-9 px-3 rounded-md border border-gray-200 text-sm w-24 focus:outline-none focus:border-[#C8102E]"
-                                            />
-                                        </div>
-                                        <Button type="button" onClick={addVariant} className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0">
-                                            <Plus className="w-4 h-4 mr-1" /> {t("addVariant")}
-                                        </Button>
                                     </div>
-                                    <p className="text-xs text-gray-400">{t("variantStockNote")}</p>
+                                    <p className="text-xs text-gray-400">{contentTab === "tr" ? "Varyant eklenince Stok alanı otomatik olarak yok sayılır." : "Once a variant is added, the Stock field is automatically ignored."}</p>
                                 </div>
                             )}
                         </div>

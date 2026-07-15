@@ -671,7 +671,8 @@
     "total": "Total",
     "action": "Action",
     "details": "Details",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "currency": "Currency"
   },
   "adminOrderDetails": {
     "backToOrders": "Back to Orders",
@@ -747,7 +748,6 @@
     "confirmRejectTitle": "Reject Return?",
     "confirmRejectDesc": "This will reject the return request for order",
     "confirmRejectBtn": "Yes, Reject",
-    "cancelAction": "Cancel",
     "customerDetails": "Customer Details",
     "guest": "Guest",
     "user": "User",
@@ -800,7 +800,14 @@
     "noProductsFound": "No products found",
     "noProductsSearchDesc": "We couldn't find any products matching your search terms.",
     "noProductsEmptyDesc": "Get started by creating your first product in the store.",
-    "createNewProduct": "Create New Product"
+    "createNewProduct": "Create New Product",
+    "usdMigrateTitle": "Bulk USD Price Add",
+    "usdMigrateDesc": "Automatically generates USD prices for all products missing one, using your entered exchange rate.",
+    "usdMigrateApply": "Apply",
+    "usdMigrateSuccess": "{usdCreated} products received USD price · {tryCreated} TRY created · {total} total products",
+    "usdMigrateError": "Enter a valid USD/TRY rate (e.g. 38.50)",
+    "usdMigrateFailed": "An error occurred during migration",
+    "usdMigrateOverwrite": "Apply to all products (also update existing USD prices)"
   },
   "paymentManagement": {
     "title": "Payment Management",
@@ -825,7 +832,18 @@
     "additionalNote": "Additional Note",
     "additionalNoteHint": "Optional note shown to customers alongside bank details.",
     "saving": "Saving...",
-    "saveConfiguration": "Save Configuration"
+    "saveConfiguration": "Save Configuration",
+    "tryBankTransferDetails": "TRY Bank Transfer Details",
+    "tryBankTransferDesc": "Shown to customers paying in Turkish Lira.",
+    "usdBankTransferDetails": "USD Bank Transfer Details",
+    "usdBankTransferDesc": "Shown to customers paying in US Dollars. Leave IBAN empty to disable USD checkout.",
+    "swiftCode": "SWIFT / BIC Code",
+    "usdAdditionalNote": "USD Additional Note",
+    "usdShippingFee": "USD Shipping Fee",
+    "usdFreeShippingThreshold": "USD Free Shipping Threshold",
+    "usdShippingFeeNote": "Flat rate shipping fee for USD orders below the threshold.",
+    "usdThresholdNote": "Cart subtotal in USD required to qualify for free shipping.",
+    "usdAvailableHint": "USD checkout is enabled only when both Bank Name and IBAN are filled in."
   },
   "saleAnalysis": {
     "title": "Sale Analysis",
@@ -930,7 +948,8 @@
     "addAnotherAddress": "+ Add another address",
     "subtotal": "Subtotal",
     "shipping": "Shipping",
-    "free": "Free"
+    "free": "Free",
+    "swiftCode": "SWIFT / BIC"
   },
   "checkoutSuccess": {
     "confirming": "Confirming your order...",

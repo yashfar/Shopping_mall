@@ -7,8 +7,9 @@ type Locale = "tr" | "en";
 const STORE_NAME = process.env.STORE_NAME || "My Store";
 const FROM_EMAIL = `${STORE_NAME} <noreply@mail.creativeaventus.com>`;
 
-function formatPrice(kurus: number): string {
-    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(kurus / 100);
+function formatPrice(amount: number, currency: "TRY" | "USD" = "TRY"): string {
+    const locale = currency === "USD" ? "en-US" : "tr-TR";
+    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount / 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -25,9 +26,10 @@ export interface OrderConfirmationItem {
 export interface OrderConfirmationData {
     orderNumber: string;
     items: OrderConfirmationItem[];
-    total: number; // in cents
+    total: number; // in minor units (kuruş or cents)
     firstName?: string | null;
     locale?: Locale;
+    currencyCode?: "TRY" | "USD";
 }
 
 export async function sendOrderConfirmationEmail(
@@ -58,7 +60,8 @@ export async function sendOrderConfirmationEmail(
 }
 
 function getOrderConfirmationTemplate(data: OrderConfirmationData, locale: Locale): string {
-    const { orderNumber, items, total, firstName } = data;
+    const { orderNumber, items, total, firstName, currencyCode = "TRY" } = data;
+    const fmt = (amount: number) => formatPrice(amount, currencyCode);
 
     const copy = {
         tr: {
@@ -106,7 +109,7 @@ function getOrderConfirmationTemplate(data: OrderConfirmationData, locale: Local
             <span style="color: #1a1a1a; font-size: 14px; font-weight: 500; vertical-align: middle;">${item.title}</span>
           </td>
           <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; text-align: center; color: #6b7280; font-size: 14px; vertical-align: middle;">x${item.quantity}</td>
-          <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #1a1a1a; font-size: 14px; font-weight: 600; vertical-align: middle;">${formatPrice(item.price * item.quantity)}</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #1a1a1a; font-size: 14px; font-weight: 600; vertical-align: middle;">${fmt(item.price * item.quantity)}</td>
         </tr>`
         )
         .join("");
@@ -150,7 +153,7 @@ function getOrderConfirmationTemplate(data: OrderConfirmationData, locale: Local
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td style="color:#374151;font-size:16px;font-weight:700;">${copy.totalLabel}</td>
-                      <td style="text-align:right;color:#C8102E;font-size:20px;font-weight:700;">${formatPrice(total)}</td>
+                      <td style="text-align:right;color:#C8102E;font-size:20px;font-weight:700;">${fmt(total)}</td>
                     </tr>
                   </table>
                 </td>

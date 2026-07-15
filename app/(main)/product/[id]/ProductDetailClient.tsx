@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import StarRating from "@@/components/StarRating";
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
@@ -47,6 +47,7 @@ interface Review {
 interface ProductVariant {
   id: string;
   color: string;
+  colorEn: string | null;
   colorHex: string | null;
   stock: number;
   images: string[];
@@ -58,6 +59,7 @@ interface Product {
   description: string | null;
   price: number;
   salePrice?: number | null;
+  prices?: PriceEntry[];
   category: { name: string } | null;
   stock: number;
   thumbnail: string | null;
@@ -82,9 +84,11 @@ export default function ProductDetailClient({
 }: ProductDetailClientProps) {
   const { addToCart } = useCart();
   const { toggle, isWishlisted } = useWishlist();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, formatResolvedPrice, resolveProductPrice } = useCurrency();
+  const resolved = resolveProductPrice(product);
   const router = useRouter();
   const t = useTranslations("productDetail");
+  const locale = useLocale();
   const wishlisted = isWishlisted(product.id);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -454,7 +458,7 @@ export default function ProductDetailClient({
                     </span>
                     {selectedVariant ? (
                       <span className="text-sm font-bold text-[#1A1A1A]">
-                        {selectedVariant.color}
+                        {locale === "en" && selectedVariant.colorEn ? selectedVariant.colorEn : selectedVariant.color}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">
@@ -472,7 +476,7 @@ export default function ProductDetailClient({
                           onClick={() =>
                             !isOutOfStock && handleSelectVariant(variant)
                           }
-                          title={`${variant.color}${isOutOfStock ? " (Tükendi)" : ` — ${variant.stock} adet`}`}
+                          title={`${locale === "en" && variant.colorEn ? variant.colorEn : variant.color}${isOutOfStock ? (locale === "en" ? " (Out of stock)" : " (Tükendi)") : ` — ${variant.stock} ${locale === "en" ? "pcs" : "adet"}`}`}
                           className={`relative w-10 h-10 rounded-full border-4 transition-all duration-200 ${
                             isSelected
                               ? "border-[#C8102E] scale-110 shadow-md"
@@ -516,25 +520,23 @@ export default function ProductDetailClient({
                     {t("totalPrice")}
                   </span>
                   <div className="flex items-baseline gap-3 flex-wrap">
-                    {product.salePrice ? (
+                    {resolved === null ? (
+                      <span className="text-2xl font-semibold text-gray-400 italic">—</span>
+                    ) : resolved.salePrice ? (
                       <>
                         <span className="text-4xl font-black text-[#C8102E]">
-                          {formatPrice(product.salePrice)}
+                          {formatResolvedPrice({ ...resolved, price: resolved.salePrice })}
                         </span>
                         <span className="text-xl font-medium text-gray-400 line-through">
-                          {formatPrice(product.price)}
+                          {formatResolvedPrice(resolved)}
                         </span>
                         <span className="text-sm font-bold text-white bg-[#C8102E] px-2 py-0.5 rounded-full">
-                          -
-                          {Math.round(
-                            (1 - product.salePrice / product.price) * 100,
-                          )}
-                          %
+                          -{Math.round((1 - resolved.salePrice / resolved.price) * 100)}%
                         </span>
                       </>
                     ) : (
                       <span className="text-4xl font-black text-[#1A1A1A]">
-                        {formatPrice(product.price)}
+                        {formatResolvedPrice(resolved)}
                       </span>
                     )}
                   </div>
