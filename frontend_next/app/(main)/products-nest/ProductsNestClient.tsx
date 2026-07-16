@@ -612,9 +612,7 @@ export default function ProductsNestClient() {
                 >
                   Önceki
                 </button>
-                <span className="text-sm font-bold text-[#A9A9A9]">
-                  Sayfa {page}
-                </span>
+                <span className="text-sm font-bold text-[#A9A9A9]">{page}</span>
                 <button
                   onClick={() => {
                     setLoading(true);
