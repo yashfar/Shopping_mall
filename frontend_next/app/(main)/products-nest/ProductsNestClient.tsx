@@ -625,6 +625,7 @@ export default function ProductsNestClient() {
                   Sonraki
                 </button>
               </div>
+              <div>yashar</div>
             </>
           )}
         </main>
