@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// NOTE: This schema only models the subset of the shared database that this
+// NestJS service needs (Product + its direct relations). Migrations for
+// these tables are owned by `frontend_next/prisma/schema.prisma` — this app
+// only reads/writes existing tables, it never runs `prisma migrate` itself.
+// ============================================================================
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  nameEn   String?
+  products Product[]
+}
+
+model Product {
+  id           String           @id @default(cuid())
+  title        String
+  description  String?
+  price        Int // cents
+  salePrice    Int?
+  stock        Int              @default(0)
+  isActive     Boolean          @default(true)
+  categoryId   String?
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  thumbnail    String?
+  images       ProductImage[]
+  reviews      Review[]
+  variants     ProductVariant[]
+  shippingDays String           @default("3-5")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     String
+  colorHex  String?
+  stock     Int      @default(0)
+  images    String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int
+  comment   String?
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
