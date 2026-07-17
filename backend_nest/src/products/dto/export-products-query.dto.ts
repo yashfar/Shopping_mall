@@ -4,6 +4,10 @@ import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 export class ExportProductsQueryDto {
   @IsOptional()
   @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
   categoryId?: string;
 
   @IsOptional()

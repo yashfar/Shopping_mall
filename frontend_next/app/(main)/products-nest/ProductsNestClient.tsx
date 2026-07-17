@@ -1,11 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCurrency } from "@@/context/CurrencyContext";
 
 const NEST_API_URL =
   process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
 const PAGE_SIZE = 12;
+
+function createPaginationItems(
+  page: number,
+  totalPages: number,
+  siblingCount: number,
+) {
+  const pages = new Set<number>([1, totalPages]);
+
+  for (
+    let number = page - siblingCount;
+    number <= page + siblingCount;
+    number += 1
+  ) {
+    if (number > 1 && number < totalPages) pages.add(number);
+  }
+
+  const sortedPages = [...pages].sort((a, b) => a - b);
+  const items: Array<number | "ellipsis"> = [];
+
+  sortedPages.forEach((number, index) => {
+    const previous = sortedPages[index - 1];
+    if (previous !== undefined && number - previous > 1) {
+      items.push("ellipsis");
+    }
+    items.push(number);
+  });
+
+  return items;
+}
 
 type NestCategory = { id: string; name: string; nameEn: string | null };
 type NestColor = { color: string; colorHex: string | null };
@@ -36,6 +65,7 @@ type FiltersMeta = {
 };
 
 type Filters = {
+  search: string;
   categoryId: string;
   color: string;
   minPrice: string;
@@ -44,6 +74,7 @@ type Filters = {
 };
 
 const EMPTY_FILTERS: Filters = {
+  search: "",
   categoryId: "",
   color: "",
   minPrice: "",
@@ -53,6 +84,7 @@ const EMPTY_FILTERS: Filters = {
 
 function createFilterParams(filters: Filters) {
   const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
   if (filters.categoryId) params.set("categoryId", filters.categoryId);
   if (filters.color) params.set("color", filters.color);
   if (filters.minPrice) params.set("minPrice", filters.minPrice);
@@ -86,6 +118,7 @@ function StarRow({ value }: { value: number }) {
 
 export default function ProductsNestClient() {
   const { formatPrice } = useCurrency();
+  const productsTopRef = useRef<HTMLElement>(null);
 
   const [filtersMeta, setFiltersMeta] = useState<FiltersMeta | null>(null);
   const [filtersMetaError, setFiltersMetaError] = useState(false);
@@ -94,6 +127,7 @@ export default function ProductsNestClient() {
   const [maxPriceInput, setMaxPriceInput] = useState("");
   const [priceValidationError, setPriceValidationError] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
 
   const [page, setPage] = useState(1);
   const [products, setProducts] = useState<NestProduct[]>([]);
@@ -102,6 +136,7 @@ export default function ProductsNestClient() {
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
 
   // Load filter options (categories, colors, price range) once
   const loadFiltersMeta = useCallback(async () => {
@@ -120,6 +155,23 @@ export default function ProductsNestClient() {
     loadFiltersMeta();
   }, [loadFiltersMeta]);
 
+  useEffect(() => {
+    const normalizedSearch = searchInput.trim();
+    if (normalizedSearch === filters.search) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setLoading(true);
+      setError("");
+      setPage(1);
+      setFilters((previous) => ({
+        ...previous,
+        search: normalizedSearch,
+      }));
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput, filters.search]);
+
   const fetchProducts = useCallback(async () => {
     const params = createFilterParams(filters);
     params.set("page", String(page));
@@ -128,10 +180,14 @@ export default function ProductsNestClient() {
     try {
       const res = await fetch(`${NEST_API_URL}/products?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load products");
-      const data: { products: NestProduct[]; hasMore: boolean } =
-        await res.json();
+      const data: {
+        products: NestProduct[];
+        hasMore: boolean;
+        totalPages: number;
+      } = await res.json();
       setProducts(data.products);
       setHasMore(data.hasMore);
+      setTotalPages(data.totalPages);
     } catch {
       setError(
         "Ürünler yüklenirken bir hata oluştu. NestJS backend (port 4000) çalışıyor mu?",
@@ -186,6 +242,7 @@ export default function ProductsNestClient() {
     setMinPriceInput("");
     setMaxPriceInput("");
     setPriceValidationError("");
+    setSearchInput("");
     setFilters(EMPTY_FILTERS);
     setPage(1);
   };
@@ -220,11 +277,28 @@ export default function ProductsNestClient() {
   };
 
   const hasActiveFilters =
+    filters.search ||
     filters.categoryId ||
     filters.color ||
     filters.minPrice ||
     filters.maxPrice ||
     filters.rating;
+  const isSearchPending = searchInput.trim() !== filters.search;
+
+  const mobilePaginationItems = createPaginationItems(page, totalPages, 1);
+  const desktopPaginationItems = createPaginationItems(page, totalPages, 2);
+
+  const changePage = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+
+    setLoading(true);
+    setError("");
+    setPage(nextPage);
+    productsTopRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-12">
@@ -256,6 +330,59 @@ export default function ProductsNestClient() {
             </code>
             ) veri çeker.
           </p>
+
+          <div className="mt-6 max-w-2xl">
+            <label
+              htmlFor="product-search"
+              className="mb-2 block text-sm font-bold text-[#1A1A1A]"
+            >
+              Ürünlerde ara
+            </label>
+            <div className="relative">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-4-4" strokeLinecap="round" />
+              </svg>
+              <input
+                id="product-search"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Ürün adı, açıklama veya kategori ara..."
+                autoComplete="off"
+                aria-describedby="product-search-status"
+                className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-12 pr-12 text-base text-[#1A1A1A] shadow-sm outline-none transition focus:border-[#C8102E] focus:ring-4 focus:ring-red-100"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  aria-label="Aramayı temizle"
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-xl text-gray-400 transition hover:bg-gray-100 hover:text-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <p
+              id="product-search-status"
+              className="mt-2 min-h-5 text-xs font-medium text-gray-500"
+              aria-live="polite"
+            >
+              {isSearchPending
+                ? "Arama hazırlanıyor…"
+                : filters.search
+                  ? `“${filters.search}” için sonuçlar gösteriliyor.`
+                  : "Yazmayı bıraktıktan 400 ms sonra arama yapılır."}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -496,7 +623,7 @@ export default function ProductsNestClient() {
         )}
 
         {/* Product grid */}
-        <main>
+        <main ref={productsTopRef} className="scroll-mt-24">
           {error && (
             <div className="bg-red-50 border border-red-100 text-[#C8102E] rounded-lg p-4 mb-6 font-medium">
               {error}
@@ -600,32 +727,93 @@ export default function ProductsNestClient() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-center gap-4 mt-10">
+              <div className="mt-10 flex items-center justify-center gap-1 sm:gap-3">
                 <button
-                  onClick={() => {
-                    setLoading(true);
-                    setError("");
-                    setPage((p) => Math.max(1, p - 1));
-                  }}
+                  type="button"
+                  onClick={() => changePage(page - 1)}
                   disabled={page === 1}
-                  className="px-5 py-2.5 rounded-full border border-gray-200 font-bold text-sm text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#C8102E] hover:text-[#C8102E] transition-colors"
+                  aria-label="Önceki sayfa"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 p-0 text-sm font-bold text-[#1A1A1A] transition-colors hover:border-[#C8102E] hover:text-[#C8102E] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-5"
                 >
-                  Önceki
+                  <span aria-hidden="true">‹</span>
+                  <span className="ml-1 hidden sm:inline">Önceki</span>
                 </button>
-                <span className="text-sm font-bold text-[#A9A9A9]">{page}</span>
-                <button
-                  onClick={() => {
-                    setLoading(true);
-                    setError("");
-                    setPage((p) => p + 1);
-                  }}
-                  disabled={!hasMore}
-                  className="px-5 py-2.5 rounded-full border border-gray-200 font-bold text-sm text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#C8102E] hover:text-[#C8102E] transition-colors"
+
+                <nav
+                  aria-label="Mobil ürün sayfaları"
+                  className="flex items-center justify-center gap-0.5 sm:hidden"
                 >
-                  Sonraki
+                  {mobilePaginationItems.map((item, index) =>
+                    item === "ellipsis" ? (
+                      <span
+                        key={`mobile-ellipsis-${index}`}
+                        className="flex h-8 w-5 items-center justify-center text-xs text-gray-400"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() => changePage(item)}
+                        aria-label={`${item}. sayfaya git`}
+                        aria-current={page === item ? "page" : undefined}
+                        className={`flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-xs font-bold transition-colors ${
+                          page === item
+                            ? "border-[#C8102E] bg-[#C8102E] text-white shadow-sm"
+                            : "border-gray-200 bg-white text-[#1A1A1A] hover:border-[#C8102E] hover:text-[#C8102E]"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+                </nav>
+
+                <nav
+                  aria-label="Ürün sayfaları"
+                  className="hidden items-center justify-center gap-1 sm:flex"
+                >
+                  {desktopPaginationItems.map((item, index) =>
+                    item === "ellipsis" ? (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="flex h-10 w-8 items-center justify-center text-gray-400"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() => changePage(item)}
+                        aria-label={`${item}. sayfaya git`}
+                        aria-current={page === item ? "page" : undefined}
+                        className={`flex h-10 min-w-10 items-center justify-center rounded-full border px-3 text-sm font-bold transition-colors ${
+                          page === item
+                            ? "border-[#C8102E] bg-[#C8102E] text-white shadow-sm"
+                            : "border-gray-200 bg-white text-[#1A1A1A] hover:border-[#C8102E] hover:text-[#C8102E]"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+                </nav>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(page + 1)}
+                  disabled={!hasMore}
+                  aria-label="Sonraki sayfa"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 p-0 text-sm font-bold text-[#1A1A1A] transition-colors hover:border-[#C8102E] hover:text-[#C8102E] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-5"
+                >
+                  <span className="mr-1 hidden sm:inline">Sonraki</span>
+                  <span aria-hidden="true">›</span>
                 </button>
               </div>
-              <div>yashar new</div>
             </>
           )}
         </main>

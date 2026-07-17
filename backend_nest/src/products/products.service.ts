@@ -12,7 +12,7 @@ import { Prisma } from '../../generated/prisma/client';
 
 type ProductFilters = Pick<
   ExportProductsQueryDto,
-  'categoryId' | 'color' | 'minPrice' | 'maxPrice' | 'rating'
+  'search' | 'categoryId' | 'color' | 'minPrice' | 'maxPrice' | 'rating'
 >;
 
 @Injectable()
@@ -26,6 +26,19 @@ export class ProductsService {
     query: ProductFilters,
   ): Promise<Prisma.ProductWhereInput> {
     const where: Prisma.ProductWhereInput = { isActive: true };
+
+    if (query.search?.trim()) {
+      const search = query.search.trim();
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        {
+          category: {
+            is: { name: { contains: search, mode: 'insensitive' } },
+          },
+        },
+      ];
+    }
 
     if (query.categoryId) {
       where.categoryId = query.categoryId;
@@ -82,23 +95,24 @@ export class ProductsService {
     const orderBy = this.buildOrderBy(query.sort);
 
     const skip = (page - 1) * pageSize;
-    const take = pageSize + 1; // fetch one extra row to know if there's a next page
-
-    const products = await this.prisma.product.findMany({
-      where,
-      include: {
-        category: { select: { id: true, name: true, nameEn: true } },
-        variants: {
-          select: { id: true, color: true, colorHex: true, stock: true },
+    const [products, totalProducts] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        include: {
+          category: { select: { id: true, name: true, nameEn: true } },
+          variants: {
+            select: { id: true, color: true, colorHex: true, stock: true },
+          },
+          reviews: { select: { rating: true } },
         },
-        reviews: { select: { rating: true } },
-      },
-      orderBy,
-      skip,
-      take,
-    });
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
 
-    let items = products.map(({ reviews, ...product }) => {
+    const items = products.map(({ reviews, ...product }) => {
       const reviewCount = reviews.length;
       const avgRating = reviewCount
         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
@@ -106,10 +120,17 @@ export class ProductsService {
       return { ...product, avgRating, reviewCount };
     });
 
-    const hasMore = items.length > pageSize;
-    if (hasMore) items = items.slice(0, pageSize);
+    const totalPages = Math.ceil(totalProducts / pageSize);
+    const hasMore = page < totalPages;
 
-    return { products: items, page, pageSize, hasMore };
+    return {
+      products: items,
+      page,
+      pageSize,
+      totalProducts,
+      totalPages,
+      hasMore,
+    };
   }
 
   async exportXlsx(query: ExportProductsQueryDto) {

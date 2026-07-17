@@ -1,0 +1,256 @@
+{
+  "seedKey": "products-demo-20260717",
+  "bucket": "products",
+  "images": [
+    {
+      "index": 1,
+      "path": "products/products-demo-20260717/demo-001.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-001.webp"
+    },
+    {
+      "index": 2,
+      "path": "products/products-demo-20260717/demo-002.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-002.webp"
+    },
+    {
+      "index": 3,
+      "path": "products/products-demo-20260717/demo-003.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-003.webp"
+    },
+    {
+      "index": 4,
+      "path": "products/products-demo-20260717/demo-004.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-004.webp"
+    },
+    {
+      "index": 5,
+      "path": "products/products-demo-20260717/demo-005.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-005.webp"
+    },
+    {
+      "index": 6,
+      "path": "products/products-demo-20260717/demo-006.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-006.webp"
+    },
+    {
+      "index": 7,
+      "path": "products/products-demo-20260717/demo-007.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-007.webp"
+    },
+    {
+      "index": 8,
+      "path": "products/products-demo-20260717/demo-008.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-008.webp"
+    },
+    {
+      "index": 9,
+      "path": "products/products-demo-20260717/demo-009.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-009.webp"
+    },
+    {
+      "index": 10,
+      "path": "products/products-demo-20260717/demo-010.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-010.webp"
+    },
+    {
+      "index": 11,
+      "path": "products/products-demo-20260717/demo-011.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-011.webp"
+    },
+    {
+      "index": 12,
+      "path": "products/products-demo-20260717/demo-012.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-012.webp"
+    },
+    {
+      "index": 13,
+      "path": "products/products-demo-20260717/demo-013.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-013.webp"
+    },
+    {
+      "index": 14,
+      "path": "products/products-demo-20260717/demo-014.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-014.webp"
+    },
+    {
+      "index": 15,
+      "path": "products/products-demo-20260717/demo-015.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-015.webp"
+    },
+    {
+      "index": 16,
+      "path": "products/products-demo-20260717/demo-016.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-016.webp"
+    },
+    {
+      "index": 17,
+      "path": "products/products-demo-20260717/demo-017.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-017.webp"
+    },
+    {
+      "index": 18,
+      "path": "products/products-demo-20260717/demo-018.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-018.webp"
+    },
+    {
+      "index": 19,
+      "path": "products/products-demo-20260717/demo-019.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-019.webp"
+    },
+    {
+      "index": 20,
+      "path": "products/products-demo-20260717/demo-020.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-020.webp"
+    },
+    {
+      "index": 21,
+      "path": "products/products-demo-20260717/demo-021.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-021.webp"
+    },
+    {
+      "index": 22,
+      "path": "products/products-demo-20260717/demo-022.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-022.webp"
+    },
+    {
+      "index": 23,
+      "path": "products/products-demo-20260717/demo-023.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-023.webp"
+    },
+    {
+      "index": 24,
+      "path": "products/products-demo-20260717/demo-024.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-024.webp"
+    },
+    {
+      "index": 25,
+      "path": "products/products-demo-20260717/demo-025.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-025.webp"
+    },
+    {
+      "index": 26,
+      "path": "products/products-demo-20260717/demo-026.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-026.webp"
+    },
+    {
+      "index": 27,
+      "path": "products/products-demo-20260717/demo-027.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-027.webp"
+    },
+    {
+      "index": 28,
+      "path": "products/products-demo-20260717/demo-028.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-028.webp"
+    },
+    {
+      "index": 29,
+      "path": "products/products-demo-20260717/demo-029.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-029.webp"
+    },
+    {
+      "index": 30,
+      "path": "products/products-demo-20260717/demo-030.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-030.webp"
+    },
+    {
+      "index": 31,
+      "path": "products/products-demo-20260717/demo-031.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-031.webp"
+    },
+    {
+      "index": 32,
+      "path": "products/products-demo-20260717/demo-032.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-032.webp"
+    },
+    {
+      "index": 33,
+      "path": "products/products-demo-20260717/demo-033.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-033.webp"
+    },
+    {
+      "index": 34,
+      "path": "products/products-demo-20260717/demo-034.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-034.webp"
+    },
+    {
+      "index": 35,
+      "path": "products/products-demo-20260717/demo-035.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-035.webp"
+    },
+    {
+      "index": 36,
+      "path": "products/products-demo-20260717/demo-036.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-036.webp"
+    },
+    {
+      "index": 37,
+      "path": "products/products-demo-20260717/demo-037.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-037.webp"
+    },
+    {
+      "index": 38,
+      "path": "products/products-demo-20260717/demo-038.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-038.webp"
+    },
+    {
+      "index": 39,
+      "path": "products/products-demo-20260717/demo-039.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-039.webp"
+    },
+    {
+      "index": 40,
+      "path": "products/products-demo-20260717/demo-040.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-040.webp"
+    },
+    {
+      "index": 41,
+      "path": "products/products-demo-20260717/demo-041.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-041.webp"
+    },
+    {
+      "index": 42,
+      "path": "products/products-demo-20260717/demo-042.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-042.webp"
+    },
+    {
+      "index": 43,
+      "path": "products/products-demo-20260717/demo-043.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-043.webp"
+    },
+    {
+      "index": 44,
+      "path": "products/products-demo-20260717/demo-044.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-044.webp"
+    },
+    {
+      "index": 45,
+      "path": "products/products-demo-20260717/demo-045.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-045.webp"
+    },
+    {
+      "index": 46,
+      "path": "products/products-demo-20260717/demo-046.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-046.webp"
+    },
+    {
+      "index": 47,
+      "path": "products/products-demo-20260717/demo-047.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-047.webp"
+    },
+    {
+      "index": 48,
+      "path": "products/products-demo-20260717/demo-048.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-048.webp"
+    },
+    {
+      "index": 49,
+      "path": "products/products-demo-20260717/demo-049.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-049.webp"
+    },
+    {
+      "index": 50,
+      "path": "products/products-demo-20260717/demo-050.webp",
+      "url": "https://lokvrllizlrbmsedtazu.supabase.co/storage/v1/object/public/products/products/products-demo-20260717/demo-050.webp"
+    }
+  ]
+}
