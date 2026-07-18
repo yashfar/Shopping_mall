@@ -9,6 +9,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { ExportProductsQueryDto } from './dto/export-products-query.dto';
 import { ProductsXlsxSerializer } from './products-xlsx.serializer';
 import { Prisma } from '../../generated/prisma/client';
+import { normalizeSearchText } from './normalize-search-text';
 
 type ProductFilters = Pick<
   ExportProductsQueryDto,
@@ -28,16 +29,7 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = { isActive: true };
 
     if (query.search?.trim()) {
-      const search = query.search.trim();
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        {
-          category: {
-            is: { name: { contains: search, mode: 'insensitive' } },
-          },
-        },
-      ];
+      where.searchText = { contains: normalizeSearchText(query.search) };
     }
 
     if (query.categoryId) {
@@ -235,7 +227,7 @@ export class ProductsService {
     if (dto.categoryId) {
       const category = await this.prisma.category.findUnique({
         where: { id: dto.categoryId },
-        select: { id: true },
+        select: { id: true, name: true, nameEn: true },
       });
 
       if (!category) {
@@ -243,9 +235,27 @@ export class ProductsService {
           `Category ${dto.categoryId} does not exist`,
         );
       }
+
+      return this.prisma.product.create({
+        data: {
+          ...dto,
+          searchText: normalizeSearchText(
+            [dto.title, dto.description, category.name, category.nameEn]
+              .filter(Boolean)
+              .join(' '),
+          ),
+        },
+      });
     }
 
-    return this.prisma.product.create({ data: dto });
+    return this.prisma.product.create({
+      data: {
+        ...dto,
+        searchText: normalizeSearchText(
+          [dto.title, dto.description].filter(Boolean).join(' '),
+        ),
+      },
+    });
   }
 
   async remove(id: string) {

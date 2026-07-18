@@ -70,6 +70,7 @@ model Product {
   id          String         @id @default(cuid())
   title       String
   description String?
+  searchText  String         @default("")
   price       Int            // Keep as Int for cents (backward compatibility)
   salePrice   Int?           // Optional sale price in cents (null = no sale)
   stock       Int            @default(0)

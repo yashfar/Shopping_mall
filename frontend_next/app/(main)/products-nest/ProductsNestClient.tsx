@@ -422,7 +422,7 @@ export default function ProductsNestClient() {
             />
             <aside
               id="product-filters"
-              className="custom-scrollbar fixed bottom-20 left-3 top-20 z-40 w-2/3 space-y-4 overflow-y-auto overscroll-contain rounded-xl border border-gray-200 bg-white p-3 shadow-2xl md:sticky md:top-25 md:z-10 md:h-fit md:max-h-[calc(100vh-20rem)] md:w-auto md:space-y-6 md:rounded-lg md:p-4 md:shadow-sm"
+              className="custom-scrollbar fixed bottom-20 left-3 top-20 z-40 w-2/3 space-y-4 overflow-y-auto overscroll-contain rounded-xl border border-gray-200 bg-white p-3 shadow-2xl md:sticky md:top-25 md:z-10 md:h-fit md:max-h-[calc(100vh-10rem)] 3xl:max-h-[calc(100vh-20rem)] md:w-auto md:space-y-6 md:rounded-lg md:p-4 md:shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-extrabold text-[#1A1A1A]">
