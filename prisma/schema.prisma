@@ -14,8 +14,8 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String        @id @default(cuid())
+  email         String        @unique
   emailVerified DateTime?
   name          String?
   image         String?
@@ -25,9 +25,9 @@ model User {
   avatar        String?
   phone         String?
   birthdate     DateTime?
-  role          Role      @default(USER)
-  locale        String    @default("en")
-  createdAt     DateTime  @default(now())
+  role          Role          @default(USER)
+  locale        String        @default("en")
+  createdAt     DateTime      @default(now())
   carts         Cart[]
   orders        Order[]
   accounts      Account[]
@@ -60,25 +60,44 @@ model Address {
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  nameEn   String?
-  products Product[]
+  id           String                @id @default(cuid())
+  name         String                @unique
+  nameEn       String?
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  products     Product[]
+  translations CategoryTranslation[]
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  locale     String
+  name       String
+  slug       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, locale])
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  price       Int            // Keep as Int for cents (backward compatibility)
-  salePrice   Int?           // Optional sale price in cents (null = no sale)
-  stock       Int            @default(0)
-  isActive    Boolean        @default(true)
-  categoryId  String?
-  category    Category?      @relation(fields: [categoryId], references: [id])
-  thumbnail   String?        // selected main image
+  id            String               @id @default(cuid())
+  title         String
+  description   String?
+  searchText    String               @default("")
+  price         Int // Keep as Int for cents (backward compatibility)
+  salePrice     Int? // Optional sale price in cents (null = no sale)
+  stock         Int                  @default(0)
+  isActive      Boolean              @default(true)
+  categoryId    String?
+  category      Category?            @relation(fields: [categoryId], references: [id])
+  thumbnail     String? // selected main image
   images        ProductImage[]
   translations  ProductTranslation[]
+  prices        ProductPrice[]
   reviews       Review[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
@@ -86,16 +105,29 @@ model Product {
   wishlistItems Wishlist[]
   stockAlerts   StockAlert[]
   variants      ProductVariant[]
-  shippingDays  String         @default("3-5")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  shippingDays  String               @default("3-5")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+
+model ProductPrice {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currencyCode String
+  price        Int
+  salePrice    Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([productId, currencyCode])
 }
 
 model ProductTranslation {
   id          String   @id @default(cuid())
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  locale      String   // "tr", "en"
+  locale      String // "tr", "en"
   title       String
   description String?
   createdAt   DateTime @default(now())
@@ -119,8 +151,9 @@ model ProductVariant {
   id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  color     String   // e.g. "Siyah", "Beyaz"
-  colorHex  String?  // e.g. "#1A1A1A" for color swatch display
+  color     String // e.g. "Siyah", "Beyaz"
+  colorEn   String?
+  colorHex  String? // e.g. "#1A1A1A" for color swatch display
   stock     Int      @default(0)
   images    String[] // optional per-color image URLs
   createdAt DateTime @default(now())
@@ -134,7 +167,7 @@ model Review {
   id        String   @id @default(cuid())
   productId String
   userId    String
-  rating    Int      // 1–5
+  rating    Int // 1–5
   comment   String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -169,26 +202,64 @@ model CartItem {
 }
 
 model Order {
-  id               String       @id @default(cuid())
-  userId           String
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items            OrderItem[]
-  total            Int
-  status           OrderStatus  @default(PENDING)
-  createdAt        DateTime     @default(now())
-  orderNumber      String?      @unique
-  couponId         String?
-  coupon           Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  discountAmount   Int?
-  trackingNumber   String?
-  shippingCompany  String?
-  trackingUrl      String?
-  paymentProofUrl  String?      // URL of uploaded payment receipt
-  paymentProofPath String?      // Storage path for deletion
-  couponUsage      CouponUsage?
-  returnRequest    ReturnRequest?
+  id                 String                   @id @default(cuid())
+  userId             String
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items              OrderItem[]
+  total              Int
+  currencyCode       String                   @default("TRY")
+  status             OrderStatus              @default(PENDING)
+  createdAt          DateTime                 @default(now())
+  orderNumber        String?                  @unique
+  couponId           String?
+  coupon             Coupon?                  @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  discountAmount     Int?
+  trackingNumber     String?
+  shippingCompany    String?
+  trackingUrl        String?
+  paymentProofUrl    String? // URL of uploaded payment receipt
+  paymentProofPath   String? // Storage path for deletion
+  couponUsage        CouponUsage?
+  returnRequest      ReturnRequest?
+  agreementSnapshots OrderAgreementSnapshot[]
+  shippingName       String?
+  shippingPhone      String?
+  shippingAddress    String?
 
   @@index([userId])
+}
+
+enum AgreementDocumentType {
+  PRE_CONTRACT_INFORMATION
+  DISTANCE_SALES_AGREEMENT
+}
+
+enum AgreementDeliveryStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
+model OrderAgreementSnapshot {
+  id                    String                  @id @default(cuid())
+  orderId               String
+  order                 Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  documentType          AgreementDocumentType
+  templateVersion       String
+  locale                String
+  contentHtml           String                  @db.Text
+  integrityHash         String
+  acceptedAt            DateTime
+  deliveryStatus        AgreementDeliveryStatus @default(PENDING)
+  deliveryAttempts      Int                     @default(0)
+  lastDeliveryAttemptAt DateTime?
+  deliveredAt           DateTime?
+  deliveryError         String?
+  createdAt             DateTime                @default(now())
+
+  @@unique([orderId, documentType])
+  @@index([orderId])
 }
 
 model OrderItem {
@@ -236,19 +307,74 @@ enum ReturnStatus {
   REJECTED
 }
 
+enum ReturnRequestType {
+  WITHDRAWAL
+  ISSUE
+}
+
+enum ReturnReceiptStatus {
+  AWAITING_RECEIPT
+  RECEIVED
+  LEGACY_UNKNOWN
+}
+
+enum ReturnInspectionStatus {
+  NOT_INSPECTED
+  RESTOCKABLE
+  NOT_RESTOCKABLE
+  LEGACY_UNKNOWN
+}
+
+enum ReturnRefundStatus {
+  NOT_STARTED
+  PENDING
+  COMPLETED
+  NOT_REQUIRED
+  LEGACY_UNKNOWN
+}
+
+enum ReturnEventActor {
+  CUSTOMER
+  ADMIN
+  SYSTEM
+}
+
 model ReturnRequest {
-  id             String       @id @default(cuid())
-  orderId        String       @unique
-  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  userId         String
-  reason         ReturnReason
-  note           String?      // user's explanation
-  photos         String[]     // uploaded photo URLs
-  status         ReturnStatus @default(PENDING)
-  previousStatus String?      // order status before return request
-  adminNote      String?      // admin's response
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                   String                 @id @default(cuid())
+  orderId              String                 @unique
+  order                Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId               String
+  type                 ReturnRequestType      @default(ISSUE)
+  reason               ReturnReason?
+  note                 String? // user's explanation
+  photos               String[] // uploaded photo URLs
+  status               ReturnStatus           @default(PENDING)
+  previousStatus       String? // order status before return request
+  adminNote            String? // private administrator note
+  customerExplanation  String?
+  receiptStatus        ReturnReceiptStatus    @default(AWAITING_RECEIPT)
+  inspectionStatus     ReturnInspectionStatus @default(NOT_INSPECTED)
+  refundStatus         ReturnRefundStatus     @default(NOT_STARTED)
+  receivedAt           DateTime?
+  inspectedAt          DateTime?
+  restockedAt          DateTime?
+  refundUpdatedAt      DateTime?
+  legacyReviewRequired Boolean                @default(false)
+  events               ReturnRequestEvent[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model ReturnRequestEvent {
+  id              String           @id @default(cuid())
+  returnRequestId String
+  returnRequest   ReturnRequest    @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  actor           ReturnEventActor
+  action          String
+  message         String?
+  createdAt       DateTime         @default(now())
+
+  @@index([returnRequestId, createdAt])
 }
 
 // ============================================================================
@@ -287,23 +413,23 @@ model StockAlert {
 // ============================================================================
 
 enum CouponType {
-  PERCENTAGE   // value = percent (e.g. 20 = 20% off)
+  PERCENTAGE // value = percent (e.g. 20 = 20% off)
   FIXED_AMOUNT // value = cents  (e.g. 1000 = $10 off)
 }
 
 model Coupon {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  type        CouponType
-  value       Int          // percent OR cents depending on type
-  minAmount   Int?         // minimum subtotal in cents to use coupon
-  maxUses     Int?         // null = unlimited
-  usedCount   Int          @default(0)
-  expiresAt   DateTime?
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  usages      CouponUsage[]
-  orders      Order[]
+  id        String        @id @default(cuid())
+  code      String        @unique
+  type      CouponType
+  value     Int // percent OR cents depending on type
+  minAmount Int? // minimum subtotal in cents to use coupon
+  maxUses   Int? // null = unlimited
+  usedCount Int           @default(0)
+  expiresAt DateTime?
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  usages    CouponUsage[]
+  orders    Order[]
 }
 
 model CouponUsage {
@@ -318,7 +444,6 @@ model CouponUsage {
 
   @@unique([couponId, userId])
 }
-
 
 // ============================================================================
 // OAuth Support Models
@@ -359,7 +484,7 @@ model Account {
 // ============================================================================
 
 model VerificationToken {
-  identifier String   // Email or user identifier
+  identifier String // Email or user identifier
   token      String   @unique
   expires    DateTime
 
@@ -391,20 +516,20 @@ model Banner {
   subtitle    String?
   active      Boolean  @default(true)
   order       Int      @default(0)
-  displayMode String   @default("cover")   // object-fit: cover, contain, fill, scale-down, none
-  alignment   String   @default("center")  // object-position: center, top, bottom, left, right, etc.
+  displayMode String   @default("cover") // object-fit: cover, contain, fill, scale-down, none
+  alignment   String   @default("center") // object-position: center, top, bottom, left, right, etc.
   createdAt   DateTime @default(now())
 }
 
 model BannerSettings {
-  id            String   @id @default(cuid())
-  animationSpeed Int     @default(500)
-  slideDelay     Int     @default(3000)
-  animationType  String  @default("slide")
+  id             String @id @default(cuid())
+  animationSpeed Int    @default(500)
+  slideDelay     Int    @default(3000)
+  animationType  String @default("slide")
 
-  loop           Boolean @default(true)
-  arrowDisplay   String  @default("hover") // "show", "hover", "invisible"
-  createdAt      DateTime @default(now())
+  loop         Boolean  @default(true)
+  arrowDisplay String   @default("hover") // "show", "hover", "invisible"
+  createdAt    DateTime @default(now())
 }
 
 // ============================================================================
@@ -434,16 +559,23 @@ model CarouselItem {
 // Payment Configuration System
 // ============================================================================
 model PaymentConfig {
-  id                    String   @id @default(cuid())
-  taxPercent            Float    @default(0)    // percentage, e.g. 8.5 for 8.5%
-  shippingFee           Int      @default(0)    // in cents
-  freeShippingThreshold Int      @default(0)    // in cents
+  id                       String   @id @default(cuid())
+  taxPercent               Float    @default(0) // percentage, e.g. 8.5 for 8.5%
+  shippingFee              Int      @default(0) // in cents
+  freeShippingThreshold    Int      @default(0) // in cents
   // Bank transfer details shown to customers
-  bankName              String   @default("")
-  accountHolder         String   @default("")
-  iban                  String   @default("")
-  bankTransferNote      String   @default("")   // optional extra instructions
-  updatedAt             DateTime @updatedAt
+  bankName                 String   @default("")
+  accountHolder            String   @default("")
+  iban                     String   @default("")
+  bankTransferNote         String   @default("") // optional extra instructions
+  usdBankName              String   @default("")
+  usdAccountHolder         String   @default("")
+  usdIban                  String   @default("")
+  usdSwiftCode             String   @default("")
+  usdBankTransferNote      String   @default("")
+  usdShippingFee           Int      @default(0)
+  usdFreeShippingThreshold Int      @default(0)
+  updatedAt                DateTime @updatedAt
 }
 
 // ============================================================================

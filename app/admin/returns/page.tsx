@@ -10,11 +10,18 @@ import { useTranslations } from "next-intl";
 
 type ReturnRequest = {
     id: string;
-    reason: string;
+    type: string;
+    reason: string | null;
     note: string | null;
     photos: string[];
     status: string;
     adminNote: string | null;
+    customerExplanation: string | null;
+    receiptStatus: string;
+    inspectionStatus: string;
+    refundStatus: string;
+    restockedAt: string | null;
+    legacyReviewRequired: boolean;
     createdAt: string;
     order: {
         id: string;
@@ -49,6 +56,7 @@ export default function ReturnsPage() {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+    const [customerExplanations, setCustomerExplanations] = useState<Record<string, string>>({});
     const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
 
     const reasonLabels: Record<string, string> = {
@@ -82,24 +90,24 @@ export default function ReturnsPage() {
         fetchReturns();
     }, []);
 
-    const handleAction = async (id: string, action: "approve" | "reject") => {
+    const handleAction = async (id: string, action: string) => {
         setConfirm(null);
         setProcessingId(id);
         try {
             const res = await fetch(`/api/admin/returns/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action, adminNote: adminNotes[id] || "" }),
+                body: JSON.stringify({ action, adminNote: adminNotes[id] || "", customerExplanation: customerExplanations[id] || "" }),
             });
             const data = await res.json();
             if (!res.ok) {
                 toast.error(data.error || (action === "approve" ? t("failedToApprove") : t("failedToReject")));
                 return;
             }
-            toast.success(action === "approve" ? t("approveSuccess") : t("rejectSuccess"));
+            toast.success(t("workflowUpdated"));
             await fetchReturns();
         } catch {
-            toast.error(action === "approve" ? t("failedToApprove") : t("failedToReject"));
+            toast.error(t("workflowUpdateFailed"));
         } finally {
             setProcessingId(null);
         }
@@ -164,7 +172,7 @@ export default function ReturnsPage() {
                                         {/* Reason */}
                                         <div className="bg-orange-50 rounded-lg p-3 mb-4 border border-orange-100">
                                             <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">{t("reasonLabel")}</p>
-                                            <p className="text-sm text-gray-700 font-medium">{reasonLabels[r.reason] || r.reason}</p>
+                                            <p className="text-sm text-gray-700 font-medium">{r.type === "WITHDRAWAL" ? t("withdrawalType") : (r.reason ? reasonLabels[r.reason] || r.reason : t("issueType"))}</p>
                                             {r.note && <p className="text-xs text-gray-500 mt-1">{r.note}</p>}
                                         </div>
 
@@ -202,6 +210,13 @@ export default function ReturnsPage() {
                                             placeholder={t("adminNotePlaceholder")}
                                             rows={2}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 mb-3"
+                                        />
+                                        <textarea
+                                            value={customerExplanations[r.id] || ""}
+                                            onChange={(e) => setCustomerExplanations((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                                            placeholder={t("customerExplanationPlaceholder")}
+                                            rows={2}
+                                            className="w-full px-3 py-2 rounded-lg border border-blue-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 mb-3"
                                         />
 
                                         {/* Actions */}
@@ -242,7 +257,7 @@ export default function ReturnsPage() {
                                                 Order #{r.order.orderNumber || r.order.id.substring(0, 8)}
                                             </p>
                                             <p className="text-xs text-gray-500">
-                                                {r.order.user.email} &middot; {reasonLabels[r.reason] || r.reason}
+                                                {r.order.user.email} &middot; {r.type === "WITHDRAWAL" ? t("withdrawalType") : (r.reason ? reasonLabels[r.reason] || r.reason : t("issueType"))}
                                             </p>
                                             {r.adminNote && <p className="text-xs text-gray-400 mt-1">{r.adminNote}</p>}
                                         </div>
@@ -253,6 +268,17 @@ export default function ReturnsPage() {
                                         }`}>
                                             {statusLabels[r.status] || r.status}
                                         </span>
+                                        {r.status === "APPROVED" && !r.legacyReviewRequired && (
+                                            <div className="flex flex-wrap gap-2 ml-3">
+                                                {r.receiptStatus === "AWAITING_RECEIPT" && <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "receive")}>{t("markReceived")}</Button>}
+                                                {r.receiptStatus === "RECEIVED" && r.inspectionStatus === "NOT_INSPECTED" && <>
+                                                    <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "inspect_restockable")}>{t("inspectRestockable")}</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "inspect_not_restockable")}>{t("inspectNotRestockable")}</Button>
+                                                </>}
+                                                {r.refundStatus === "NOT_STARTED" && <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "refund_pending")}>{t("markRefundPending")}</Button>}
+                                                {r.refundStatus === "PENDING" && <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "refund_completed")}>{t("confirmRefundCompleted")}</Button>}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

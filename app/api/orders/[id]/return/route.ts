@@ -3,6 +3,7 @@ import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { sendReturnPendingEmail } from "@@/lib/mail";
 import { getLocaleFromRequest } from "@@/lib/get-locale";
+import { canReopenReturn, customerOwnsOrder, validateReturnSubmission } from "@@/lib/return-workflow";
 
 export async function POST(
     req: Request,
@@ -17,16 +18,15 @@ export async function POST(
     const locale = getLocaleFromRequest(req);
 
     try {
-        const { reason, note, photos } = await req.json();
-
-        if (!reason) {
-            return NextResponse.json({ error: "Reason is required" }, { status: 400 });
-        }
+        const { type = "ISSUE", reason, note, photos, followUp } = await req.json();
+        if (!["WITHDRAWAL", "ISSUE"].includes(type)) return NextResponse.json({ error: "Invalid request type" }, { status: 400 });
 
         const validReasons = ["DAMAGED", "WRONG_ITEM", "NOT_AS_DESCRIBED", "CHANGED_MIND", "OTHER"];
-        if (!validReasons.includes(reason)) {
+        if (reason && !validReasons.includes(reason)) {
             return NextResponse.json({ error: "Invalid reason" }, { status: 400 });
         }
+        const validation = validateReturnSubmission({ type, reason, photos });
+        if (validation.error) return NextResponse.json({ error: validation.error }, { status: 400 });
 
         const order = await prisma.order.findUnique({
             where: { id },
@@ -40,7 +40,7 @@ export async function POST(
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
 
-        if (order.userId !== session.user.id) {
+        if (!customerOwnsOrder(order.userId, session.user.id)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -52,38 +52,40 @@ export async function POST(
             );
         }
 
-        if (order.returnRequest) {
+        if (order.returnRequest && !canReopenReturn(order.returnRequest.status)) {
             return NextResponse.json(
                 { error: "A return request already exists for this order" },
                 { status: 409 }
             );
         }
 
-        const photoUrls: string[] = Array.isArray(photos)
-            ? photos.filter((p: unknown) => typeof p === "string").slice(0, 5)
-            : [];
-
-        if (photoUrls.length === 0) {
-            return NextResponse.json(
-                { error: "At least one photo is required for a return request" },
-                { status: 400 }
-            );
+        const photoUrls = validation.photos;
+        if (order.returnRequest && !String(followUp || note || "").trim()) {
+            return NextResponse.json({ error: "A follow-up message is required to reopen this request" }, { status: 400 });
         }
 
         const returnRequest = await prisma.$transaction(async (tx) => {
             // Keep user locale up to date
             await tx.user.update({ where: { id: session.user.id }, data: { locale } });
 
-            const rr = await tx.returnRequest.create({
-                data: {
-                    orderId: id,
-                    userId: session.user.id,
-                    reason,
-                    note: note?.trim() || null,
-                    photos: photoUrls,
-                    previousStatus: order.status,
-                },
-            });
+            const rr = order.returnRequest
+                ? await tx.returnRequest.update({
+                    where: { id: order.returnRequest.id },
+                    data: {
+                        status: "PENDING", type, reason: reason || null,
+                        note: note?.trim() || order.returnRequest.note,
+                        photos: photoUrls.length ? photoUrls : order.returnRequest.photos,
+                        customerExplanation: null,
+                        events: { create: { actor: "CUSTOMER", action: "REOPENED", message: String(followUp || note).trim() } },
+                    },
+                })
+                : await tx.returnRequest.create({
+                    data: {
+                        orderId: id, userId: session.user.id, type, reason: reason || null,
+                        note: note?.trim() || null, photos: photoUrls, previousStatus: order.status,
+                        events: { create: { actor: "CUSTOMER", action: "SUBMITTED", message: note?.trim() || null } },
+                    },
+                });
 
             await tx.order.update({
                 where: { id },

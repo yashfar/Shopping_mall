@@ -29,6 +29,19 @@ type Order = {
     trackingNumber?: string | null;
     shippingCompany?: string | null;
     trackingUrl?: string | null;
+    agreementSnapshots?: Array<{
+        documentType: "PRE_CONTRACT_INFORMATION" | "DISTANCE_SALES_AGREEMENT";
+        templateVersion: string;
+        locale: string;
+        acceptedAt: string;
+        integrityHash: string;
+        deliveryStatus: string;
+        deliveryAttempts: number;
+    }>;
+    returnRequest?: {
+        id: string; type: string; reason?: string | null; status: string;
+        customerExplanation?: string | null; receiptStatus: string; inspectionStatus: string; refundStatus: string;
+    } | null;
 };
 
 export default function OrderDetails({ orderId }: { orderId: string }) {
@@ -41,10 +54,28 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     const [showConfirm, setShowConfirm] = useState(false);
     const [showReturn, setShowReturn] = useState(false);
     const [returnReason, setReturnReason] = useState("");
+    const [returnType, setReturnType] = useState<"WITHDRAWAL" | "ISSUE">("WITHDRAWAL");
     const [returnNote, setReturnNote] = useState("");
     const [returnPhotos, setReturnPhotos] = useState<string[]>([]);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [submittingReturn, setSubmittingReturn] = useState(false);
+    const [retryingDocuments, setRetryingDocuments] = useState(false);
+
+    const retryDocumentDelivery = async () => {
+        setRetryingDocuments(true);
+        try {
+            const response = await fetch(`/api/orders/${orderId}/documents/retry`, { method: "POST" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || t("documentRetryFailed"));
+            toast.success(t("documentRetryQueued"));
+            const refreshed = await fetch(`/api/orders/${orderId}`);
+            if (refreshed.ok) setOrder((await refreshed.json()).order);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : t("documentRetryFailed"));
+        } finally {
+            setRetryingDocuments(false);
+        }
+    };
 
     const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -78,12 +109,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     };
 
     const submitReturn = async () => {
-        if (!returnReason) {
+        if (returnType === "ISSUE" && !returnReason) {
             toast.error(t("selectReasonError"));
-            return;
-        }
-        if (returnPhotos.length === 0) {
-            toast.error(t("photoRequired"));
             return;
         }
         setSubmittingReturn(true);
@@ -91,7 +118,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             const res = await fetch(`/api/orders/${orderId}/return`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reason: returnReason, note: returnNote, photos: returnPhotos }),
+                body: JSON.stringify({ type: returnType, reason: returnReason || null, note: returnNote, photos: returnPhotos, followUp: order?.returnRequest?.status === "REJECTED" ? returnNote : undefined }),
             });
             const data = await res.json();
             if (!res.ok) {
@@ -99,7 +126,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                 return;
             }
             toast.success(t("returnSubmitSuccess"));
-            setOrder((prev) => prev ? { ...prev, status: "RETURN_REQUESTED" } : prev);
+            setOrder((prev) => prev ? { ...prev, status: "RETURN_REQUESTED", returnRequest: data.returnRequest } : prev);
             setShowReturn(false);
         } catch {
             toast.error(t("returnSubmitFailed"));
@@ -446,6 +473,12 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                             ) : (
                                 <div className="space-y-3">
                                     <p className="text-xs text-gray-500 font-medium">{t("returnReason")}</p>
+                                    <select value={returnType} onChange={(e) => { setReturnType(e.target.value as "WITHDRAWAL" | "ISSUE"); setReturnReason(""); }} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                                        <option value="WITHDRAWAL">{t("withdrawalRequest")}</option>
+                                        <option value="ISSUE">{t("issueReport")}</option>
+                                    </select>
+                                    {returnType === "WITHDRAWAL" && <p className="text-xs text-gray-500">{t("withdrawalOptionalInfo")}</p>}
+                                    {returnType === "ISSUE" && (
                                     <select
                                         value={returnReason}
                                         onChange={(e) => setReturnReason(e.target.value)}
@@ -458,6 +491,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                         <option value="CHANGED_MIND">{t("changedMind")}</option>
                                         <option value="OTHER">{t("other")}</option>
                                     </select>
+                                    )}
                                     <textarea
                                         value={returnNote}
                                         onChange={(e) => setReturnNote(e.target.value)}
@@ -469,7 +503,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                     {/* Photo Upload */}
                                     <div className="space-y-2">
                                         <p className="text-xs text-gray-500 font-medium">
-                                            {t("uploadPhotos")} <span className="text-[#C8102E] font-bold">*</span> <span className="text-gray-400">({t("maxPhotos")})</span>
+                                            {t("uploadPhotos")} {returnType === "ISSUE" && <span className="text-[#C8102E] font-bold">*</span>} <span className="text-gray-400">({t("maxPhotos")})</span>
                                         </p>
                                         {returnPhotos.length > 0 && (
                                             <div className="flex gap-2 flex-wrap">
@@ -524,7 +558,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                         <Button
                                             className="flex-1 text-sm bg-orange-500 hover:bg-orange-600 text-white font-bold"
                                             onClick={submitReturn}
-                                            disabled={submittingReturn || !returnReason || uploadingPhoto || returnPhotos.length === 0}
+                                            disabled={submittingReturn || (returnType === "ISSUE" && !returnReason) || uploadingPhoto || (order.returnRequest?.status === "REJECTED" && !returnNote.trim())}
                                         >
                                             {submittingReturn ? t("submitting") : t("submitRequest")}
                                         </Button>
@@ -549,6 +583,40 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                 <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">{t("returnApproved")}</p>
                                 <p className="text-xs text-violet-500">{t("returnApprovedMessage")}</p>
                             </div>
+                        </div>
+                    )}
+
+                    {order.returnRequest && (
+                        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+                            <p className="font-bold text-gray-900">{t("returnWorkflowStatus")}: {t(`returnStatus_${order.returnRequest.status}`)}</p>
+                            <p className="mt-1 text-gray-600">{t("receiptStage")}: {t(`receiptStatus_${order.returnRequest.receiptStatus}`)}</p>
+                            <p className="text-gray-600">{t("inspectionStage")}: {t(`inspectionStatus_${order.returnRequest.inspectionStatus}`)}</p>
+                            <p className="text-gray-600">{t("refundStage")}: {t(`refundStatus_${order.returnRequest.refundStatus}`)}</p>
+                            {order.returnRequest.customerExplanation && <p className="mt-3 border-t border-gray-200 pt-3 text-gray-700">{order.returnRequest.customerExplanation}</p>}
+                            {order.returnRequest.status === "REJECTED" && <p className="mt-2 text-xs text-gray-500">{t("reopenHelp")}</p>}
+                        </div>
+                    )}
+
+                    {order.agreementSnapshots && order.agreementSnapshots.length > 0 && (
+                        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 text-sm">
+                            <p className="font-bold text-gray-900">{t("acceptedDocuments")}</p>
+                            <p className="mt-1 text-xs text-gray-500">{t("acceptedDocumentsHelp")}</p>
+                            <div className="mt-3 flex flex-col gap-2">
+                                {order.agreementSnapshots.map((document) => {
+                                    const path = document.documentType === "PRE_CONTRACT_INFORMATION" ? "pre-contract" : "distance-sales";
+                                    return (
+                                        <a key={document.documentType} href={`/api/orders/${order.id}/documents/${path}`} className="font-semibold text-[#C8102E] underline underline-offset-2">
+                                            {document.documentType === "PRE_CONTRACT_INFORMATION" ? t("downloadPreContract") : t("downloadDistanceSales")}
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                            <p className="mt-3 text-xs text-gray-500">{t("documentDeliveryStatus", { status: order.agreementSnapshots[0].deliveryStatus })}</p>
+                            {order.agreementSnapshots.some((document) => document.deliveryStatus === "FAILED") && (
+                                <button type="button" onClick={retryDocumentDelivery} disabled={retryingDocuments} className="mt-3 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 disabled:opacity-50">
+                                    {retryingDocuments ? t("documentRetrying") : t("documentRetry")}
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

@@ -6,7 +6,7 @@ import { calculateCartTotals } from "@@/lib/payment-utils";
 import { useCurrency } from "@@/context/CurrencyContext";
 import { toast } from "sonner";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -33,17 +33,25 @@ type AppliedCoupon = {
     discountAmount: number;
 };
 
+type Address = { id: string; title: string; firstName: string; lastName: string; city: string; district: string; neighborhood: string; fullAddress: string };
+type AgreementPreview = { bundleHash: string; documents: { preContract: string; distanceSales: string } };
+
 export default function CheckoutContent() {
     const router = useRouter();
     const { formatPrice } = useCurrency();
 
     const t = useTranslations("checkout");
     const tc = useTranslations("common");
+    const locale = useLocale();
     const [cart, setCart] = useState<Cart | null>(null);
     const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
-    const [hasAddresses, setHasAddresses] = useState(true);
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [selectedAddressId, setSelectedAddressId] = useState("");
+    const [agreementPreview, setAgreementPreview] = useState<AgreementPreview | null>(null);
+    const [agreementsAccepted, setAgreementsAccepted] = useState(false);
+    const [reviewingAgreements, setReviewingAgreements] = useState(false);
 
     // Coupon state
     const [couponInput, setCouponInput] = useState("");
@@ -77,7 +85,7 @@ export default function CheckoutContent() {
                 if (response.ok) {
                     const data = await response.json();
                     const addressesExist = data.addresses && data.addresses.length > 0;
-                    setHasAddresses(addressesExist);
+                    setAddresses(data.addresses || []);
 
                     // Redirect to cart if no addresses
                     if (!addressesExist) {
@@ -110,6 +118,8 @@ export default function CheckoutContent() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setAppliedCoupon(data);
+            setAgreementPreview(null);
+            setAgreementsAccepted(false);
             setCouponInput("");
         } catch (err) {
             setCouponError(err instanceof Error ? err.message : t("invalidCoupon"));
@@ -121,6 +131,28 @@ export default function CheckoutContent() {
     const removeCoupon = () => {
         setAppliedCoupon(null);
         setCouponError("");
+        setAgreementPreview(null);
+        setAgreementsAccepted(false);
+    };
+
+    const reviewAgreements = async () => {
+        if (!selectedAddressId) return;
+        setReviewingAgreements(true);
+        try {
+            const response = await fetch("/api/checkout/agreements", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-locale": locale },
+                body: JSON.stringify({ addressId: selectedAddressId, couponCode: appliedCoupon?.code ?? null }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || t("agreementPreviewFailed"));
+            setAgreementPreview(data);
+            setAgreementsAccepted(false);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : t("agreementPreviewFailed"));
+        } finally {
+            setReviewingAgreements(false);
+        }
     };
 
     const createOrder = async () => {
@@ -129,11 +161,21 @@ export default function CheckoutContent() {
             const response = await fetch("/api/orders/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ couponCode: appliedCoupon?.code ?? null }),
+                body: JSON.stringify({
+                    couponCode: appliedCoupon?.code ?? null,
+                    addressId: selectedAddressId,
+                    acceptedDocuments: agreementsAccepted,
+                    acceptedBundleHash: agreementPreview?.bundleHash,
+                }),
             });
 
             if (!response.ok) {
                 const data = await response.json();
+                if (response.status === 409 && data.error === "AGREEMENT_CHANGED") {
+                    setAgreementPreview(null);
+                    setAgreementsAccepted(false);
+                    throw new Error(t("agreementChanged"));
+                }
                 throw new Error(data.error || t("failedToCreateOrder"));
             }
 
@@ -332,10 +374,60 @@ export default function CheckoutContent() {
                         </div>
                     </div>
 
+                    <div className="space-y-3 border-t border-gray-100 pt-5">
+                        <label className="block text-sm font-bold text-gray-700" htmlFor="agreement-address">{t("deliveryAddress")}</label>
+                        <select
+                            id="agreement-address"
+                            value={selectedAddressId}
+                            onChange={(event) => {
+                                setSelectedAddressId(event.target.value);
+                                setAgreementPreview(null);
+                                setAgreementsAccepted(false);
+                            }}
+                            disabled={creating}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
+                        >
+                            <option value="">{t("selectDeliveryAddress")}</option>
+                            {addresses.map((address) => (
+                                <option key={address.id} value={address.id}>{address.title} — {address.firstName} {address.lastName}, {address.district}/{address.city}</option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={reviewAgreements}
+                            disabled={!selectedAddressId || reviewingAgreements || creating}
+                            className="w-full rounded-full border border-[#C8102E] px-4 py-3 text-sm font-bold text-[#C8102E] disabled:opacity-40"
+                        >
+                            {reviewingAgreements ? t("preparingDocuments") : t("reviewDocuments")}
+                        </button>
+                    </div>
+
+                    {agreementPreview && (
+                        <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                            <details className="rounded-xl bg-white p-3" open>
+                                <summary className="cursor-pointer font-bold">{t("preContractInformation")}</summary>
+                                <iframe title={t("preContractInformation")} srcDoc={agreementPreview.documents.preContract} sandbox="" className="mt-3 h-72 w-full border-t" />
+                            </details>
+                            <details className="rounded-xl bg-white p-3">
+                                <summary className="cursor-pointer font-bold">{t("distanceSalesAgreement")}</summary>
+                                <iframe title={t("distanceSalesAgreement")} srcDoc={agreementPreview.documents.distanceSales} sandbox="" className="mt-3 h-72 w-full border-t" />
+                            </details>
+                            <label className="flex items-start gap-3 rounded-xl border border-red-100 bg-white p-4 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={agreementsAccepted}
+                                    onChange={(event) => setAgreementsAccepted(event.target.checked)}
+                                    className="mt-1 h-4 w-4"
+                                />
+                                <span>{t("acceptDocuments")}</span>
+                            </label>
+                        </div>
+                    )}
+
                     <div className="space-y-3 pt-4">
                         <button
                             onClick={createOrder}
-                            disabled={creating}
+                            disabled={creating || !agreementPreview || !agreementsAccepted}
                             className={`w-full py-4 px-4 rounded-full text-white font-black text-lg transition-all shadow-[0_4px_14px_0_rgba(200,16,46,0.39)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${creating ? "bg-gray-400" : "bg-gradient-to-r from-[#C8102E] to-[#b91c1c]"}`}
                         >
                             {/* Shine effect */}

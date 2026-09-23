@@ -101,6 +101,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [downloading, setDownloading] = useState<"invoice" | "label" | null>(null);
     const [processingReturn, setProcessingReturn] = useState(false);
     const [returnAdminNote, setReturnAdminNote] = useState("");
+    const [returnCustomerExplanation, setReturnCustomerExplanation] = useState("");
     const [returnConfirm, setReturnConfirm] = useState<"approve" | "reject" | null>(null);
     const [trackingNumber, setTrackingNumber] = useState("");
     const [shippingCompany, setShippingCompany] = useState("");
@@ -242,7 +243,7 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             const res = await fetch(`/api/admin/returns/${order.returnRequest.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action, adminNote: returnAdminNote }),
+                body: JSON.stringify({ action, adminNote: returnAdminNote, customerExplanation: returnCustomerExplanation }),
             });
             const data = await res.json();
             if (!res.ok) {
@@ -664,6 +665,13 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                 placeholder={t("adminNotePlaceholder")}
                                 rows={2}
                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 mb-3"
+                            />
+                            <textarea
+                                value={returnCustomerExplanation}
+                                onChange={(e) => setReturnCustomerExplanation(e.target.value)}
+                                placeholder={t("customerExplanationPlaceholder")}
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-lg border border-blue-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 mb-3"
                             />
                             <div className="flex gap-2">
                                 <Button

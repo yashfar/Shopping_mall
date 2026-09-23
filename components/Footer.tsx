@@ -22,6 +22,11 @@ export default function Footer() {
                         <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("quickLinks")}</h4>
                         <ul className="list-none p-0 m-0 flex flex-col gap-3">
                             <li>
+                                <Link href="/about" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                    {t("aboutUs")}
+                                </Link>
+                            </li>
+                            <li>
                                 <Link href="/products" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("products")}
                                 </Link>
@@ -73,6 +78,11 @@ export default function Footer() {
                             <li>
                                 <Link href="/terms" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
                                     {t("termsOfService")}
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/distance-sales-agreement" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
+                                    {t("distanceSalesAgreement")}
                                 </Link>
                             </li>
                             <li>

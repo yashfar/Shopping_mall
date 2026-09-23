@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@@/components/ui/button";
-import { Send, Loader2, Mail, MessageSquare, User } from "lucide-react";
+import { Send, Loader2, Mail, MessageSquare, Phone, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export default function ContactPage() {
@@ -38,8 +38,8 @@ export default function ContactPage() {
 
             setSent(true);
             toast.success(t("messageSentToast"));
-        } catch (err: any) {
-            toast.error(err.message || t("failedToSend"));
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : t("failedToSend"));
         } finally {
             setSubmitting(false);
         }
@@ -90,6 +90,16 @@ export default function ContactPage() {
                             <div>
                                 <p className="text-sm font-black text-gray-900">{t("emailUs")}</p>
                                 <p className="text-sm text-gray-500 mt-0.5">{t("emailAddress")}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+                                <Phone className="w-5 h-5 text-[#C8102E]" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-gray-900">{t("phoneUs")}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{t("phoneNumber")}</p>
                             </div>
                         </div>
 
