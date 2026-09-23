@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test:csv": "node --require tsx/cjs --test app/lib/csv/__tests__/serializer.test.ts",
+    "test:returns": "node --require tsx/cjs --test lib/__tests__/return-workflow.test.ts",
+    "test:returns:integration": "node --require tsx/cjs scripts/test-return-workflow-integration.ts",
+    "test:agreements": "node --require tsx/cjs --test lib/__tests__/order-agreements.test.ts",
+    "test:agreements:integration": "node --require tsx/cjs scripts/test-order-agreements-integration.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

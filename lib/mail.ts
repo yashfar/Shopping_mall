@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Keep module imports usable in migration/tests that use the explicit email
+// sink. Real sends still fail safely at the provider when no key is configured.
+const resend = new Resend(process.env.RESEND_API_KEY || "re_missing_configuration");
 
 type Locale = "tr" | "en";
 
@@ -9,6 +11,40 @@ const FROM_EMAIL = `${STORE_NAME} <noreply@mail.creativeaventus.com>`;
 
 function formatPrice(kurus: number): string {
     return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(kurus / 100);
+}
+
+export async function sendAcceptedAgreementEmail(input: {
+    email: string;
+    orderNumber: string;
+    locale: Locale;
+    preContractHtml: string;
+    distanceSalesHtml: string;
+}) {
+    if (process.env.AGREEMENT_EMAIL_SINK === "success") {
+        return { success: true as const, data: { id: "test-email-sink" } };
+    }
+    if (process.env.AGREEMENT_EMAIL_SINK === "failure") {
+        return { success: false as const, error: new Error("Test email sink failure") };
+    }
+    const tr = input.locale === "tr";
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to: input.email,
+            subject: tr
+                ? `Sipariş belgeleriniz #${input.orderNumber} - ${STORE_NAME}`
+                : `Your order documents #${input.orderNumber} - ${STORE_NAME}`,
+            html: `<p>${tr ? "Kabul ettiğiniz Ön Bilgilendirme Formu ve Mesafeli Satış Sözleşmesi bu e-postaya değişmez HTML dosyaları olarak eklenmiştir." : "The Pre-contract Information and Distance Sales Agreement you accepted are attached as immutable HTML files."}</p>`,
+            attachments: [
+                { filename: tr ? "on-bilgilendirme-formu.html" : "pre-contract-information.html", content: Buffer.from(input.preContractHtml, "utf8") },
+                { filename: tr ? "mesafeli-satis-sozlesmesi.html" : "distance-sales-agreement.html", content: Buffer.from(input.distanceSalesHtml, "utf8") },
+            ],
+        });
+        if (error) return { success: false as const, error };
+        return { success: true as const, data };
+    } catch (error) {
+        return { success: false as const, error };
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -228,7 +264,7 @@ function getReturnPendingTemplate(data: ReturnPendingData, locale: Locale): stri
             statusTitle: "İnceleme Bekleniyor",
             statusSub: `Sipariş #${orderNumber}`,
             infoTitle: "Bilgi",
-            infoBody: "İade talebiniz genellikle 1-3 iş günü içinde değerlendirilmektedir. Talebinizin sonucu e-posta ile bildirilecektir.",
+            infoBody: "Talebiniz idari incelemeye alınmıştır ve sonucu e-posta ile bildirilecektir. Bu inceleme, uygulanabilir kanuni cayma ve iade haklarınızı satıcının takdirine bağlı hale getirmez.",
             cta: "Siparişlerimi Görüntüle",
             support: "Herhangi bir sorunuz varsa destek ekibimizle iletişime geçebilirsiniz.",
             footer: `Bu e-posta ${STORE_NAME} tarafından gönderilmiştir.`,
@@ -242,7 +278,7 @@ function getReturnPendingTemplate(data: ReturnPendingData, locale: Locale): stri
             statusTitle: "Pending Review",
             statusSub: `Order #${orderNumber}`,
             infoTitle: "Info",
-            infoBody: "Return requests are typically reviewed within 1-3 business days. You will be notified by email once a decision has been made.",
+            infoBody: "Your request is under administrative review and the result will be sent by email. This review does not make applicable statutory withdrawal or return rights dependent on the seller's discretion.",
             cta: "View My Orders",
             support: "If you have any questions, feel free to contact our support team.",
             footer: `This email was sent by ${STORE_NAME}.`,
@@ -358,15 +394,15 @@ function getReturnResultTemplate(data: ReturnResultData, locale: Locale): string
     const copy = {
         tr: {
             greeting: firstName ? `Merhaba ${firstName},` : "Merhaba,",
-            statusTitle: approved ? "İade Onaylandı" : "İade Talebi Reddedildi",
+            statusTitle: approved ? "İade İşlemi Onaylandı" : "İade Talebi Güncellemesi",
             statusIcon: approved ? "&#10003;" : "&#10007;",
             statusSub: `Sipariş #${orderNumber}`,
             message: approved
-                ? `<strong>#${orderNumber}</strong> numaralı siparişinize ait iade talebiniz onaylanmıştır. <strong>${formatPrice(total)}</strong> tutarındaki iade, orijinal ödeme yönteminize aktarılacaktır.`
-                : `<strong>#${orderNumber}</strong> numaralı siparişinize ait iade talebiniz incelenmiş ve ne yazık ki bu aşamada onaylanamamıştır.`,
+                ? `<strong>#${orderNumber}</strong> numaralı siparişinize ait iade talebi işleme alınmak üzere onaylanmıştır. Bu onay ürünün fiziksel olarak teslim alındığı, yeniden stoklandığı veya <strong>${formatPrice(total)}</strong> tutarındaki geri ödemenin tamamlandığı anlamına gelmez; geri ödeme durumu ayrıca takip edilir.`
+                : `<strong>#${orderNumber}</strong> numaralı siparişinize ait çevrim içi iade talebi bu aşamada idari işlem için onaylanamamıştır. Bu sonuç, varsa kanuni cayma veya ayıplı mala ilişkin haklarınızı ortadan kaldırmaz. Ayrıntı için aşağıdaki ekip notunu inceleyebilir veya bizimle iletişime geçebilirsiniz.`,
             teamNoteLabel: "Ekibimizin Notu",
             shippingTitle: "&#128230; Ücretsiz İade Kargo Talimatları",
-            shippingBody: "Ürünü orijinal ambalajında aşağıdaki adrese gönderin. İade kargo ücreti tamamen tarafımızca karşılanmaktadır — kargo firmasına ödeme yapmayınız.",
+            shippingBody: "Ürünü aşağıdaki adrese PTT Kargo ile gönderebilirsiniz. Ön bilgilendirmede belirtilen PTT Kargo kullanıldığında tüketiciden iade kargo masrafı alınmaz.",
             addressLabel: "İade Adresi",
             shippingNote: `Kargo gönderiminizde sipariş numaranızı (<strong>#${orderNumber}</strong>) belirtmeyi unutmayın.`,
             cta: "Siparişlerimi Görüntüle",
@@ -376,15 +412,15 @@ function getReturnResultTemplate(data: ReturnResultData, locale: Locale): string
         },
         en: {
             greeting: firstName ? `Hello ${firstName},` : "Hello,",
-            statusTitle: approved ? "Return Approved" : "Return Request Rejected",
+            statusTitle: approved ? "Return Processing Approved" : "Return Request Update",
             statusIcon: approved ? "&#10003;" : "&#10007;",
             statusSub: `Order #${orderNumber}`,
             message: approved
-                ? `Your return request for order <strong>#${orderNumber}</strong> has been approved. A refund of <strong>${formatPrice(total)}</strong> will be issued to your original payment method.`
-                : `Your return request for order <strong>#${orderNumber}</strong> has been reviewed and unfortunately could not be approved at this time.`,
+                ? `Your return request for order <strong>#${orderNumber}</strong> has been approved for processing. This does not mean the goods have been physically received or restocked, or that the <strong>${formatPrice(total)}</strong> refund has been completed; refund progress is tracked separately.`
+                : `The online return request for order <strong>#${orderNumber}</strong> could not be approved for administrative processing at this stage. This result does not remove any applicable statutory withdrawal or defective-goods rights. Review the team note below or contact us for details.`,
             teamNoteLabel: "Note from our team",
             shippingTitle: "&#128230; Free Return Shipping Instructions",
-            shippingBody: "Please send the item in its original packaging to the address below. Return shipping is fully covered by us — do not pay the carrier.",
+            shippingBody: "You may return the item to the address below using PTT Kargo. When PTT Kargo is the carrier stated in the pre-contract information, the consumer is not charged return carriage.",
             addressLabel: "Return Address",
             shippingNote: `Please include your order number (<strong>#${orderNumber}</strong>) on the shipment.`,
             cta: "View My Orders",

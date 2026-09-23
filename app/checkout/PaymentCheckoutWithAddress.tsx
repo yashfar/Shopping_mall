@@ -36,6 +36,9 @@ interface Order {
     total: number;
     status: string;
     items: OrderItem[];
+    shippingName?: string | null;
+    shippingPhone?: string | null;
+    shippingAddress?: string | null;
 }
 
 interface BankDetails {
@@ -56,7 +59,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
     const [loading, setLoading] = useState(true);
     const [loadingAddresses, setLoadingAddresses] = useState(true);
     const [uploading, setUploading] = useState(false);
-    const [currentStep, setCurrentStep] = useState<"address" | "payment">("address");
+    const [currentStep, setCurrentStep] = useState<"address" | "payment">("payment");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
 
@@ -185,7 +188,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
     };
 
     const handleUpload = async () => {
-        if (!selectedFile || !selectedAddressId) return;
+        if (!selectedFile) return;
 
         setUploading(true);
         setUploadError("");
@@ -217,7 +220,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         navigator.clipboard.writeText(text);
     };
 
-    if (loading || loadingAddresses) {
+    if (loading) {
         return (
             <div className="checkout-loading">
                 <div className="spinner"></div>
@@ -230,7 +233,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         return null;
     }
 
-    if (addresses.length === 0) {
+    if (!order.shippingAddress && !loadingAddresses && addresses.length === 0) {
         return (
             <div className="no-address-container">
                 <div className="no-address-card">
@@ -365,26 +368,12 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                     <div className="selected-address-summary">
                         <div className="summary-header">
                             <h3>{t("deliveryAddress")}</h3>
-                            <button className="btn-change" onClick={() => setCurrentStep("address")}>
-                                {t("change")}
-                            </button>
                         </div>
-                        {addresses.find((a) => a.id === selectedAddressId) && (
+                        {order.shippingAddress && (
                             <div className="summary-content">
-                                {(() => {
-                                    const addr = addresses.find((a) => a.id === selectedAddressId)!;
-                                    return (
-                                        <>
-                                            <p className="summary-name">
-                                                <strong>{addr.title}</strong> - {addr.firstName} {addr.lastName}
-                                            </p>
-                                            <p className="summary-text">
-                                                {addr.fullAddress}, {addr.neighborhood}, {addr.district}, {addr.city}
-                                            </p>
-                                            <p className="summary-text">{maskPhone(addr.phone)}</p>
-                                        </>
-                                    );
-                                })()}
+                                <p className="summary-name"><strong>{order.shippingName}</strong></p>
+                                <p className="summary-text">{order.shippingAddress}</p>
+                                {order.shippingPhone && <p className="summary-text">{maskPhone(order.shippingPhone)}</p>}
                             </div>
                         )}
                     </div>
@@ -570,7 +559,7 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
                     <div className="payment-actions">
                         <button
                             className="btn-secondary"
-                            onClick={() => setCurrentStep("address")}
+                            onClick={() => router.push(`/orders/${orderId}`)}
                             disabled={uploading}
                         >
                             {t("back")}

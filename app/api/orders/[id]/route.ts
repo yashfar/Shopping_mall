@@ -34,6 +34,18 @@ export async function GET(
                         },
                     },
                 },
+                returnRequest: {
+                    select: {
+                        id: true, type: true, reason: true, note: true, photos: true,
+                        status: true, customerExplanation: true, receiptStatus: true,
+                        inspectionStatus: true, refundStatus: true, createdAt: true, updatedAt: true,
+                        events: { select: { id: true, actor: true, action: true, message: true, createdAt: true }, orderBy: { createdAt: "asc" } },
+                    },
+                },
+                agreementSnapshots: {
+                    select: { documentType: true, templateVersion: true, locale: true, acceptedAt: true, integrityHash: true, deliveryStatus: true, deliveryAttempts: true },
+                    orderBy: { documentType: "asc" },
+                },
             },
         });
 

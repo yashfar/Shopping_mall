@@ -1,193 +1,82 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
-import { getPaymentConfig } from "@/lib/payment-config";
-import { calculateCartTotals } from "@@/lib/payment-utils";
 import { generateOrderNumber } from "@@/lib/order-utils";
 import { getLocaleFromRequest } from "@@/lib/get-locale";
+import { buildCheckoutAgreement, validateAgreementAcceptance } from "@@/lib/checkout-agreements";
+import { deliverOrderAgreements } from "@@/lib/agreement-delivery";
 
-/**
- * POST /api/orders/create
- * Creates an order from the user's cart.
- *
- * Stock validation is performed INSIDE the transaction so that two
- * concurrent checkouts cannot both pass the availability check and
- * both succeed for the same limited-stock item.
- */
 export async function POST(req: Request) {
-    const session = await auth();
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const locale = getLocaleFromRequest(req) === "tr" ? "tr" : "en";
 
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const body = await req.json().catch(() => ({}));
+    if (!validateAgreementAcceptance(body)) {
+      return NextResponse.json({ error: "DOCUMENT_ACCEPTANCE_REQUIRED" }, { status: 400 });
+    }
+    if (typeof body.addressId !== "string" || !body.addressId) {
+      return NextResponse.json({ error: "DELIVERY_ADDRESS_REQUIRED" }, { status: 400 });
     }
 
-    const locale = getLocaleFromRequest(req);
+    const result = await prisma.$transaction(async (tx) => {
+      const quote = await buildCheckoutAgreement(tx, {
+        userId: session.user.id,
+        addressId: body.addressId,
+        couponCode: body.couponCode,
+        locale,
+      });
+      if (quote.agreement.bundleHash !== body.acceptedBundleHash) throw new Error("AGREEMENT_CHANGED");
 
-    try {
-        const body = await req.json().catch(() => ({}));
-        const couponCode: string | undefined = body?.couponCode?.trim().toUpperCase() || undefined;
+      const acceptedAt = new Date();
+      await tx.user.update({ where: { id: session.user.id }, data: { locale } });
+      const order = await tx.order.create({
+        data: {
+          userId: session.user.id,
+          orderNumber: await generateOrderNumber(tx),
+          total: quote.total,
+          currencyCode: "TRY",
+          status: "PENDING",
+          shippingName: quote.buyerName,
+          shippingPhone: quote.address.phone,
+          shippingAddress: quote.deliveryAddress,
+          ...(quote.coupon ? { couponId: quote.coupon.id, discountAmount: quote.discountAmount } : {}),
+          items: {
+            create: quote.cart.items.map((item) => ({
+              productId: item.productId,
+              variantId: item.variantId ?? null,
+              variantColor: item.variant?.color ?? null,
+              quantity: item.quantity,
+              price: item.product.price,
+            })),
+          },
+          agreementSnapshots: {
+            create: [
+              { documentType: "PRE_CONTRACT_INFORMATION", templateVersion: quote.agreement.templateVersion, locale, contentHtml: quote.agreement.preContractHtml, integrityHash: quote.agreement.preContractHash, acceptedAt },
+              { documentType: "DISTANCE_SALES_AGREEMENT", templateVersion: quote.agreement.templateVersion, locale, contentHtml: quote.agreement.distanceSalesHtml, integrityHash: quote.agreement.distanceSalesHash, acceptedAt },
+            ],
+          },
+        },
+      });
 
-        const config = await getPaymentConfig();
+      if (quote.coupon) {
+        await tx.couponUsage.create({ data: { couponId: quote.coupon.id, userId: session.user.id, orderId: order.id } });
+        await tx.coupon.update({ where: { id: quote.coupon.id }, data: { usedCount: { increment: 1 } } });
+      }
+      return { orderId: order.id };
+    });
 
-        const order = await prisma.$transaction(async (tx) => {
-            // Save customer locale so all future emails use the right language
-            await tx.user.update({ where: { id: session.user.id }, data: { locale } });
-
-            // Re-fetch the cart inside the transaction so we're reading
-            // consistent data for both validation and order creation.
-            const cart = await tx.cart.findUnique({
-                where: { userId: session.user.id },
-                include: {
-                    items: {
-                        include: { product: true, variant: true },
-                    },
-                },
-            });
-
-            if (!cart || cart.items.length === 0) {
-                throw new Error("CART_EMPTY");
-            }
-
-            // Validate stock inside the transaction — this prevents the race
-            // condition where two simultaneous requests both pass an external check.
-            for (const item of cart.items) {
-                if (!item.product.isActive) {
-                    throw new Error(`PRODUCT_INACTIVE:${item.product.title}`);
-                }
-                const availableStock = item.variant ? item.variant.stock : item.product.stock;
-                if (availableStock < item.quantity) {
-                    throw new Error(
-                        `INSUFFICIENT_STOCK:${item.product.title}:${availableStock}:${item.quantity}`
-                    );
-                }
-            }
-
-            const totals = calculateCartTotals(cart.items, config);
-
-            // Validate coupon inside transaction
-            let discountAmount = 0;
-            let coupon = null;
-            if (couponCode) {
-                coupon = await tx.coupon.findUnique({
-                    where: { code: couponCode },
-                    include: {
-                        usages: { where: { userId: session.user.id } },
-                    },
-                });
-
-                if (!coupon || !coupon.isActive) {
-                    throw new Error("INVALID_COUPON");
-                }
-                if (coupon.expiresAt && coupon.expiresAt < new Date()) {
-                    throw new Error("COUPON_EXPIRED");
-                }
-                if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
-                    throw new Error("COUPON_LIMIT_REACHED");
-                }
-                if (coupon.usages.length > 0) {
-                    throw new Error("COUPON_ALREADY_USED");
-                }
-                if (coupon.minAmount !== null && totals.subtotal < coupon.minAmount) {
-                    throw new Error(`COUPON_MIN_AMOUNT:${coupon.minAmount}`);
-                }
-
-                if (coupon.type === "PERCENTAGE") {
-                    discountAmount = Math.round(totals.subtotal * (coupon.value / 100));
-                } else {
-                    discountAmount = Math.min(coupon.value, totals.subtotal);
-                }
-            }
-
-            const finalTotal = Math.max(0, totals.total - discountAmount);
-
-            const newOrder = await tx.order.create({
-                data: {
-                    userId: session.user.id,
-                    orderNumber: await generateOrderNumber(tx),
-                    total: finalTotal,
-                    status: "PENDING",
-                    ...(coupon ? { couponId: coupon.id, discountAmount } : {}),
-                },
-            });
-
-            await tx.orderItem.createMany({
-                data: cart.items.map((item) => ({
-                    orderId: newOrder.id,
-                    productId: item.productId,
-                    variantId: item.variantId ?? null,
-                    variantColor: item.variant?.color ?? null,
-                    quantity: item.quantity,
-                    price: item.product.price,
-                })),
-            });
-
-            if (coupon) {
-                await tx.couponUsage.create({
-                    data: {
-                        couponId: coupon.id,
-                        userId: session.user.id,
-                        orderId: newOrder.id,
-                    },
-                });
-                await tx.coupon.update({
-                    where: { id: coupon.id },
-                    data: { usedCount: { increment: 1 } },
-                });
-            }
-
-            // Cart is cleared when the customer uploads payment proof,
-            // not here — so "back to cart" still shows their items.
-
-            return newOrder;
-        });
-
-        return NextResponse.json(
-            { message: "Order created", orderId: order.id },
-            { status: 201 }
-        );
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            if (error.message === "CART_EMPTY") {
-                return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
-            }
-            if (error.message === "INVALID_COUPON") {
-                return NextResponse.json({ error: "Invalid or inactive coupon code" }, { status: 400 });
-            }
-            if (error.message === "COUPON_EXPIRED") {
-                return NextResponse.json({ error: "This coupon has expired" }, { status: 400 });
-            }
-            if (error.message === "COUPON_LIMIT_REACHED") {
-                return NextResponse.json({ error: "This coupon has reached its usage limit" }, { status: 400 });
-            }
-            if (error.message === "COUPON_ALREADY_USED") {
-                return NextResponse.json({ error: "You have already used this coupon" }, { status: 400 });
-            }
-            if (error.message.startsWith("COUPON_MIN_AMOUNT:")) {
-                const minAmount = parseInt(error.message.split(":")[1]);
-                return NextResponse.json({ error: `Minimum order amount of ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(minAmount / 100)} required` }, { status: 400 });
-            }
-            if (error.message.startsWith("PRODUCT_INACTIVE:")) {
-                const title = error.message.split(":")[1];
-                return NextResponse.json(
-                    { error: `Product "${title}" is no longer available` },
-                    { status: 400 }
-                );
-            }
-            if (error.message.startsWith("INSUFFICIENT_STOCK:")) {
-                const [, title, available, requested] = error.message.split(":");
-                return NextResponse.json(
-                    {
-                        error: `Insufficient stock for "${title}". Available: ${available}, Requested: ${requested}`,
-                    },
-                    { status: 400 }
-                );
-            }
-        }
-
-        console.error("Error creating order:", error);
-        return NextResponse.json(
-            { error: "Failed to create order" },
-            { status: 500 }
-        );
+    await deliverOrderAgreements(result.orderId).catch(() => undefined);
+    return NextResponse.json({ message: "Order created", orderId: result.orderId }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "AGREEMENT_CHANGED") return NextResponse.json({ error: message }, { status: 409 });
+    const known = ["CART_EMPTY", "ADDRESS_NOT_FOUND", "INVALID_COUPON", "COUPON_EXPIRED", "COUPON_LIMIT_REACHED", "COUPON_ALREADY_USED"];
+    if (known.includes(message) || message.startsWith("COUPON_MIN_AMOUNT:") || message.startsWith("PRODUCT_INACTIVE:") || message.startsWith("INSUFFICIENT_STOCK:")) {
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    console.error("Error creating order");
+    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+  }
 }
