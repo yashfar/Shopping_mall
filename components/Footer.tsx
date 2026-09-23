@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -91,6 +92,39 @@ export default function Footer() {
                                 </Link>
                             </li>
                         </ul>
+                    </div>
+                </div>
+
+                <div
+                    className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5 border-t border-[#A9A9A9]/20 py-8 sm:gap-x-10"
+                    aria-label="iyzico ile Öde, Visa and Mastercard"
+                >
+                    <div className="flex min-h-14 items-center justify-center px-3">
+                        <Image
+                            src="/assets/payment/iyzico-ile-ode.svg"
+                            alt="iyzico ile Öde"
+                            width={107}
+                            height={38}
+                            className="h-auto w-[107px]"
+                        />
+                    </div>
+                    <div className="flex min-h-14 items-center justify-center px-3">
+                        <Image
+                            src="/assets/payment/visa.webp"
+                            alt="Visa"
+                            width={90}
+                            height={30}
+                            className="h-auto w-[82px] sm:w-[90px]"
+                        />
+                    </div>
+                    <div className="flex min-h-14 items-center justify-center px-3">
+                        <Image
+                            src="/assets/payment/mastercard.webp"
+                            alt="Mastercard"
+                            width={58}
+                            height={36}
+                            className="h-auto w-[54px] sm:w-[58px]"
+                        />
                     </div>
                 </div>
 
