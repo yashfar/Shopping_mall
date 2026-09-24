@@ -2,7 +2,7 @@
 
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import { Star, ShoppingCart, Loader2, Heart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -26,6 +26,7 @@ interface Product {
     title: string;
     price: number;
     salePrice?: number | null;
+    prices?: PriceEntry[];
     thumbnail: string | null;
     reviews?: Review[];
     stock?: number;
@@ -42,7 +43,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggle, isWishlisted } = useWishlist();
     const t = useTranslations("productCard");
-    const { formatPrice } = useCurrency();
+    const { formatResolvedPrice, resolveProductPrice } = useCurrency();
+    const resolved = resolveProductPrice(product);
     const router = useRouter();
     const wishlisted = isWishlisted(product.id);
 
@@ -179,9 +181,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                                 {t("new")}
                             </span>
                         )}
-                        {product.salePrice && product.stock !== 0 && (
+                        {resolved?.salePrice && product.stock !== 0 && (
                             <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                -{Math.round((1 - product.salePrice / product.price) * 100)}%
+                                -{Math.round((1 - resolved.salePrice / resolved.price) * 100)}%
                             </span>
                         )}
                         {!hasAnyStock && (
@@ -292,18 +294,20 @@ export default function ProductCard({ product }: ProductCardProps) {
                     {/* Price & Mobile Add Button */}
                     <div className="flex items-center justify-between pt-2">
                         <div className="flex flex-col">
-                            {product.salePrice ? (
+                            {resolved === null ? (
+                                <span className="text-sm text-gray-400 italic">—</span>
+                            ) : resolved.salePrice ? (
                                 <>
                                     <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
-                                        {formatPrice(product.salePrice)}
+                                        {formatResolvedPrice({ ...resolved, price: resolved.salePrice })}
                                     </span>
                                     <span className="text-xs text-gray-400 line-through">
-                                        {formatPrice(product.price)}
+                                        {formatResolvedPrice(resolved)}
                                     </span>
                                 </>
                             ) : (
                                 <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
-                                    {formatPrice(product.price)}
+                                    {formatResolvedPrice(resolved)}
                                 </span>
                             )}
                         </div>

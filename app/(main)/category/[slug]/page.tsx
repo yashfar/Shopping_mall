@@ -36,6 +36,7 @@ export default async function CategoryPage({
     include: {
       reviews: { select: { id: true, rating: true } },
       category: true,
+      prices: { select: { currencyCode: true, price: true, salePrice: true } },
     },
     orderBy: getSortOrder(sort),
     take: 12,

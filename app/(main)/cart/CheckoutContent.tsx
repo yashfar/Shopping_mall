@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { calculateCartTotals } from "@@/lib/payment-utils";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import { toast } from "sonner";
 
 import { useLocale, useTranslations } from "next-intl";
@@ -11,457 +11,656 @@ import Image from "next/image";
 import Link from "next/link";
 
 type CartItem = {
+  id: string;
+  quantity: number;
+  product: {
     id: string;
-    quantity: number;
-    product: {
-        id: string;
-        title: string;
-        price: number;
-        thumbnail: string | null;
-    };
+    title: string;
+    price: number;
+    thumbnail: string | null;
+    prices?: PriceEntry[];
+  };
 };
 
 type Cart = {
-    id: string;
-    items: CartItem[];
+  id: string;
+  items: CartItem[];
 };
 
 type AppliedCoupon = {
-    code: string;
-    type: string;
-    value: number;
-    discountAmount: number;
+  code: string;
+  type: string;
+  value: number;
+  discountAmount: number;
 };
 
-type Address = { id: string; title: string; firstName: string; lastName: string; city: string; district: string; neighborhood: string; fullAddress: string };
-type AgreementPreview = { bundleHash: string; documents: { preContract: string; distanceSales: string } };
+type Address = {
+  id: string;
+  title: string;
+  firstName: string;
+  lastName: string;
+  city: string;
+  district: string;
+  neighborhood: string;
+  fullAddress: string;
+};
+type AgreementPreview = {
+  bundleHash: string;
+  documents: { preContract: string; distanceSales: string };
+};
 
 export default function CheckoutContent() {
-    const router = useRouter();
-    const { formatPrice } = useCurrency();
+  const router = useRouter();
+  const { formatPrice, currency, resolveProductPrice } = useCurrency();
 
-    const t = useTranslations("checkout");
-    const tc = useTranslations("common");
-    const locale = useLocale();
-    const [cart, setCart] = useState<Cart | null>(null);
-    const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [creating, setCreating] = useState(false);
-    const [addresses, setAddresses] = useState<Address[]>([]);
-    const [selectedAddressId, setSelectedAddressId] = useState("");
-    const [agreementPreview, setAgreementPreview] = useState<AgreementPreview | null>(null);
-    const [agreementsAccepted, setAgreementsAccepted] = useState(false);
-    const [reviewingAgreements, setReviewingAgreements] = useState(false);
+  const t = useTranslations("checkout");
+  const tc = useTranslations("common");
+  const locale = useLocale();
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [config, setConfig] = useState<{
+    taxPercent: number;
+    shippingFee: number;
+    freeShippingThreshold: number;
+    usdShippingFee: number;
+    usdFreeShippingThreshold: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [agreementPreview, setAgreementPreview] =
+    useState<AgreementPreview | null>(null);
+  const [agreementsAccepted, setAgreementsAccepted] = useState(false);
+  const [reviewingAgreements, setReviewingAgreements] = useState(false);
 
-    // Coupon state
-    const [couponInput, setCouponInput] = useState("");
-    const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-    const [couponLoading, setCouponLoading] = useState(false);
-    const [couponError, setCouponError] = useState("");
+  // Coupon state
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null,
+  );
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
-    useEffect(() => {
-        const fetchCart = async () => {
-            try {
-                const response = await fetch("/api/cart");
-                if (!response.ok) throw new Error("Failed to fetch cart");
-                const data = await response.json();
-                setCart(data.cart);
-                setConfig(data.config);
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const response = await fetch("/api/cart");
+        if (!response.ok) throw new Error("Failed to fetch cart");
+        const data = await response.json();
+        setCart(data.cart);
+        setConfig(data.config);
 
-                // Redirect to cart if empty (only on initial load)
-                if (!data.cart || data.cart.items.length === 0) {
-                    router.push("/cart");
-                }
-            } catch (error) {
-                console.error("Error fetching cart:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const checkAddresses = async () => {
-            try {
-                const response = await fetch("/api/address/list");
-                if (response.ok) {
-                    const data = await response.json();
-                    const addressesExist = data.addresses && data.addresses.length > 0;
-                    setAddresses(data.addresses || []);
-
-                    // Redirect to cart if no addresses
-                    if (!addressesExist) {
-                        router.push("/cart");
-                    }
-                }
-            } catch (error) {
-                console.error("Error checking addresses:", error);
-            }
-        };
-
-        fetchCart();
-        checkAddresses();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Only run once on mount
-
-    const applyCoupon = async () => {
-        if (!couponInput.trim() || !cart || !config) return;
-        setCouponLoading(true);
-        setCouponError("");
-
-        const totals = calculateCartTotals(cart.items, config);
-
-        try {
-            const res = await fetch("/api/coupon/validate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: couponInput.trim(), subtotal: totals.subtotal }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            setAppliedCoupon(data);
-            setAgreementPreview(null);
-            setAgreementsAccepted(false);
-            setCouponInput("");
-        } catch (err) {
-            setCouponError(err instanceof Error ? err.message : t("invalidCoupon"));
-        } finally {
-            setCouponLoading(false);
+        // Redirect to cart if empty (only on initial load)
+        if (!data.cart || data.cart.items.length === 0) {
+          router.push("/cart");
         }
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const removeCoupon = () => {
-        setAppliedCoupon(null);
-        setCouponError("");
-        setAgreementPreview(null);
-        setAgreementsAccepted(false);
-    };
+    const checkAddresses = async () => {
+      try {
+        const response = await fetch("/api/address/list");
+        if (response.ok) {
+          const data = await response.json();
+          const addressesExist = data.addresses && data.addresses.length > 0;
+          setAddresses(data.addresses || []);
 
-    const reviewAgreements = async () => {
-        if (!selectedAddressId) return;
-        setReviewingAgreements(true);
-        try {
-            const response = await fetch("/api/checkout/agreements", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "x-locale": locale },
-                body: JSON.stringify({ addressId: selectedAddressId, couponCode: appliedCoupon?.code ?? null }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || t("agreementPreviewFailed"));
-            setAgreementPreview(data);
-            setAgreementsAccepted(false);
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : t("agreementPreviewFailed"));
-        } finally {
-            setReviewingAgreements(false);
+          // Redirect to cart if no addresses
+          if (!addressesExist) {
+            router.push("/cart");
+          }
         }
+      } catch (error) {
+        console.error("Error checking addresses:", error);
+      }
     };
 
-    const createOrder = async () => {
-        try {
-            setCreating(true);
-            const response = await fetch("/api/orders/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    couponCode: appliedCoupon?.code ?? null,
-                    addressId: selectedAddressId,
-                    acceptedDocuments: agreementsAccepted,
-                    acceptedBundleHash: agreementPreview?.bundleHash,
-                }),
-            });
+    fetchCart();
+    checkAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
-            if (!response.ok) {
-                const data = await response.json();
-                if (response.status === 409 && data.error === "AGREEMENT_CHANGED") {
-                    setAgreementPreview(null);
-                    setAgreementsAccepted(false);
-                    throw new Error(t("agreementChanged"));
-                }
-                throw new Error(data.error || t("failedToCreateOrder"));
-            }
+  const computedTotals = useMemo(() => {
+    if (!cart || !config) return null;
+    const effectiveConfig =
+      currency === "USD"
+        ? {
+            taxPercent: config.taxPercent,
+            shippingFee: config.usdShippingFee ?? 0,
+            freeShippingThreshold: config.usdFreeShippingThreshold ?? 0,
+          }
+        : {
+            taxPercent: config.taxPercent,
+            shippingFee: config.shippingFee,
+            freeShippingThreshold: config.freeShippingThreshold,
+          };
+    const itemPrices = cart.items.map((item) => {
+      const r = resolveProductPrice(item.product);
+      return {
+        price: r ? (r.salePrice ?? r.price) : 0,
+        quantity: item.quantity,
+      };
+    });
+    return calculateTotalsFromPrices(itemPrices, effectiveConfig);
+  }, [cart, config, currency, resolveProductPrice]);
 
-            const data = await response.json();
+  const applyCoupon = async () => {
+    if (!couponInput.trim() || !cart || !config || !computedTotals) return;
+    setCouponLoading(true);
+    setCouponError("");
 
-            // Redirect to payment page (cart is NOT cleared here anymore —
-            // it's cleared when the customer uploads the payment proof)
-            router.push(`/checkout?orderId=${data.orderId}`);
-        } catch (error) {
-            console.error("Error creating order:", error);
-            toast.error(error instanceof Error ? error.message : t("failedToCreateOrder"));
-            setCreating(false); // Only reset on error
-        }
-        // Don't reset creating on success - let the redirect happen
-    };
-
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
-                <p className="text-[#A9A9A9] font-semibold">{t("preparingOrder")}</p>
-            </div>
-        );
+    try {
+      const res = await fetch("/api/coupon/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          subtotal: computedTotals.subtotal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAppliedCoupon(data);
+      setAgreementPreview(null);
+      setAgreementsAccepted(false);
+      setCouponInput("");
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : t("invalidCoupon"));
+    } finally {
+      setCouponLoading(false);
     }
+  };
 
-    if (!cart || cart.items.length === 0) {
-        return null; // Will redirect
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError("");
+    setAgreementPreview(null);
+    setAgreementsAccepted(false);
+  };
+
+  const reviewAgreements = async () => {
+    if (!selectedAddressId) return;
+    setReviewingAgreements(true);
+    try {
+      const response = await fetch("/api/checkout/agreements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-locale": locale },
+        body: JSON.stringify({
+          addressId: selectedAddressId,
+          couponCode: appliedCoupon?.code ?? null,
+          currencyCode: currency,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || t("agreementPreviewFailed"));
+      setAgreementPreview(data);
+      setAgreementsAccepted(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("agreementPreviewFailed"),
+      );
+    } finally {
+      setReviewingAgreements(false);
     }
+  };
 
-    const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
-    const discountAmount = appliedCoupon?.discountAmount ?? 0;
-    const finalTotal = totals ? Math.max(0, totals.total - discountAmount) : 0;
+  const createOrder = async () => {
+    try {
+      setCreating(true);
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponCode: appliedCoupon?.code ?? null,
+          currencyCode: currency,
+          addressId: selectedAddressId,
+          acceptedDocuments: agreementsAccepted,
+          acceptedBundleHash: agreementPreview?.bundleHash,
+        }),
+      });
 
-    if (!totals || !config) return null;
+      if (!response.ok) {
+        const data = await response.json();
+        if (response.status === 409 && data.error === "AGREEMENT_CHANGED") {
+          setAgreementPreview(null);
+          setAgreementsAccepted(false);
+          throw new Error(t("agreementChanged"));
+        }
+        throw new Error(data.error || t("failedToCreateOrder"));
+      }
 
+      const data = await response.json();
+
+      // Redirect to payment page (cart is NOT cleared here anymore —
+      // it's cleared when the customer uploads the payment proof)
+      router.push(`/checkout?orderId=${data.orderId}`);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error(
+        error instanceof Error ? error.message : t("failedToCreateOrder"),
+      );
+      setCreating(false); // Only reset on error
+    }
+    // Don't reset creating on success - let the redirect happen
+  };
+
+  if (loading) {
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
-            {/* Left Column: Order Details */}
-            <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
-                    <h2 className="text-xl font-extrabold text-[#1A1A1A] mb-6 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#C8102E]">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                        </svg>
-                        {t("itemsInOrder")}
-                    </h2>
-
-                    <div className="space-y-6">
-                        {cart.items.map((item) => (
-                            <div
-                                key={item.id}
-                                className="flex gap-4 py-4 border-b border-gray-100 last:border-0 last:pb-0"
-                            >
-                                {/* Thumbnail */}
-                                <Link
-                                    href={`/product/${item.product.id}`}
-                                    className="relative w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden"
-                                >
-                                    {item.product.thumbnail ? (
-                                        <Image
-                                            src={item.product.thumbnail}
-                                            alt={item.product.title}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    ) : (
-                                        <span className="text-2xl">📦</span>
-                                    )}
-                                </Link>
-
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div>
-                                            <Link
-                                                href={`/product/${item.product.id}`}
-                                                className="font-bold text-[#1A1A1A] leading-snug hover:text-[#C8102E] transition-colors"
-                                            >
-                                                {item.product.title}
-                                            </Link>
-                                            <p className="text-sm text-gray-500 mt-1">{t("quantity", { count: item.quantity })}</p>
-                                        </div>
-                                        <div className="font-extrabold text-[#1A1A1A]">
-                                            {formatPrice(item.product.price)}
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
-                                        {t("subtotal")} <span className="text-[#C8102E]">{formatPrice(item.product.price * item.quantity)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex items-start gap-4">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                        </svg>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-[#1A1A1A] font-bold">{t("shippingInfo")}</p>
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                            {totals.shippingAmount === 0
-                                ? t("freeShippingMessage")
-                                : t("standardShipping", { fee: (config.shippingFee / 100).toFixed(2) })}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Column: Place Order */}
-            <div className="lg:col-span-1">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
-                    <h2 className="text-xl font-extrabold text-[#1A1A1A]">{t("orderSummary")}</h2>
-
-                    {/* Coupon Input */}
-                    {!appliedCoupon ? (
-                        <div className="space-y-2">
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={couponInput}
-                                    onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
-                                    onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
-                                    placeholder={t("couponPlaceholder")}
-                                    disabled={couponLoading || creating}
-                                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                />
-                                <button
-                                    onClick={applyCoupon}
-                                    disabled={couponLoading || !couponInput.trim() || creating}
-                                    className="px-3 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 transition-colors"
-                                >
-                                    {couponLoading ? "..." : t("apply")}
-                                </button>
-                            </div>
-                            {couponError && (
-                                <p className="text-xs text-red-500 font-medium">{couponError}</p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="text-sm font-bold text-green-700">{appliedCoupon.code}</span>
-                                <span className="text-xs text-green-600">
-                                    {appliedCoupon.type === "PERCENTAGE" ? `${appliedCoupon.value}% off` : `${formatPrice(appliedCoupon.value)} off`}
-                                </span>
-                            </div>
-                            <button onClick={removeCoupon} disabled={creating} className="text-gray-400 hover:text-red-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="space-y-3 pb-6 border-b border-gray-100">
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span className="text-md flex flex-col">{t("subtotalTaxIncluded")} <span className="text-xs">{t("taxIncluded")}</span></span>
-                            <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-gray-500 font-medium">
-                            <span className="text-md">{t("shipping")}</span>
-                            {totals.shippingAmount === 0 ? (
-                                <span className="text-emerald-600 font-bold">{tc("free")}</span>
-                            ) : (
-                                <span className="text-[#1A1A1A] font-bold">{formatPrice(totals.shippingAmount)}</span>
-                            )}
-                        </div>
-                        <div className="flex justify-between items-center text-gray-400 text-sm">
-                            <span>{t("estimatedTaxIncluded")}</span>
-                            <span className="font-medium">{formatPrice(totals.taxAmount)}</span>
-                        </div>
-                        {appliedCoupon && (
-                            <div className="flex justify-between items-center text-green-600 font-medium">
-                                <span className="text-sm">{t("discount", { code: appliedCoupon.code })}</span>
-                                <span className="font-bold">-{formatPrice(discountAmount)}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-[#1A1A1A]">{t("total")}</span>
-                        <div className="text-right">
-                            {appliedCoupon && (
-                                <p className="text-sm text-gray-400 line-through">{formatPrice(totals.total)}</p>
-                            )}
-                            <span className="text-2xl font-black text-[#C8102E]">
-                                {formatPrice(finalTotal)}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3 border-t border-gray-100 pt-5">
-                        <label className="block text-sm font-bold text-gray-700" htmlFor="agreement-address">{t("deliveryAddress")}</label>
-                        <select
-                            id="agreement-address"
-                            value={selectedAddressId}
-                            onChange={(event) => {
-                                setSelectedAddressId(event.target.value);
-                                setAgreementPreview(null);
-                                setAgreementsAccepted(false);
-                            }}
-                            disabled={creating}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
-                        >
-                            <option value="">{t("selectDeliveryAddress")}</option>
-                            {addresses.map((address) => (
-                                <option key={address.id} value={address.id}>{address.title} — {address.firstName} {address.lastName}, {address.district}/{address.city}</option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={reviewAgreements}
-                            disabled={!selectedAddressId || reviewingAgreements || creating}
-                            className="w-full rounded-full border border-[#C8102E] px-4 py-3 text-sm font-bold text-[#C8102E] disabled:opacity-40"
-                        >
-                            {reviewingAgreements ? t("preparingDocuments") : t("reviewDocuments")}
-                        </button>
-                    </div>
-
-                    {agreementPreview && (
-                        <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                            <details className="rounded-xl bg-white p-3" open>
-                                <summary className="cursor-pointer font-bold">{t("preContractInformation")}</summary>
-                                <iframe title={t("preContractInformation")} srcDoc={agreementPreview.documents.preContract} sandbox="" className="mt-3 h-72 w-full border-t" />
-                            </details>
-                            <details className="rounded-xl bg-white p-3">
-                                <summary className="cursor-pointer font-bold">{t("distanceSalesAgreement")}</summary>
-                                <iframe title={t("distanceSalesAgreement")} srcDoc={agreementPreview.documents.distanceSales} sandbox="" className="mt-3 h-72 w-full border-t" />
-                            </details>
-                            <label className="flex items-start gap-3 rounded-xl border border-red-100 bg-white p-4 text-sm">
-                                <input
-                                    type="checkbox"
-                                    checked={agreementsAccepted}
-                                    onChange={(event) => setAgreementsAccepted(event.target.checked)}
-                                    className="mt-1 h-4 w-4"
-                                />
-                                <span>{t("acceptDocuments")}</span>
-                            </label>
-                        </div>
-                    )}
-
-                    <div className="space-y-3 pt-4">
-                        <button
-                            onClick={createOrder}
-                            disabled={creating || !agreementPreview || !agreementsAccepted}
-                            className={`w-full py-4 px-4 rounded-full text-white font-black text-lg transition-all shadow-[0_4px_14px_0_rgba(200,16,46,0.39)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${creating ? "bg-gray-400" : "bg-gradient-to-r from-[#C8102E] to-[#b91c1c]"}`}
-                        >
-                            {/* Shine effect */}
-                            {!creating && (
-                                <div className="absolute top-0 -left-[120%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:left-[120%] transition-all duration-1000 ease-in-out" />
-                            )}
-
-                            <span className="relative z-10 flex items-center justify-center gap-2 text-lg md:text-sm">
-                                {creating ? t("processing") : t("confirmPayment")}
-                                {!creating && (
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm4.28 10.28a.75.75 0 0 0 0-1.06l-3-3a.75.75 0 1 0-1.06 1.06l1.72 1.72H8.25a.75.75 0 0 0 0 1.5h5.69l-1.72 1.72a.75.75 0 1 0 1.06 1.06l3-3Z" clipRule="evenodd" />
-                                    </svg>
-                                )}
-                            </span>
-                        </button>
-
-                        <button
-                            onClick={() => router.push("/cart")}
-                            disabled={creating}
-                            className="w-full py-3 px-6 text-sm font-bold text-gray-500 hover:text-[#C8102E] transition-colors"
-                        >
-                            {t("backToCart")}
-                        </button>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium pt-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                        </svg>
-                        {t("secureCheckout")}
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
+        <p className="text-[#A9A9A9] font-semibold">{t("preparingOrder")}</p>
+      </div>
     );
+  }
+
+  if (!cart || cart.items.length === 0) {
+    return null; // Will redirect
+  }
+
+  const totals = computedTotals;
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const finalTotal = totals ? Math.max(0, totals.total - discountAmount) : 0;
+
+  if (!totals || !config) return null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+      {/* Left Column: Order Details */}
+      <div className="lg:col-span-2 space-y-6">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
+          <h2 className="text-xl font-extrabold text-[#1A1A1A] mb-6 flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5 text-[#C8102E]"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+              />
+            </svg>
+            {t("itemsInOrder")}
+          </h2>
+
+          <div className="space-y-6">
+            {cart.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex gap-4 py-4 border-b border-gray-100 last:border-0 last:pb-0"
+              >
+                {/* Thumbnail */}
+                <Link
+                  href={`/product/${item.product.id}`}
+                  className="relative w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden"
+                >
+                  {item.product.thumbnail ? (
+                    <Image
+                      src={item.product.thumbnail}
+                      alt={item.product.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl">📦</span>
+                  )}
+                </Link>
+
+                <div className="flex-1">
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <Link
+                        href={`/product/${item.product.id}`}
+                        className="font-bold text-[#1A1A1A] leading-snug hover:text-[#C8102E] transition-colors"
+                      >
+                        {item.product.title}
+                      </Link>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {t("quantity", { count: item.quantity })}
+                      </p>
+                    </div>
+                    <div className="font-extrabold text-[#1A1A1A]">
+                      {(() => {
+                        const r = resolveProductPrice(item.product);
+                        return r ? formatPrice(r.salePrice ?? r.price) : "—";
+                      })()}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
+                    {t("subtotal")}{" "}
+                    <span className="text-[#C8102E]">
+                      {(() => {
+                        const r = resolveProductPrice(item.product);
+                        return r
+                          ? formatPrice(
+                              (r.salePrice ?? r.price) * item.quantity,
+                            )
+                          : "—";
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex items-start gap-4">
+          <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
+              />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[#1A1A1A] font-bold">{t("shippingInfo")}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {totals.shippingAmount === 0
+                ? t("freeShippingMessage")
+                : t("standardShipping", {
+                    fee: (
+                      (currency === "USD"
+                        ? config.usdShippingFee
+                        : config.shippingFee) / 100
+                    ).toFixed(2),
+                  })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Place Order */}
+      <div className="lg:col-span-1">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
+          <h2 className="text-xl font-extrabold text-[#1A1A1A]">
+            {t("orderSummary")}
+          </h2>
+
+          {/* Coupon Input */}
+          {!appliedCoupon ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value);
+                    setCouponError("");
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  placeholder={t("couponPlaceholder")}
+                  disabled={couponLoading || creating}
+                  className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                />
+                <button
+                  onClick={applyCoupon}
+                  disabled={couponLoading || !couponInput.trim() || creating}
+                  className="px-3 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 transition-colors"
+                >
+                  {couponLoading ? "..." : t("apply")}
+                </button>
+              </div>
+              {couponError && (
+                <p className="text-xs text-red-500 font-medium">
+                  {couponError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-green-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-sm font-bold text-green-700">
+                  {appliedCoupon.code}
+                </span>
+                <span className="text-xs text-green-600">
+                  {appliedCoupon.type === "PERCENTAGE"
+                    ? `${appliedCoupon.value}% off`
+                    : `${formatPrice(appliedCoupon.value)} off`}
+                </span>
+              </div>
+              <button
+                onClick={removeCoupon}
+                disabled={creating}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3 pb-6 border-b border-gray-100">
+            <div className="flex justify-between items-center text-gray-500 font-medium">
+              <span className="text-md flex flex-col">
+                {t("subtotalTaxIncluded")}{" "}
+                <span className="text-xs">{t("taxIncluded")}</span>
+              </span>
+              <span className="text-[#1A1A1A] font-bold">
+                {formatPrice(totals.subtotal)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-gray-500 font-medium">
+              <span className="text-md">{t("shipping")}</span>
+              {totals.shippingAmount === 0 ? (
+                <span className="text-emerald-600 font-bold">{tc("free")}</span>
+              ) : (
+                <span className="text-[#1A1A1A] font-bold">
+                  {formatPrice(totals.shippingAmount)}
+                </span>
+              )}
+            </div>
+            <div className="flex justify-between items-center text-gray-400 text-sm">
+              <span>{t("estimatedTaxIncluded")}</span>
+              <span className="font-medium">
+                {formatPrice(totals.taxAmount)}
+              </span>
+            </div>
+            {appliedCoupon && (
+              <div className="flex justify-between items-center text-green-600 font-medium">
+                <span className="text-sm">
+                  {t("discount", { code: appliedCoupon.code })}
+                </span>
+                <span className="font-bold">
+                  -{formatPrice(discountAmount)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-bold text-[#1A1A1A]">
+              {t("total")}
+            </span>
+            <div className="text-right">
+              {appliedCoupon && (
+                <p className="text-sm text-gray-400 line-through">
+                  {formatPrice(totals.total)}
+                </p>
+              )}
+              <span className="text-2xl font-black text-[#C8102E]">
+                {formatPrice(finalTotal)}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3 border-t border-gray-100 pt-5">
+            <label
+              className="block text-sm font-bold text-gray-700"
+              htmlFor="agreement-address"
+            >
+              {t("deliveryAddress")}
+            </label>
+            <select
+              id="agreement-address"
+              value={selectedAddressId}
+              onChange={(event) => {
+                setSelectedAddressId(event.target.value);
+                setAgreementPreview(null);
+                setAgreementsAccepted(false);
+              }}
+              disabled={creating}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
+            >
+              <option value="">{t("selectDeliveryAddress")}</option>
+              {addresses.map((address) => (
+                <option key={address.id} value={address.id}>
+                  {address.title} — {address.firstName} {address.lastName},{" "}
+                  {address.district}/{address.city}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={reviewAgreements}
+              disabled={!selectedAddressId || reviewingAgreements || creating}
+              className="w-full rounded-full border border-[#C8102E] px-4 py-3 text-sm font-bold text-[#C8102E] disabled:opacity-40"
+            >
+              {reviewingAgreements
+                ? t("preparingDocuments")
+                : t("reviewDocuments")}
+            </button>
+          </div>
+
+          {agreementPreview && (
+            <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <details className="rounded-xl bg-white p-3" open>
+                <summary className="cursor-pointer font-bold">
+                  {t("preContractInformation")}
+                </summary>
+                <iframe
+                  title={t("preContractInformation")}
+                  srcDoc={agreementPreview.documents.preContract}
+                  sandbox=""
+                  className="mt-3 h-72 w-full border-t"
+                />
+              </details>
+              <details className="rounded-xl bg-white p-3">
+                <summary className="cursor-pointer font-bold">
+                  {t("distanceSalesAgreement")}
+                </summary>
+                <iframe
+                  title={t("distanceSalesAgreement")}
+                  srcDoc={agreementPreview.documents.distanceSales}
+                  sandbox=""
+                  className="mt-3 h-72 w-full border-t"
+                />
+              </details>
+              <label className="flex items-start gap-3 rounded-xl border border-red-100 bg-white p-4 text-sm">
+                <input
+                  type="checkbox"
+                  checked={agreementsAccepted}
+                  onChange={(event) =>
+                    setAgreementsAccepted(event.target.checked)
+                  }
+                  className="mt-1 h-4 w-4"
+                />
+                <span>{t("acceptDocuments")}</span>
+              </label>
+            </div>
+          )}
+
+          <div className="space-y-3 pt-4">
+            <button
+              onClick={createOrder}
+              disabled={creating || !agreementPreview || !agreementsAccepted}
+              className={`w-full py-4 px-4 rounded-full text-white font-black text-lg transition-all shadow-[0_4px_14px_0_rgba(200,16,46,0.39)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${creating ? "bg-gray-400" : "bg-gradient-to-r from-[#C8102E] to-[#b91c1c]"}`}
+            >
+              {/* Shine effect */}
+              {!creating && (
+                <div className="absolute top-0 -left-[120%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:left-[120%] transition-all duration-1000 ease-in-out" />
+              )}
+
+              <span className="relative z-10 flex items-center justify-center gap-2 text-lg md:text-sm">
+                {creating ? t("processing") : t("confirmPayment")}
+                {!creating && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm4.28 10.28a.75.75 0 0 0 0-1.06l-3-3a.75.75 0 1 0-1.06 1.06l1.72 1.72H8.25a.75.75 0 0 0 0 1.5h5.69l-1.72 1.72a.75.75 0 1 0 1.06 1.06l3-3Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </span>
+            </button>
+
+            <button
+              onClick={() => router.push("/cart")}
+              disabled={creating}
+              className="w-full py-3 px-6 text-sm font-bold text-gray-500 hover:text-[#C8102E] transition-colors"
+            >
+              {t("backToCart")}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium pt-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-3 h-3"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+              />
+            </svg>
+            {t("secureCheckout")}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

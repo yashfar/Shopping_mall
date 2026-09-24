@@ -1,25 +1,59 @@
 import { prisma } from "../app/lib/prisma";
 
+const TR_MAP: Record<string, string> = {
+    "ı": "i", "ğ": "g", "ş": "s", "ö": "o", "ü": "u", "ç": "c",
+    "İ": "i", "Ğ": "g", "Ş": "s", "Ö": "o", "Ü": "u", "Ç": "c",
+};
+
+function toSlug(name: string): string {
+    return name
+        .replace(/[ığşöüçİĞŞÖÜÇ]/g, (c) => TR_MAP[c] ?? c)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
 async function main() {
     console.log("Seeding categories...");
 
-    const categories = [
-        "Electronics",
-        "Clothing",
-        "Books",
-        "Home & Garden",
-        "Sports",
-        "Toys",
-        "Health & Beauty",
-        "Automotive",
+    // Each entry: tr name (required) + optional en name.
+    // Existing seeded data has English names in the `name` (legacy TR) field.
+    // These will be replaced with real Turkish names in a later content step.
+    const categories: { name: string; nameEn?: string }[] = [
+        { name: "Electronics" },
+        { name: "Clothing" },
+        { name: "Books" },
+        { name: "Home & Garden" },
+        { name: "Sports" },
+        { name: "Toys" },
+        { name: "Health & Beauty" },
+        { name: "Automotive" },
     ];
 
-    for (const name of categories) {
-        await prisma.category.upsert({
-            where: { name },
+    for (const cat of categories) {
+        const category = await prisma.category.upsert({
+            where: { name: cat.name },
             update: {},
-            create: { name },
+            create: { name: cat.name, nameEn: cat.nameEn ?? null },
         });
+
+        // Upsert Turkish translation
+        await prisma.categoryTranslation.upsert({
+            where: { categoryId_locale: { categoryId: category.id, locale: "tr" } },
+            update: { name: cat.name, slug: toSlug(cat.name) },
+            create: { categoryId: category.id, locale: "tr", name: cat.name, slug: toSlug(cat.name) },
+        });
+
+        // Upsert English translation only if an EN name is provided
+        if (cat.nameEn) {
+            await prisma.categoryTranslation.upsert({
+                where: { categoryId_locale: { categoryId: category.id, locale: "en" } },
+                update: { name: cat.nameEn, slug: toSlug(cat.nameEn) },
+                create: { categoryId: category.id, locale: "en", name: cat.nameEn, slug: toSlug(cat.nameEn) },
+            });
+        }
     }
 
     console.log("Categories seeded successfully.");

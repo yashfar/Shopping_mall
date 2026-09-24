@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
-import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, Loader2, Trash2, Plus, Palette, Languages } from "lucide-react";
+import { CategoryCombobox, type CategoryOption } from "@@/components/CategoryCombobox";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -28,6 +29,7 @@ interface UploadedImage {
 interface Variant {
     id: string;
     color: string;
+    colorEn: string | null;
     colorHex: string | null;
     stock: number;
     images: string[];
@@ -35,6 +37,7 @@ interface Variant {
 
 interface VariantDraft {
     color: string;
+    colorEn: string;
     colorHex: string;
     stock: string;
 }
@@ -64,13 +67,15 @@ export default function EditProductPage() {
     const [titleEn, setTitleEn] = useState("");
     const [descriptionEn, setDescriptionEn] = useState("");
     const [contentTab, setContentTab] = useState<"tr" | "en">("tr");
-    const [price, setPrice] = useState("");
-    const [salePrice, setSalePrice] = useState("");
-    const [category, setCategory] = useState("");
-    const [categoryNameEn, setCategoryNameEn] = useState("");
+    const [priceTRY, setPriceTRY] = useState("");
+    const [salePriceTRY, setSalePriceTRY] = useState("");
+    const [priceUSD, setPriceUSD] = useState("");
+    const [salePriceUSD, setSalePriceUSD] = useState("");
+    const [missingUSD, setMissingUSD] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [stock, setStock] = useState("0");
     const [images, setImages] = useState<UploadedImage[]>([]);
-    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+    const [categories, setCategories] = useState<CategoryOption[]>([]);
     const [thumbnail, setThumbnail] = useState<string>("");
 
     // Loading states
@@ -88,8 +93,12 @@ export default function EditProductPage() {
     // Variant state
     const [variants, setVariants] = useState<Variant[]>([]);
     const [editingStock, setEditingStock] = useState<Record<string, string>>({});
-    const [newVariant, setNewVariant] = useState<VariantDraft>({ color: "", colorHex: "#000000", stock: "0" });
+    const [newVariant, setNewVariant] = useState<VariantDraft>({ color: "", colorEn: "", colorHex: "#000000", stock: "0" });
+    const [variantTranslating, setVariantTranslating] = useState(false);
     const [savingVariant, setSavingVariant] = useState<string | null>(null);
+    const [translating, setTranslating] = useState(false);
+    const [bannerHighlighted, setBannerHighlighted] = useState(false);
+    const translateBannerRef = useRef<HTMLDivElement>(null);
 
     // Fetch product details
     useEffect(() => {
@@ -109,9 +118,19 @@ export default function EditProductPage() {
                 const enTranslation = product.translations?.find((tr: any) => tr.locale === "en");
                 setTitleEn(enTranslation?.title || "");
                 setDescriptionEn(enTranslation?.description || "");
-                setPrice((product.price / 100).toFixed(2));
-                setSalePrice(product.salePrice ? (product.salePrice / 100).toFixed(2) : "");
-                setCategory(product.category?.name || product.category || "");
+                const tryEntry = product.prices?.find((p: any) => p.currencyCode === "TRY");
+                const usdEntry = product.prices?.find((p: any) => p.currencyCode === "USD");
+                // Fall back to Product.price if no TRY ProductPrice row yet
+                setPriceTRY(tryEntry ? (tryEntry.price / 100).toFixed(2) : (product.price / 100).toFixed(2));
+                setSalePriceTRY(tryEntry?.salePrice ? (tryEntry.salePrice / 100).toFixed(2) : (product.salePrice ? (product.salePrice / 100).toFixed(2) : ""));
+                if (usdEntry) {
+                    setPriceUSD((usdEntry.price / 100).toFixed(2));
+                    setSalePriceUSD(usdEntry.salePrice ? (usdEntry.salePrice / 100).toFixed(2) : "");
+                    setMissingUSD(false);
+                } else {
+                    setMissingUSD(true);
+                }
+                setSelectedCategoryId(product.category?.id ?? null);
                 setStock(product.stock.toString());
                 setShippingDays(product.shippingDays || "3-5");
                 setThumbnail(product.thumbnail || "");
@@ -144,14 +163,20 @@ export default function EditProductPage() {
         fetchProduct();
     }, [id]);
 
-    // Fetch categories
+    // Fetch categories (admin endpoint for full TR+EN data needed by the combobox search)
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await fetch("/api/categories");
+                const response = await fetch("/api/admin/categories");
                 if (response.ok) {
                     const data = await response.json();
-                    setCategories(data);
+                    setCategories(
+                        data.map((cat: any) => ({
+                            id: cat.id,
+                            name: cat.name,
+                            nameEn: cat.nameEn ?? null,
+                        }))
+                    );
                 }
             } catch (error) {
                 console.error("Failed to fetch categories", error);
@@ -265,6 +290,7 @@ export default function EditProductPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     color: newVariant.color.trim(),
+                    colorEn: newVariant.colorEn.trim() || null,
                     colorHex: newVariant.colorHex,
                     stock: parseInt(newVariant.stock) || 0,
                 }),
@@ -273,12 +299,40 @@ export default function EditProductPage() {
             if (!res.ok) throw new Error(data.error);
             setVariants(prev => [...prev, data.variant]);
             setEditingStock(prev => ({ ...prev, [data.variant.id]: data.variant.stock.toString() }));
-            setNewVariant({ color: "", colorHex: "#000000", stock: "0" });
-            toast.success("Varyant eklendi");
+            setNewVariant({ color: "", colorEn: "", colorHex: "#000000", stock: "0" });
+            toast.success(contentTab === "tr" ? "Varyant eklendi" : "Variant added");
         } catch (err: any) {
             toast.error(err.message || "Varyant eklenemedi");
         } finally {
             setSavingVariant(null);
+        }
+    };
+
+    const handleTranslateVariantColor = async (direction: "toEn" | "toTr") => {
+        const sourceText = direction === "toEn" ? newVariant.color.trim() : newVariant.colorEn.trim();
+        if (!sourceText) return;
+        setVariantTranslating(true);
+        try {
+            const res = await fetch("/api/admin/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    texts: [sourceText],
+                    from: direction === "toEn" ? "TR" : "EN",
+                    to: direction === "toEn" ? "EN" : "TR",
+                }),
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            if (direction === "toEn") {
+                setNewVariant(v => ({ ...v, colorEn: data.translations[0] ?? "" }));
+            } else {
+                setNewVariant(v => ({ ...v, color: data.translations[0] ?? "" }));
+            }
+        } catch {
+            toast.error("Çeviri başarısız.");
+        } finally {
+            setVariantTranslating(false);
         }
     };
 
@@ -321,6 +375,31 @@ export default function EditProductPage() {
         }
     };
 
+    const handleTranslateToTurkish = async () => {
+        if (!titleEn.trim()) return;
+        setTranslating(true);
+        try {
+            const res = await fetch("/api/admin/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    texts: [titleEn.trim(), descriptionEn.trim() || titleEn.trim()],
+                    from: "EN",
+                    to: "TR",
+                }),
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            setTitle(data.translations[0] ?? "");
+            setDescription(data.translations[1] ?? "");
+            toast.success("Türkçeye çevrildi! Kontrol edip düzenleyebilirsiniz.");
+        } catch {
+            toast.error("Çeviri sırasında bir hata oluştu.");
+        } finally {
+            setTranslating(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -337,29 +416,55 @@ export default function EditProductPage() {
             return;
         }
 
-        if (!title.trim() || !description.trim() || !category.trim()) {
-            setError(t("errorRequiredFields"));
-            toast.error(t("errorRequiredFields"));
+        if (!title.trim() || !description.trim() || !selectedCategoryId) {
+            if (!title.trim() && titleEn.trim()) {
+                setContentTab("tr");
+                setTimeout(() => {
+                    translateBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    setBannerHighlighted(true);
+                    setTimeout(() => setBannerHighlighted(false), 1500);
+                }, 50);
+                toast.error("Please fill in Turkish fields or use the Translate button.");
+            } else {
+                setError(t("errorRequiredFields"));
+                toast.error(t("errorRequiredFields"));
+            }
             return;
         }
 
-        const priceInCents = Math.round(parseFloat(price) * 100);
-        if (isNaN(priceInCents) || priceInCents <= 0) {
-            setError(t("errorInvalidPrice"));
+        const tryPriceInCents = Math.round(parseFloat(priceTRY) * 100);
+        if (isNaN(tryPriceInCents) || tryPriceInCents <= 0) {
+            setError("TRY fiyatı geçersiz.");
             return;
         }
+        let trySalePriceInCents: number | null = null;
+        if (salePriceTRY.trim()) {
+            trySalePriceInCents = Math.round(parseFloat(salePriceTRY) * 100);
+            if (isNaN(trySalePriceInCents) || trySalePriceInCents <= 0 || trySalePriceInCents >= tryPriceInCents) {
+                setError("TRY indirimli fiyat geçersiz.");
+                return;
+            }
+        }
 
-        let salePriceInCents: number | null = null;
-        if (salePrice.trim()) {
-            salePriceInCents = Math.round(parseFloat(salePrice) * 100);
-            if (isNaN(salePriceInCents) || salePriceInCents <= 0) {
-                setError(t("errorInvalidSalePrice"));
+        const pricesToSave: Array<{ currencyCode: string; price: number; salePrice: number | null }> = [
+            { currencyCode: "TRY", price: tryPriceInCents, salePrice: trySalePriceInCents },
+        ];
+
+        if (priceUSD.trim()) {
+            const usdPriceInCents = Math.round(parseFloat(priceUSD) * 100);
+            if (isNaN(usdPriceInCents) || usdPriceInCents <= 0) {
+                setError("USD fiyatı geçersiz.");
                 return;
             }
-            if (salePriceInCents >= priceInCents) {
-                setError(t("errorSalePriceTooHigh"));
-                return;
+            let usdSalePriceInCents: number | null = null;
+            if (salePriceUSD.trim()) {
+                usdSalePriceInCents = Math.round(parseFloat(salePriceUSD) * 100);
+                if (isNaN(usdSalePriceInCents) || usdSalePriceInCents <= 0 || usdSalePriceInCents >= usdPriceInCents) {
+                    setError("USD indirimli fiyat geçersiz.");
+                    return;
+                }
             }
+            pricesToSave.push({ currencyCode: "USD", price: usdPriceInCents, salePrice: usdSalePriceInCents });
         }
 
         const stockNumber = variants.length > 0
@@ -383,10 +488,8 @@ export default function EditProductPage() {
                     description: description.trim(),
                     titleEn: titleEn.trim() || null,
                     descriptionEn: descriptionEn.trim() || null,
-                    price: priceInCents,
-                    salePrice: salePriceInCents,
-                    category: category.trim(),
-                    categoryNameEn: categoryNameEn.trim() || null,
+                    prices: pricesToSave,
+                    categoryId: selectedCategoryId,
                     stock: stockNumber,
                     shippingDays: shippingDays.trim() || "3-5",
                     images: images.map((img) => img.url),
@@ -552,22 +655,49 @@ export default function EditProductPage() {
                                         <button
                                             type="button"
                                             onClick={() => setContentTab("tr")}
-                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${contentTab === "tr" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${contentTab === "tr" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                                         >
-                                            🇹🇷 Türkçe
+                                            TR Türkçe
+                                            {!title && titleEn && <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />}
+                                            {title && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setContentTab("en")}
                                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${contentTab === "en" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                                         >
-                                            🇬🇧 English
+                                            EN English
                                             {titleEn && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
                                         </button>
                                     </div>
 
                                     {contentTab === "tr" && (
                                         <div className="space-y-4">
+                                            {!title.trim() && titleEn.trim() && (
+                                                <div
+                                                    ref={translateBannerRef}
+                                                    className={`flex items-center gap-3 p-3.5 bg-blue-50 border rounded-lg transition-all duration-300 ${bannerHighlighted ? "border-blue-500 ring-2 ring-blue-400 ring-offset-2 scale-[1.01]" : "border-blue-200"}`}
+                                                >
+                                                    <Languages className="h-4 w-4 text-blue-500 shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-blue-900">Turkish fields are empty</p>
+                                                        <p className="text-xs text-blue-600 mt-0.5">Auto-translate from your English content.</p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleTranslateToTurkish}
+                                                        disabled={translating || submitting}
+                                                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-3"
+                                                    >
+                                                        {translating ? (
+                                                            <><Loader2 className="h-3 w-3 animate-spin mr-1.5" />Translating...</>
+                                                        ) : (
+                                                            <><Languages className="h-3 w-3 mr-1.5" />Translate to Turkish</>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            )}
                                             <div>
                                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                                                     {t("productTitle")} <span className="text-red-500">*</span>
@@ -635,122 +765,136 @@ export default function EditProductPage() {
                                     )}
                                 </div>
 
-                                {/* Row: Price, Sale Price & Stock */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div>
-                                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("priceUSD")} <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                                            <input
-                                                type="number"
-                                                id="price"
-                                                value={price}
-                                                onChange={(e) => setPrice(e.target.value)}
-                                                step="0.01"
-                                                min="0"
-                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0.00"
-                                                required
-                                                disabled={submitting}
-                                            />
+                                {/* Pricing Section */}
+                                <div className="space-y-4 p-4 rounded-lg border border-gray-200 bg-gray-50/50">
+                                    <h3 className="text-sm font-semibold text-gray-800">{t("pricing") || "Fiyatlandırma"}</h3>
+
+                                    {missingUSD && (
+                                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700 font-medium">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+                                                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                            </svg>
+                                            Bu ürün için USD fiyatı girilmemiş. Storefront'ta USD seçilince fiyat gösterilmeyecek.
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div>
-                                        <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("salePrice")} <span className="text-gray-400 font-normal">{t("optional")}</span>
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                                            <input
-                                                type="number"
-                                                id="salePrice"
-                                                value={salePrice}
-                                                onChange={(e) => setSalePrice(e.target.value)}
-                                                step="0.01"
-                                                min="0"
-                                                className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0.00"
-                                                disabled={submitting}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-                                            {t("stockQuantity")} {variants.length === 0 && <span className="text-red-500">*</span>}
-                                        </label>
-                                        {variants.length > 0 ? (
-                                            <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
-                                                {variants.reduce((s, v) => s + v.stock, 0)} (varyantlardan otomatik)
-                                            </div>
-                                        ) : (
-                                            <input
-                                                type="number"
-                                                id="stock"
-                                                value={stock}
-                                                onChange={(e) => setStock(e.target.value)}
-                                                min="0"
-                                                className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                                placeholder="0"
-                                                required
-                                                disabled={submitting}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                                        {t("category")} <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            id="category"
-                                            list="category-suggestions"
-                                            value={category}
-                                            onChange={(e) => {
-                                                setCategory(e.target.value);
-                                                if (categories.some(c => c.name.toLowerCase() === e.target.value.toLowerCase())) {
-                                                    setCategoryNameEn("");
-                                                }
-                                            }}
-                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                                            placeholder={t("categoryPlaceholder")}
-                                            required
-                                            disabled={submitting}
-                                            autoComplete="off"
-                                        />
-                                        <datalist id="category-suggestions">
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.name} />
-                                            ))}
-                                        </datalist>
-                                    </div>
-                                    {/* Show EN name field only for new categories */}
-                                    {category.trim() && !categories.some(c => c.name.toLowerCase() === category.trim().toLowerCase()) && (
-                                        <div className="mt-2">
-                                            <div className="flex items-center gap-1 mb-1">
-                                                <span className="text-xs font-medium text-amber-600">🆕 Yeni kategori</span>
-                                                <span className="text-xs text-gray-400">— İngilizce ismini de gir:</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm shrink-0">🇬🇧</span>
+                                    {/* TRY */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "TRY Fiyat" : "TRY Price"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₺</span>
                                                 <input
-                                                    type="text"
-                                                    value={categoryNameEn}
-                                                    onChange={(e) => setCategoryNameEn(e.target.value)}
-                                                    placeholder="English category name (optional)"
-                                                    maxLength={100}
-                                                    disabled={submitting}
-                                                    className="flex-1 h-9 px-3 rounded-md border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/40 focus:border-amber-400 transition-all"
+                                                    type="number"
+                                                    value={priceTRY}
+                                                    onChange={(e) => setPriceTRY(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    required disabled={submitting}
                                                 />
                                             </div>
                                         </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "TRY İndirimli" : "TRY Sale"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₺</span>
+                                                <input
+                                                    type="number"
+                                                    value={salePriceTRY}
+                                                    onChange={(e) => setSalePriceTRY(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* USD */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "USD Fiyat" : "USD Price"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={priceUSD}
+                                                    onChange={(e) => { setPriceUSD(e.target.value); if (e.target.value) setMissingUSD(false); }}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                {contentTab === "tr" ? "USD İndirimli" : "USD Sale"} <span className="text-gray-400 font-normal">{contentTab === "tr" ? "(isteğe bağlı)" : "(optional)"}</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={salePriceUSD}
+                                                    onChange={(e) => setSalePriceUSD(e.target.value)}
+                                                    step="0.01" min="0"
+                                                    className="w-full h-10 pl-7 pr-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                                    placeholder="0.00"
+                                                    disabled={submitting}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stock */}
+                                <div>
+                                    <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
+                                        {t("stockQuantity")} {variants.length === 0 && <span className="text-red-500">*</span>}
+                                    </label>
+                                    {variants.length > 0 ? (
+                                        <div className="h-10 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm flex items-center text-gray-500">
+                                            {variants.reduce((s, v) => s + v.stock, 0)} (varyantlardan otomatik)
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            id="stock"
+                                            value={stock}
+                                            onChange={(e) => setStock(e.target.value)}
+                                            min="0"
+                                            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
+                                            placeholder="0"
+                                            required
+                                            disabled={submitting}
+                                        />
                                     )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {t("category")} <span className="text-red-500">*</span>
+                                    </label>
+                                    <CategoryCombobox
+                                        categories={categories}
+                                        value={selectedCategoryId}
+                                        onChange={setSelectedCategoryId}
+                                        locale={contentTab}
+                                        onCategoryCreated={(cat) =>
+                                            setCategories((prev) =>
+                                                [...prev, cat].sort((a, b) => a.name.localeCompare(b.name))
+                                            )
+                                        }
+                                        disabled={submitting}
+                                    />
                                 </div>
 
                                 {/* Shipping Days */}
@@ -794,10 +938,10 @@ export default function EditProductPage() {
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <div className="flex items-center gap-2 mb-4">
                                 <Palette className="w-5 h-5 text-gray-400" />
-                                <h2 className="text-lg font-semibold text-gray-900">Renk Varyantları</h2>
+                                <h2 className="text-lg font-semibold text-gray-900">{contentTab === "tr" ? "Renk Varyantları" : "Color Variants"}</h2>
                                 {variants.length > 0 && (
                                     <span className="ml-auto text-sm text-gray-500">
-                                        Toplam stok: {variants.reduce((s, v) => s + v.stock, 0)}
+                                        {contentTab === "tr" ? `Toplam stok: ${variants.reduce((s, v) => s + v.stock, 0)}` : `Total stock: ${variants.reduce((s, v) => s + v.stock, 0)}`}
                                     </span>
                                 )}
                             </div>
@@ -808,7 +952,10 @@ export default function EditProductPage() {
                                     {variants.map(v => (
                                         <div key={v.id} className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 ${savingVariant === v.id ? "opacity-50" : ""}`}>
                                             <div className="w-6 h-6 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex || "#ccc" }} />
-                                            <span className="font-medium text-gray-900 w-28">{v.color}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-medium text-gray-900">{v.color}</span>
+                                                {v.colorEn && <span className="text-gray-400 text-sm ml-2">/ {v.colorEn}</span>}
+                                            </div>
                                             <input
                                                 type="number"
                                                 value={editingStock[v.id] ?? v.stock}
@@ -816,7 +963,7 @@ export default function EditProductPage() {
                                                 min="0"
                                                 className="h-8 px-2 rounded border border-gray-200 text-sm w-20 focus:outline-none focus:border-[#C8102E]"
                                             />
-                                            <span className="text-xs text-gray-400">adet</span>
+                                            <span className="text-xs text-gray-400">{contentTab === "tr" ? "adet" : "pcs"}</span>
                                             <Button
                                                 type="button"
                                                 size="sm"
@@ -840,47 +987,79 @@ export default function EditProductPage() {
                             )}
 
                             {/* Add new variant row */}
-                            <div className="flex items-end gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-medium text-gray-600">Renk Adı</label>
-                                    <input
-                                        type="text"
-                                        value={newVariant.color}
-                                        onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
-                                        placeholder="Siyah"
-                                        className="h-9 px-3 rounded-md border border-gray-200 text-sm w-32 focus:outline-none focus:border-[#C8102E]"
-                                    />
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3">
+                                <div className="flex items-end gap-3 flex-wrap">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-medium text-gray-600">TR {contentTab === "tr" ? "Renk Adı" : "Color Name"} <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={newVariant.color}
+                                            onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
+                                            placeholder="Siyah"
+                                            className="h-9 px-3 rounded-md border border-gray-200 text-sm w-28 focus:outline-none focus:border-[#C8102E]"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-medium text-gray-600">EN {contentTab === "tr" ? "Renk Adı" : "Color Name"}</label>
+                                        <input
+                                            type="text"
+                                            value={newVariant.colorEn}
+                                            onChange={e => setNewVariant(v => ({ ...v, colorEn: e.target.value }))}
+                                            placeholder="Black"
+                                            className="h-9 px-3 rounded-md border border-gray-200 text-sm w-28 focus:outline-none focus:border-[#C8102E]"
+                                        />
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTranslateVariantColor("toEn")}
+                                            disabled={variantTranslating || !newVariant.color.trim()}
+                                            title={contentTab === "tr" ? "TR → EN çevir" : "Translate TR → EN"}
+                                            className="h-9 px-2 rounded-md border border-gray-200 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                                        >
+                                            {variantTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : "TR→EN"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTranslateVariantColor("toTr")}
+                                            disabled={variantTranslating || !newVariant.colorEn.trim()}
+                                            title={contentTab === "tr" ? "EN → TR çevir" : "Translate EN → TR"}
+                                            className="h-9 px-2 rounded-md border border-gray-200 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                                        >
+                                            {variantTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : "EN→TR"}
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-medium text-gray-600">{contentTab === "tr" ? "Renk" : "Color"}</label>
+                                        <input
+                                            type="color"
+                                            value={newVariant.colorHex}
+                                            onChange={e => setNewVariant(v => ({ ...v, colorHex: e.target.value }))}
+                                            className="h-9 w-14 rounded-md border border-gray-200 cursor-pointer p-0.5"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-medium text-gray-600">{contentTab === "tr" ? "Stok" : "Stock"}</label>
+                                        <input
+                                            type="number"
+                                            value={newVariant.stock}
+                                            onChange={e => setNewVariant(v => ({ ...v, stock: e.target.value }))}
+                                            min="0"
+                                            className="h-9 px-3 rounded-md border border-gray-200 text-sm w-24 focus:outline-none focus:border-[#C8102E]"
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        onClick={addVariant}
+                                        disabled={savingVariant === "new" || !newVariant.color.trim()}
+                                        className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0"
+                                    >
+                                        {savingVariant === "new" ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> {contentTab === "tr" ? "Ekle" : "Add"}</>}
+                                    </Button>
                                 </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-medium text-gray-600">Renk</label>
-                                    <input
-                                        type="color"
-                                        value={newVariant.colorHex}
-                                        onChange={e => setNewVariant(v => ({ ...v, colorHex: e.target.value }))}
-                                        className="h-9 w-14 rounded-md border border-gray-200 cursor-pointer p-0.5"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-medium text-gray-600">Stok</label>
-                                    <input
-                                        type="number"
-                                        value={newVariant.stock}
-                                        onChange={e => setNewVariant(v => ({ ...v, stock: e.target.value }))}
-                                        min="0"
-                                        className="h-9 px-3 rounded-md border border-gray-200 text-sm w-24 focus:outline-none focus:border-[#C8102E]"
-                                    />
-                                </div>
-                                <Button
-                                    type="button"
-                                    onClick={addVariant}
-                                    disabled={savingVariant === "new" || !newVariant.color.trim()}
-                                    className="h-9 bg-[#C8102E] hover:bg-[#A90D27] text-white shrink-0"
-                                >
-                                    {savingVariant === "new" ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> Ekle</>}
-                                </Button>
                             </div>
                             {variants.length > 0 && (
-                                <p className="text-xs text-amber-600 mt-2">Varyantlı ürünlerde ana stok otomatik olarak güncellenir.</p>
+                                <p className="text-xs text-amber-600 mt-2">{contentTab === "tr" ? "Varyantlı ürünlerde ana stok otomatik olarak güncellenir." : "In products with variants, total stock is updated automatically."}</p>
                             )}
                         </div>
 

@@ -14,6 +14,13 @@ type Config = {
     accountHolder: string;
     iban: string;
     bankTransferNote: string;
+    usdBankName: string;
+    usdAccountHolder: string;
+    usdIban: string;
+    usdSwiftCode: string;
+    usdBankTransferNote: string;
+    usdShippingFee: number;
+    usdFreeShippingThreshold: number;
 };
 
 export default function PaymentManagementPage() {
@@ -22,7 +29,6 @@ export default function PaymentManagementPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // State stores display values (Dollars for fee/threshold)
     const [formData, setFormData] = useState({
         taxPercent: "",
         shippingFee: "",
@@ -31,6 +37,13 @@ export default function PaymentManagementPage() {
         accountHolder: "",
         iban: "",
         bankTransferNote: "",
+        usdBankName: "",
+        usdAccountHolder: "",
+        usdIban: "",
+        usdSwiftCode: "",
+        usdBankTransferNote: "",
+        usdShippingFee: "",
+        usdFreeShippingThreshold: "",
     });
 
     useEffect(() => {
@@ -51,7 +64,6 @@ export default function PaymentManagementPage() {
             const data = await res.json();
             const config: Config = data.config;
 
-            // Convert Cents to Dollars for display
             setFormData({
                 taxPercent: config.taxPercent.toString(),
                 shippingFee: (config.shippingFee / 100).toFixed(2),
@@ -60,6 +72,13 @@ export default function PaymentManagementPage() {
                 accountHolder: config.accountHolder || "",
                 iban: config.iban || "",
                 bankTransferNote: config.bankTransferNote || "",
+                usdBankName: config.usdBankName || "",
+                usdAccountHolder: config.usdAccountHolder || "",
+                usdIban: config.usdIban || "",
+                usdSwiftCode: config.usdSwiftCode || "",
+                usdBankTransferNote: config.usdBankTransferNote || "",
+                usdShippingFee: (config.usdShippingFee / 100).toFixed(2),
+                usdFreeShippingThreshold: (config.usdFreeShippingThreshold / 100).toFixed(2),
             });
         } catch (error) {
             console.error(error);
@@ -73,20 +92,23 @@ export default function PaymentManagementPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            // Convert Dollars to Cents for saving
-            // parseFloat might return NaN if empty, ideally validate.
-            const taxPercent = parseFloat(formData.taxPercent) || 0;
-            const shippingFeeDollars = parseFloat(formData.shippingFee) || 0;
-            const thresholdDollars = parseFloat(formData.freeShippingThreshold) || 0;
+                const taxPercent = parseFloat(formData.taxPercent) || 0;
 
             const payload = {
                 taxPercent,
-                shippingFee: Math.round(shippingFeeDollars * 100),
-                freeShippingThreshold: Math.round(thresholdDollars * 100),
+                shippingFee: Math.round((parseFloat(formData.shippingFee) || 0) * 100),
+                freeShippingThreshold: Math.round((parseFloat(formData.freeShippingThreshold) || 0) * 100),
                 bankName: formData.bankName.trim(),
                 accountHolder: formData.accountHolder.trim(),
                 iban: formData.iban.trim(),
                 bankTransferNote: formData.bankTransferNote.trim(),
+                usdBankName: formData.usdBankName.trim(),
+                usdAccountHolder: formData.usdAccountHolder.trim(),
+                usdIban: formData.usdIban.trim(),
+                usdSwiftCode: formData.usdSwiftCode.trim(),
+                usdBankTransferNote: formData.usdBankTransferNote.trim(),
+                usdShippingFee: Math.round((parseFloat(formData.usdShippingFee) || 0) * 100),
+                usdFreeShippingThreshold: Math.round((parseFloat(formData.usdFreeShippingThreshold) || 0) * 100),
             };
 
             const res = await fetch("/api/admin/payment-config", {
@@ -98,7 +120,6 @@ export default function PaymentManagementPage() {
             if (!res.ok) throw new Error("Failed to save");
 
             const data = await res.json();
-            // Update state with confirmed values
             const config: Config = data.config;
             setFormData({
                 taxPercent: config.taxPercent.toString(),
@@ -108,6 +129,13 @@ export default function PaymentManagementPage() {
                 accountHolder: config.accountHolder || "",
                 iban: config.iban || "",
                 bankTransferNote: config.bankTransferNote || "",
+                usdBankName: config.usdBankName || "",
+                usdAccountHolder: config.usdAccountHolder || "",
+                usdIban: config.usdIban || "",
+                usdSwiftCode: config.usdSwiftCode || "",
+                usdBankTransferNote: config.usdBankTransferNote || "",
+                usdShippingFee: (config.usdShippingFee / 100).toFixed(2),
+                usdFreeShippingThreshold: (config.usdFreeShippingThreshold / 100).toFixed(2),
             });
 
             toast.success(t("configSaved"));
@@ -165,13 +193,13 @@ export default function PaymentManagementPage() {
                         </div>
                     </div>
 
-                    {/* Shipping Fee */}
+                    {/* TRY Shipping Fee */}
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">
                             {t("standardShippingFee")}
                         </label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₺</span>
                             <input
                                 type="number"
                                 min="0"
@@ -185,13 +213,13 @@ export default function PaymentManagementPage() {
                         <p className="text-xs text-gray-400">{t("shippingFeeNote")}</p>
                     </div>
 
-                    {/* Free Shipping Threshold */}
+                    {/* TRY Free Shipping Threshold */}
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">
                             {t("freeShippingThreshold")}
                         </label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₺</span>
                             <input
                                 type="number"
                                 min="0"
@@ -205,10 +233,10 @@ export default function PaymentManagementPage() {
                         <p className="text-xs text-gray-400">{t("thresholdNote")}</p>
                     </div>
 
-                    {/* Bank Transfer Details Section */}
+                    {/* TRY Bank Transfer Details */}
                     <div className="pt-6 border-t border-gray-200">
-                        <h2 className="text-lg font-black text-[#1A1A1A] tracking-tight mb-1">{t("bankTransferDetails")}</h2>
-                        <p className="text-sm text-gray-400 mb-6">{t("bankTransferDesc")}</p>
+                        <h2 className="text-lg font-black text-[#1A1A1A] tracking-tight mb-1">{t("tryBankTransferDetails")}</h2>
+                        <p className="text-sm text-gray-400 mb-6">{t("tryBankTransferDesc")}</p>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -221,7 +249,6 @@ export default function PaymentManagementPage() {
                                     placeholder="e.g. Ziraat Bankasi"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("accountHolder")}</label>
                                 <input
@@ -232,7 +259,6 @@ export default function PaymentManagementPage() {
                                     placeholder="e.g. John Doe"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("iban")}</label>
                                 <input
@@ -243,7 +269,6 @@ export default function PaymentManagementPage() {
                                     placeholder="e.g. TR00 0000 0000 0000 0000 0000 00"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("additionalNote")}</label>
                                 <textarea
@@ -254,6 +279,99 @@ export default function PaymentManagementPage() {
                                     placeholder="e.g. Please include your order number in the transfer description"
                                 />
                                 <p className="text-xs text-gray-400">{t("additionalNoteHint")}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* USD Bank Transfer Details */}
+                    <div className="pt-6 border-t border-gray-200">
+                        <h2 className="text-lg font-black text-[#1A1A1A] tracking-tight mb-1">{t("usdBankTransferDetails")}</h2>
+                        <p className="text-sm text-gray-400 mb-2">{t("usdBankTransferDesc")}</p>
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">{t("usdAvailableHint")}</p>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("bankName")}</label>
+                                <input
+                                    type="text"
+                                    value={formData.usdBankName}
+                                    onChange={(e) => setFormData({ ...formData, usdBankName: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                    placeholder="e.g. Chase Bank"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("accountHolder")}</label>
+                                <input
+                                    type="text"
+                                    value={formData.usdAccountHolder}
+                                    onChange={(e) => setFormData({ ...formData, usdAccountHolder: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                    placeholder="e.g. John Doe"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("iban")}</label>
+                                <input
+                                    type="text"
+                                    value={formData.usdIban}
+                                    onChange={(e) => setFormData({ ...formData, usdIban: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors tracking-wider"
+                                    placeholder="e.g. US12 3456 7890 0000 0000 0000 00"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("swiftCode")}</label>
+                                <input
+                                    type="text"
+                                    value={formData.usdSwiftCode}
+                                    onChange={(e) => setFormData({ ...formData, usdSwiftCode: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors tracking-wider uppercase"
+                                    placeholder="e.g. CHASUS33"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("usdAdditionalNote")}</label>
+                                <textarea
+                                    value={formData.usdBankTransferNote}
+                                    onChange={(e) => setFormData({ ...formData, usdBankTransferNote: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors resize-none"
+                                    rows={3}
+                                    placeholder="e.g. Please include your order number as the wire reference"
+                                />
+                                <p className="text-xs text-gray-400">{t("additionalNoteHint")}</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("usdShippingFee")}</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={formData.usdShippingFee}
+                                        onChange={(e) => setFormData({ ...formData, usdShippingFee: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 font-bold text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-400">{t("usdShippingFeeNote")}</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-[#1A1A1A] uppercase tracking-wider block">{t("usdFreeShippingThreshold")}</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={formData.usdFreeShippingThreshold}
+                                        onChange={(e) => setFormData({ ...formData, usdFreeShippingThreshold: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 font-bold text-[#1A1A1A] focus:outline-none focus:border-[#C8102E] transition-colors"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-400">{t("usdThresholdNote")}</p>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { calculateCartTotals } from "@@/lib/payment-utils";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
 import { generateAgreementBundle, type AgreementLocale } from "@@/lib/order-agreements";
 
 type Db = Prisma.TransactionClient;
@@ -14,7 +14,7 @@ export function validateAgreementAcceptance(input: unknown): boolean {
 
 export async function buildCheckoutAgreement(
   db: Db,
-  input: { userId: string; addressId: string; couponCode?: string; locale: AgreementLocale },
+  input: { userId: string; addressId: string; couponCode?: string; currencyCode?: "TRY" | "USD"; locale: AgreementLocale },
 ) {
   const [user, address, cart, storedConfig] = await Promise.all([
     db.user.findUnique({ where: { id: input.userId }, select: { email: true, firstName: true, lastName: true, phone: true } }),
@@ -24,7 +24,7 @@ export async function buildCheckoutAgreement(
       include: {
         items: {
           include: {
-            product: { include: { translations: true } },
+            product: { include: { translations: true, prices: true } },
             variant: true,
           },
         },
@@ -43,8 +43,34 @@ export async function buildCheckoutAgreement(
     if (available < item.quantity) throw new Error(`INSUFFICIENT_STOCK:${item.product.title}:${available}:${item.quantity}`);
   }
 
-  const config = storedConfig ?? { taxPercent: 0, shippingFee: 0, freeShippingThreshold: 0 };
-  const totals = calculateCartTotals(cart.items, config);
+  const config = storedConfig ?? {
+    taxPercent: 0,
+    shippingFee: 0,
+    freeShippingThreshold: 0,
+    usdBankName: "",
+    usdIban: "",
+    usdShippingFee: 0,
+    usdFreeShippingThreshold: 0,
+  };
+  const currencyCode = input.currencyCode === "USD" ? "USD" : "TRY";
+  if (currencyCode === "USD" && (!config.usdBankName || !config.usdIban)) {
+    throw new Error("USD_PAYMENT_UNAVAILABLE");
+  }
+  const resolvedItems = cart.items.map((item) => {
+    const priceEntry = item.product.prices.find((price) => price.currencyCode === currencyCode);
+    if (!priceEntry) throw new Error(`NO_PRICE_FOR_CURRENCY:${item.product.title}:${currencyCode}`);
+    return {
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      variantColor: item.variant?.color ?? null,
+      quantity: item.quantity,
+      price: priceEntry.salePrice ?? priceEntry.price,
+    };
+  });
+  const shippingConfig = currencyCode === "USD"
+    ? { shippingFee: config.usdShippingFee, freeShippingThreshold: config.usdFreeShippingThreshold }
+    : { shippingFee: config.shippingFee, freeShippingThreshold: config.freeShippingThreshold };
+  const totals = calculateTotalsFromPrices(resolvedItems, { taxPercent: config.taxPercent, ...shippingConfig });
   const normalizedCoupon = input.couponCode?.trim().toUpperCase() || undefined;
   let discountAmount = 0;
   let coupon = null;
@@ -67,13 +93,13 @@ export async function buildCheckoutAgreement(
   const total = Math.max(0, totals.total - discountAmount);
   const buyerName = [address.firstName, address.lastName].filter(Boolean).join(" ") || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const deliveryAddress = [address.neighborhood, address.fullAddress, address.district, address.city, "Türkiye"].filter(Boolean).join(", ");
-  const items = cart.items.map((item) => {
+  const items = cart.items.map((item, index) => {
     const translation = item.product.translations.find((entry) => entry.locale === input.locale);
     return {
       title: translation?.title || item.product.title,
       variant: item.variant ? (input.locale === "en" ? item.variant.colorEn || item.variant.color : item.variant.color) : null,
       quantity: item.quantity,
-      unitPrice: item.product.price,
+      unitPrice: resolvedItems[index].price,
     };
   });
   const agreement = generateAgreementBundle({
@@ -81,7 +107,7 @@ export async function buildCheckoutAgreement(
     buyer: { name: buyerName, email: user.email, phone: address.phone || user.phone || "—" },
     deliveryAddress,
     items,
-    currency: "TRY",
+    currency: currencyCode,
     subtotal: totals.subtotal,
     discountAmount,
     taxPercent: config.taxPercent,
@@ -91,5 +117,5 @@ export async function buildCheckoutAgreement(
     couponCode: coupon?.code ?? null,
   });
 
-  return { user, address, cart, coupon, totals, discountAmount, total, buyerName, deliveryAddress, items, agreement };
+  return { user, address, cart, coupon, totals, discountAmount, total, buyerName, deliveryAddress, resolvedItems, items, agreement };
 }

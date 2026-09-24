@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { formatPrice as formatPriceFixed, type SupportedCurrency } from "@@/lib/format-price";
 
 type OrderItem = {
     id: string;
@@ -19,6 +19,7 @@ type Order = {
     id: string;
     orderNumber?: string | null;
     total: number;
+    currencyCode?: string;
     status: string;
     createdAt: string;
     items: OrderItem[];
@@ -26,7 +27,6 @@ type Order = {
 
 export default function SuccessContent({ orderId }: { orderId: string }) {
     const t = useTranslations("checkoutSuccess");
-    const { formatPrice } = useCurrency();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -175,7 +175,7 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                                             <p className="text-xs text-gray-500">{t("qty", { count: item.quantity })}</p>
                                         </div>
                                     </div>
-                                    <p className="font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                                    <p className="font-bold text-gray-900">{formatPriceFixed(item.price * item.quantity, (order.currencyCode ?? "TRY") as SupportedCurrency)}</p>
                                 </div>
                             ))}
                         </div>
@@ -184,7 +184,7 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                     <div className="bg-gray-50 p-6 md:p-8">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-gray-500 font-medium">{t("subtotal")}</span>
-                            <span className="font-bold text-gray-900">{formatPrice(order.total)}</span>
+                            <span className="font-bold text-gray-900">{formatPriceFixed(order.total, (order.currencyCode ?? "TRY") as SupportedCurrency)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-gray-500 font-medium">{t("shipping")}</span>
@@ -192,7 +192,7 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                         </div>
                         <div className="pt-4 border-t border-gray-200 border-dashed flex justify-between items-center">
                             <span className="font-black text-gray-900 text-lg">{t("total")}</span>
-                            <span className="font-black text-[#C8102E] text-2xl">{formatPrice(order.total)}</span>
+                            <span className="font-black text-[#C8102E] text-2xl">{formatPriceFixed(order.total, (order.currencyCode ?? "TRY") as SupportedCurrency)}</span>
                         </div>
                     </div>
                 </div>
