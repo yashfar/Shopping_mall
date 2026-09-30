@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["iyzipay"],
+  outputFileTracingIncludes: {
+    "/api/payments/iyzico/*": ["./node_modules/iyzipay/lib/resources/**/*"],
+  },
   images: {
     remotePatterns: [
       {
