@@ -32,6 +32,13 @@ export async function PATCH(
             );
         }
 
+        if (status === "PAID") {
+            return NextResponse.json(
+                { error: "Use a verified payment flow or manual settlement to mark an order as paid." },
+                { status: 409 },
+            );
+        }
+
         // Tracking number is required when marking as SHIPPED
         if (status === "SHIPPED" && !trackingNumber?.trim()) {
             return NextResponse.json(

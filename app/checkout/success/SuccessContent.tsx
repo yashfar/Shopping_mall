@@ -22,6 +22,8 @@ type Order = {
     status: string;
     createdAt: string;
     items: OrderItem[];
+    paymentMethod: "BANK_TRANSFER" | "IYZICO";
+    paymentStatus?: string | null;
 };
 
 export default function SuccessContent({ orderId }: { orderId: string }) {
@@ -81,6 +83,9 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
 
     const isPendingReview = order.status === "PAYMENT_UPLOADED";
     const isPaid = order.status === "PAID";
+    const isIyzicoProcessing = order.paymentMethod === "IYZICO"
+        && ["PENDING", "PROCESSING"].includes(order.paymentStatus ?? "")
+        && !isPaid;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-10">
@@ -103,6 +108,11 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                             <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("paymentApproved")}</h1>
                             <p className="text-gray-500 mt-2 text-lg">{t("paymentApprovedDesc")}</p>
                         </>
+                    ) : isIyzicoProcessing ? (
+                        <>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("paymentProcessing")}</h1>
+                            <p className="text-gray-500 mt-2 text-lg">{t("paymentProcessingDesc")}</p>
+                        </>
                     ) : isPendingReview ? (
                         <>
                             <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("paymentProofSubmitted")}</h1>
@@ -123,10 +133,10 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
             </div>
 
             {/* Pending Review Notice */}
-            {isPendingReview && (
+            {(isPendingReview || isIyzicoProcessing) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
                     <p className="text-amber-800 font-medium text-sm">
-                        {t("underReviewNotice")}
+                        {isIyzicoProcessing ? t("iyzicoReviewNotice") : t("underReviewNotice")}
                     </p>
                 </div>
             )}
@@ -148,11 +158,11 @@ export default function SuccessContent({ orderId }: { orderId: string }) {
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
                                 isPaid
                                     ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                    : isPendingReview
+                                    : isPendingReview || isIyzicoProcessing
                                     ? "bg-amber-100 text-amber-700 border-amber-200"
                                     : "bg-gray-100 text-gray-700 border-gray-200"
                             }`}>
-                                {isPaid ? t("paid") : isPendingReview ? t("underReview") : order.status}
+                                {isPaid ? t("paid") : isPendingReview || isIyzicoProcessing ? t("underReview") : order.status}
                             </span>
                         </div>
                     </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
 import { sendOrderConfirmationEmail } from "@@/lib/mail";
+import { markPaymentFailed, markPaymentSuccessful } from "@@/lib/payment-service";
 
 /**
  * POST /api/admin/orders/[id]/verify-payment
@@ -53,9 +54,22 @@ export async function POST(
 
         if (action === "approve") {
             // Stock was already decremented on upload — just mark as PAID
-            await prisma.order.update({
-                where: { id },
-                data: { status: "PAID" },
+            await prisma.$transaction(async (tx) => {
+                const payment = await tx.payment.findFirst({
+                    where: { orderId: id, provider: "MANUAL", method: "BANK_TRANSFER" },
+                    orderBy: { createdAt: "asc" },
+                });
+                const bankTransferPayment = payment ?? await tx.payment.create({
+                    data: {
+                        orderId: id,
+                        provider: "MANUAL",
+                        method: "BANK_TRANSFER",
+                        status: "PENDING",
+                        amount: order.total,
+                        currencyCode: order.currencyCode,
+                    },
+                });
+                await markPaymentSuccessful(bankTransferPayment.id, tx);
             });
 
             // Send confirmation email (non-critical)
@@ -105,6 +119,23 @@ export async function POST(
                     where: { id },
                     data: { status: "PAYMENT_REJECTED" },
                 });
+
+                const payment = await tx.payment.findFirst({
+                    where: { orderId: id, provider: "MANUAL", method: "BANK_TRANSFER" },
+                    orderBy: { createdAt: "asc" },
+                });
+
+                const bankTransferPayment = payment ?? await tx.payment.create({
+                    data: {
+                        orderId: id,
+                        provider: "MANUAL",
+                        method: "BANK_TRANSFER",
+                        status: "PENDING",
+                        amount: order.total,
+                        currencyCode: order.currencyCode,
+                    },
+                });
+                await markPaymentFailed(bankTransferPayment.id, {}, tx);
 
                 const variantProductIds = new Set<string>();
 

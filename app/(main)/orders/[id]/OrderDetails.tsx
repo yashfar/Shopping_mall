@@ -24,6 +24,11 @@ type Order = {
     orderNumber?: string | null;
     total: number;
     status: string;
+    paymentMethod: "BANK_TRANSFER" | "IYZICO";
+    paymentStatus?: string | null;
+    paymentSessionActive?: boolean;
+    canContinuePayment?: boolean;
+    canRetryPayment?: boolean;
     createdAt: string;
     items: OrderItem[];
     trackingNumber?: string | null;
@@ -60,6 +65,61 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [submittingReturn, setSubmittingReturn] = useState(false);
     const [retryingDocuments, setRetryingDocuments] = useState(false);
+    const [initializingPayment, setInitializingPayment] = useState(false);
+    const [continuingPayment, setContinuingPayment] = useState(false);
+
+    const continueIyzicoPayment = async () => {
+        if (continuingPayment || !order?.canContinuePayment) return;
+
+        setContinuingPayment(true);
+        try {
+            const response = await fetch("/api/payments/iyzico/continue", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.id }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && typeof data.paymentPageUrl === "string" && data.paymentPageUrl) {
+                window.location.assign(data.paymentPageUrl);
+                return;
+            }
+            toast.error(t("paymentContinueFailed"));
+            setOrder((current) => current ? { ...current, canContinuePayment: false } : current);
+        } catch {
+            toast.error(t("paymentContinueFailed"));
+        } finally {
+            setContinuingPayment(false);
+        }
+    };
+
+    const retryIyzicoPayment = async () => {
+        if (initializingPayment || !order?.canRetryPayment) return;
+
+        setInitializingPayment(true);
+        try {
+            const response = await fetch("/api/payments/iyzico/initialize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.id }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && typeof data.paymentPageUrl === "string" && data.paymentPageUrl) {
+                window.location.assign(data.paymentPageUrl);
+                return;
+            }
+            if (response.status === 409) {
+                toast.error(t("paymentRetryBlocked"));
+                setOrder((current) => current ? { ...current, canRetryPayment: false } : current);
+                return;
+            }
+            toast.error(t("paymentRetryFailed"));
+        } catch {
+            toast.error(t("paymentRetryFailed"));
+        } finally {
+            setInitializingPayment(false);
+        }
+    };
 
     const retryDocumentDelivery = async () => {
         setRetryingDocuments(true);
@@ -252,6 +312,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
         return <div className="text-center py-20 text-gray-400 font-bold">{t("orderNotFound")}</div>;
     }
 
+    const isPaidOrder = ["PAID", "SHIPPED", "DELIVERED", "COMPLETED"].includes(order.status);
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20 animate-in fade-in duration-500">
             {/* Left Column - Main Content (2/3 width) */}
@@ -329,7 +391,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                             </div>
                             <div className="my-2 border-t border-gray-200 border-dashed"></div>
                             <div className="flex justify-between items-center text-lg">
-                                <span className="font-black text-gray-900">{t("totalPaid")}</span>
+                                <span className="font-black text-gray-900">{t(isPaidOrder ? "totalPaid" : "orderTotal")}</span>
                                 <span className="font-black text-[#C8102E] text-2xl">{formatPrice(order.total)}</span>
                             </div>
                         </div>
@@ -426,6 +488,33 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     )}
 
                     {order.status === "PENDING" && (
+                        <>
+                            {order.canContinuePayment ? (
+                                <div className="mt-6 pt-4 border-t border-gray-100">
+                                    <Button
+                                        className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold"
+                                        onClick={continueIyzicoPayment}
+                                        disabled={continuingPayment}
+                                    >
+                                        {continuingPayment ? t("continuingPayment") : t("continuePayment")}
+                                    </Button>
+                                </div>
+                            ) : order.paymentMethod === "IYZICO" && order.paymentSessionActive && (
+                                <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                    <p className="text-sm font-medium text-amber-800">{t("paymentSessionActive")}</p>
+                                </div>
+                            )}
+                            {order.canRetryPayment && (
+                                <div className="mt-6 pt-4 border-t border-gray-100">
+                                    <Button
+                                        className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white font-bold"
+                                        onClick={retryIyzicoPayment}
+                                        disabled={initializingPayment}
+                                    >
+                                        {initializingPayment ? t("startingPayment") : t("tryPaymentAgain")}
+                                    </Button>
+                                </div>
+                            )}
                         <div className="mt-6 pt-4 border-t border-gray-100">
                             {!showConfirm ? (
                                 <Button
@@ -458,6 +547,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                                 </div>
                             )}
                         </div>
+                        </>
                     )}
 
                     {["PAID", "SHIPPED", "COMPLETED", "DELIVERED"].includes(order.status) && (

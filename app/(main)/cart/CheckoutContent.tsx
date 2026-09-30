@@ -35,6 +35,7 @@ type AppliedCoupon = {
 
 type Address = { id: string; title: string; firstName: string; lastName: string; city: string; district: string; neighborhood: string; fullAddress: string };
 type AgreementPreview = { bundleHash: string; documents: { preContract: string; distanceSales: string } };
+type PaymentMethod = "BANK_TRANSFER" | "IYZICO";
 
 export default function CheckoutContent() {
     const router = useRouter();
@@ -52,6 +53,9 @@ export default function CheckoutContent() {
     const [agreementPreview, setAgreementPreview] = useState<AgreementPreview | null>(null);
     const [agreementsAccepted, setAgreementsAccepted] = useState(false);
     const [reviewingAgreements, setReviewingAgreements] = useState(false);
+    const [identityNumber, setIdentityNumber] = useState("");
+    const [identityNumberError, setIdentityNumberError] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("BANK_TRANSFER");
 
     // Coupon state
     const [couponInput, setCouponInput] = useState("");
@@ -142,7 +146,7 @@ export default function CheckoutContent() {
             const response = await fetch("/api/checkout/agreements", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-locale": locale },
-                body: JSON.stringify({ addressId: selectedAddressId, couponCode: appliedCoupon?.code ?? null }),
+                body: JSON.stringify({ addressId: selectedAddressId, couponCode: appliedCoupon?.code ?? null, paymentMethod }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || t("agreementPreviewFailed"));
@@ -156,6 +160,12 @@ export default function CheckoutContent() {
     };
 
     const createOrder = async () => {
+        const normalizedIdentityNumber = identityNumber.trim();
+        if ((normalizedIdentityNumber && !/^\d{11}$/.test(normalizedIdentityNumber)) || (paymentMethod === "IYZICO" && !normalizedIdentityNumber)) {
+            setIdentityNumberError(t("identityNumberInvalid"));
+            return;
+        }
+
         try {
             setCreating(true);
             const response = await fetch("/api/orders/create", {
@@ -166,6 +176,8 @@ export default function CheckoutContent() {
                     addressId: selectedAddressId,
                     acceptedDocuments: agreementsAccepted,
                     acceptedBundleHash: agreementPreview?.bundleHash,
+                    identityNumber: normalizedIdentityNumber || undefined,
+                    paymentMethod,
                 }),
             });
 
@@ -180,6 +192,21 @@ export default function CheckoutContent() {
             }
 
             const data = await response.json();
+
+            if (paymentMethod === "IYZICO") {
+                const initializeResponse = await fetch("/api/payments/iyzico/initialize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId: data.orderId }),
+                });
+                const initializeData = await initializeResponse.json().catch(() => ({}));
+                if (initializeResponse.ok && typeof initializeData.paymentPageUrl === "string" && initializeData.paymentPageUrl) {
+                    window.location.assign(initializeData.paymentPageUrl);
+                    return;
+                }
+                router.push(`/checkout?orderId=${data.orderId}`);
+                return;
+            }
 
             // Redirect to payment page (cart is NOT cleared here anymore —
             // it's cleared when the customer uploads the payment proof)
@@ -375,6 +402,31 @@ export default function CheckoutContent() {
                     </div>
 
                     <div className="space-y-3 border-t border-gray-100 pt-5">
+                        <fieldset className="space-y-2">
+                            <legend className="block text-sm font-bold text-gray-700">{t("paymentMethod")}</legend>
+                            {(["BANK_TRANSFER", "IYZICO"] as const).map((method) => (
+                                <label key={method} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${paymentMethod === method ? "border-[#C8102E] bg-red-50/40" : "border-gray-200"}`}>
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value={method}
+                                        checked={paymentMethod === method}
+                                        onChange={() => {
+                                            setPaymentMethod(method);
+                                            setIdentityNumberError("");
+                                            setAgreementPreview(null);
+                                            setAgreementsAccepted(false);
+                                        }}
+                                        disabled={creating}
+                                        className="mt-1"
+                                    />
+                                    <span>
+                                        <span className="block text-sm font-bold text-gray-900">{t(method === "BANK_TRANSFER" ? "bankTransferOption" : "cardOption")}</span>
+                                        {method === "IYZICO" && <span className="block text-xs text-gray-500">{t("iyzicoSecurePayment")}</span>}
+                                    </span>
+                                </label>
+                            ))}
+                        </fieldset>
                         <label className="block text-sm font-bold text-gray-700" htmlFor="agreement-address">{t("deliveryAddress")}</label>
                         <select
                             id="agreement-address"
@@ -392,6 +444,32 @@ export default function CheckoutContent() {
                                 <option key={address.id} value={address.id}>{address.title} — {address.firstName} {address.lastName}, {address.district}/{address.city}</option>
                             ))}
                         </select>
+                        {paymentMethod === "IYZICO" && <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700" htmlFor="identity-number">
+                                {t("identityNumber")}
+                            </label>
+                            <input
+                                id="identity-number"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                maxLength={11}
+                                value={identityNumber}
+                                onChange={(event) => {
+                                    setIdentityNumber(event.target.value);
+                                    setIdentityNumberError("");
+                                }}
+                                disabled={creating}
+                                aria-describedby="identity-number-help"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
+                            />
+                            <p id="identity-number-help" className="text-xs text-gray-500">
+                                {t("identityNumberHelp")}
+                            </p>
+                            {identityNumberError && (
+                                <p className="text-xs font-medium text-red-500">{identityNumberError}</p>
+                            )}
+                        </div>}
                         <button
                             type="button"
                             onClick={reviewAgreements}

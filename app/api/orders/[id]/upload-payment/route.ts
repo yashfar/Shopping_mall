@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getLocaleFromRequest } from "@@/lib/get-locale";
 import { sendPaymentUploadedAdminEmail, sendPaymentUploadedCustomerEmail } from "@@/lib/mail";
+import { markPaymentProcessing } from "@@/lib/payment-service";
 
 /**
  * POST /api/orders/[id]/upload-payment
@@ -117,6 +118,23 @@ export async function POST(
                     status: "PAYMENT_UPLOADED",
                 },
             });
+
+            const payment = await tx.payment.findFirst({
+                where: { orderId: id, provider: "MANUAL", method: "BANK_TRANSFER" },
+                orderBy: { createdAt: "asc" },
+            });
+
+            const bankTransferPayment = payment ?? await tx.payment.create({
+                data: {
+                    orderId: id,
+                    provider: "MANUAL",
+                    method: "BANK_TRANSFER",
+                    status: "PENDING",
+                    amount: order.total,
+                    currencyCode: order.currencyCode,
+                },
+            });
+            await markPaymentProcessing(bankTransferPayment.id, tx);
 
             // Clear the user's cart — this is the point of no return for the customer.
             // (Re-uploads after rejection are safe: cart is already empty.)

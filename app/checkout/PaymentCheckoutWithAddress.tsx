@@ -39,6 +39,8 @@ interface Order {
     shippingName?: string | null;
     shippingPhone?: string | null;
     shippingAddress?: string | null;
+    paymentMethod: "BANK_TRANSFER" | "IYZICO";
+    paymentStatus?: string | null;
 }
 
 interface BankDetails {
@@ -68,6 +70,8 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadError, setUploadError] = useState("");
+    const [initializingPayment, setInitializingPayment] = useState(false);
+    const [initializeError, setInitializeError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -220,6 +224,36 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
         navigator.clipboard.writeText(text);
     };
 
+    const startIyzicoPayment = async () => {
+        if (initializingPayment) return;
+        setInitializingPayment(true);
+        setInitializeError("");
+        try {
+            const response = await fetch("/api/payments/iyzico/initialize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && typeof data.paymentPageUrl === "string" && data.paymentPageUrl) {
+                window.location.assign(data.paymentPageUrl);
+                return;
+            }
+            if (response.status === 409 && data.error === "PAYMENT_INITIALIZATION_IN_PROGRESS") {
+                setInitializeError(t("paymentAlreadyProcessing"));
+            } else if (response.status === 409 && data.error === "ORDER_ALREADY_PAID") {
+                router.push(`/checkout/success?orderId=${orderId}`);
+                return;
+            } else {
+                setInitializeError(t("iyzicoInitializationFailed"));
+            }
+        } catch {
+            setInitializeError(t("iyzicoInitializationFailed"));
+        } finally {
+            setInitializingPayment(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="checkout-loading">
@@ -231,6 +265,42 @@ export default function PaymentCheckoutWithAddress({ orderId }: { orderId: strin
 
     if (!order) {
         return null;
+    }
+
+    if (order.paymentMethod === "IYZICO") {
+        const paymentStatus = order.paymentStatus;
+        const isProcessing = paymentStatus === "PENDING" || paymentStatus === "PROCESSING";
+        const isFailed = paymentStatus === "FAILED";
+        return (
+            <div className="payment-checkout-container">
+                <div className="order-summary-card">
+                    <h2>{t("cardPayment")}</h2>
+                    <div className="order-id">
+                        <span className="label">{t("orderId")}</span>
+                        <span className="value">{order.id}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-5">
+                        <span className="font-bold">{t("total")}</span>
+                        <span className="text-xl font-black text-[#C8102E]">{formatPrice(order.total)}</span>
+                    </div>
+                    <p className="mt-4 text-sm text-gray-600">
+                        {isProcessing ? t("paymentVerificationPending") : isFailed ? t("paymentFailedRetry") : t("iyzicoRedirectInfo")}
+                    </p>
+                    {initializeError && <p className="mt-3 text-sm font-medium text-red-600">{initializeError}</p>}
+                    <button
+                        type="button"
+                        className="btn-pay mt-5 w-full"
+                        onClick={startIyzicoPayment}
+                        disabled={initializingPayment || isProcessing}
+                    >
+                        {initializingPayment ? t("openingSecurePayment") : isProcessing ? t("paymentProcessing") : t("payWithIyzico")}
+                    </button>
+                    <button type="button" className="btn-secondary mt-3 w-full" onClick={() => router.push(`/orders/${orderId}`)} disabled={initializingPayment}>
+                        {t("back")}
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     if (!order.shippingAddress && !loadingAddresses && addresses.length === 0) {

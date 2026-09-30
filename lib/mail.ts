@@ -68,7 +68,8 @@ export interface OrderConfirmationData {
 
 export async function sendOrderConfirmationEmail(
     email: string,
-    data: OrderConfirmationData
+    data: OrderConfirmationData,
+    options?: { idempotencyKey?: string },
 ) {
     const locale = data.locale ?? "en";
     const subject =
@@ -76,12 +77,15 @@ export async function sendOrderConfirmationEmail(
             ? `Siparişiniz Onaylandı #${data.orderNumber} - ${STORE_NAME}`
             : `Order Confirmed #${data.orderNumber} - ${STORE_NAME}`;
     try {
-        const { data: result, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: email,
-            subject,
-            html: getOrderConfirmationTemplate(data, locale),
-        });
+        const { data: result, error } = await resend.emails.send(
+            {
+                from: FROM_EMAIL,
+                to: email,
+                subject,
+                html: getOrderConfirmationTemplate(data, locale),
+            },
+            options,
+        );
         if (error) {
             console.error("Error sending order confirmation email:", error);
             return { success: false, error };

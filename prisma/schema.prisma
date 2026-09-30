@@ -209,6 +209,7 @@ model Order {
   total              Int
   currencyCode       String                   @default("TRY")
   status             OrderStatus              @default(PENDING)
+  paymentMethod      PaymentMethod            @default(BANK_TRANSFER)
   createdAt          DateTime                 @default(now())
   orderNumber        String?                  @unique
   couponId           String?
@@ -222,9 +223,11 @@ model Order {
   couponUsage        CouponUsage?
   returnRequest      ReturnRequest?
   agreementSnapshots OrderAgreementSnapshot[]
+  payments           Payment[]
   shippingName       String?
   shippingPhone      String?
   shippingAddress    String?
+  identityNumber     String?
 
   @@index([userId])
 }
@@ -287,6 +290,55 @@ enum OrderStatus {
   CANCELED
   RETURN_REQUESTED
   RETURNED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  IYZICO
+}
+
+enum PaymentProvider {
+  MANUAL
+  IYZICO
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Payment {
+  id                      String          @id @default(cuid())
+  orderId                 String
+  order                   Order           @relation(fields: [orderId], references: [id])
+  provider                PaymentProvider
+  method                  PaymentMethod
+  status                  PaymentStatus
+  amount                  Int
+  currencyCode            String          @default("TRY")
+  conversationId          String?
+  token                   String?
+  paymentPageUrl          String?
+  paymentId               String?
+  failureCode             String?
+  failureMessage          String?
+  manualNote              String?
+  manualReference         String?
+  settledByUserId         String?
+  paidAt                  DateTime?
+  fulfillmentAppliedAt    DateTime?
+  confirmationEmailSentAt DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([conversationId])
 }
 
 // ============================================================================
