@@ -16,6 +16,7 @@ import {
   Heart,
 } from "lucide-react";
 import LanguageSwitcher from "@@/components/LanguageSwitcher";
+import CurrencySwitcher from "@@/components/CurrencySwitcher";
 import { Button } from "@@/components/ui/button";
 import {
   Sheet,
@@ -190,12 +191,15 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
 
         {/* Footer / User Profile */}
         <div className="border-t border-gray-100 bg-gray-50/50">
-          {/* Language Switcher */}
+          {/* Language + Currency Switchers */}
           <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               {t("language")}
             </span>
-            <LanguageSwitcher />
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher />
+              <CurrencySwitcher />
+            </div>
           </div>
 
           {/* User Profile / Auth */}

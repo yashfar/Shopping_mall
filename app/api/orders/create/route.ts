@@ -19,12 +19,14 @@ export async function POST(req: Request) {
     if (typeof body.addressId !== "string" || !body.addressId) {
       return NextResponse.json({ error: "DELIVERY_ADDRESS_REQUIRED" }, { status: 400 });
     }
+    const currencyCode: "TRY" | "USD" = body.currencyCode === "USD" ? "USD" : "TRY";
 
     const result = await prisma.$transaction(async (tx) => {
       const quote = await buildCheckoutAgreement(tx, {
         userId: session.user.id,
         addressId: body.addressId,
         couponCode: body.couponCode,
+        currencyCode,
         locale,
       });
       if (quote.agreement.bundleHash !== body.acceptedBundleHash) throw new Error("AGREEMENT_CHANGED");
@@ -36,19 +38,19 @@ export async function POST(req: Request) {
           userId: session.user.id,
           orderNumber: await generateOrderNumber(tx),
           total: quote.total,
-          currencyCode: "TRY",
+          currencyCode,
           status: "PENDING",
           shippingName: quote.buyerName,
           shippingPhone: quote.address.phone,
           shippingAddress: quote.deliveryAddress,
           ...(quote.coupon ? { couponId: quote.coupon.id, discountAmount: quote.discountAmount } : {}),
           items: {
-            create: quote.cart.items.map((item) => ({
+            create: quote.resolvedItems.map((item) => ({
               productId: item.productId,
-              variantId: item.variantId ?? null,
-              variantColor: item.variant?.color ?? null,
+              variantId: item.variantId,
+              variantColor: item.variantColor,
               quantity: item.quantity,
-              price: item.product.price,
+              price: item.price,
             })),
           },
           agreementSnapshots: {
@@ -72,11 +74,17 @@ export async function POST(req: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "AGREEMENT_CHANGED") return NextResponse.json({ error: message }, { status: 409 });
-    const known = ["CART_EMPTY", "ADDRESS_NOT_FOUND", "INVALID_COUPON", "COUPON_EXPIRED", "COUPON_LIMIT_REACHED", "COUPON_ALREADY_USED"];
-    if (known.includes(message) || message.startsWith("COUPON_MIN_AMOUNT:") || message.startsWith("PRODUCT_INACTIVE:") || message.startsWith("INSUFFICIENT_STOCK:")) {
+    const known = ["CART_EMPTY", "ADDRESS_NOT_FOUND", "INVALID_COUPON", "COUPON_EXPIRED", "COUPON_LIMIT_REACHED", "COUPON_ALREADY_USED", "USD_PAYMENT_UNAVAILABLE"];
+    if (
+      known.includes(message)
+      || message.startsWith("COUPON_MIN_AMOUNT:")
+      || message.startsWith("PRODUCT_INACTIVE:")
+      || message.startsWith("INSUFFICIENT_STOCK:")
+      || message.startsWith("NO_PRICE_FOR_CURRENCY:")
+    ) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    console.error("Error creating order");
+    console.error("Error creating order", error);
     return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
   }
 }

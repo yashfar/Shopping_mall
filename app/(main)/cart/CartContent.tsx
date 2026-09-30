@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@@/context/CartContext";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
-import { calculateCartTotals } from "@@/lib/payment-utils";
-import { useTranslations } from "next-intl";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
+import { useTranslations, useLocale } from "next-intl";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -20,10 +20,12 @@ type CartItem = {
         price: number;
         stock: number;
         thumbnail: string | null;
+        prices?: PriceEntry[];
     };
     variant?: {
         id: string;
         color: string;
+        colorEn: string | null;
         colorHex: string | null;
         stock: number;
     } | null;
@@ -37,11 +39,18 @@ type Cart = {
 export default function CartContent() {
     const router = useRouter();
     const { refreshCart } = useCart();
-    const { formatPrice } = useCurrency();
+    const { formatPrice, currency, resolveProductPrice } = useCurrency();
     const t = useTranslations("cart");
     const tc = useTranslations("common");
+    const locale = useLocale();
     const [cart, setCart] = useState<Cart | null>(null);
-    const [config, setConfig] = useState<{ taxPercent: number; shippingFee: number; freeShippingThreshold: number } | null>(null);
+    const [config, setConfig] = useState<{
+        taxPercent: number;
+        shippingFee: number;
+        freeShippingThreshold: number;
+        usdShippingFee: number;
+        usdFreeShippingThreshold: number;
+    } | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
     const [hasAddresses, setHasAddresses] = useState(true);
@@ -141,6 +150,18 @@ export default function CartContent() {
         checkAddresses();
     }, []);
 
+    const totals = useMemo(() => {
+        if (!cart || !config) return null;
+        const effectiveConfig = currency === "USD"
+            ? { taxPercent: config.taxPercent, shippingFee: config.usdShippingFee ?? 0, freeShippingThreshold: config.usdFreeShippingThreshold ?? 0 }
+            : { taxPercent: config.taxPercent, shippingFee: config.shippingFee, freeShippingThreshold: config.freeShippingThreshold };
+        const itemPrices = cart.items.map((item) => {
+            const r = resolveProductPrice(item.product);
+            return { price: r ? (r.salePrice ?? r.price) : 0, quantity: item.quantity };
+        });
+        return calculateTotalsFromPrices(itemPrices, effectiveConfig);
+    }, [cart, config, currency, resolveProductPrice]);
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -192,8 +213,6 @@ export default function CartContent() {
             </div>
         );
     }
-
-    const totals = cart && config ? calculateCartTotals(cart.items, config) : null;
 
     return (
         <div className="space-y-8">
@@ -249,7 +268,7 @@ export default function CartContent() {
                                             {item.variant.colorHex && (
                                                 <div className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: item.variant.colorHex }} />
                                             )}
-                                            <span className="text-xs text-gray-500 font-medium">{item.variant.color}</span>
+                                            <span className="text-xs text-gray-500 font-medium">{locale === "en" && item.variant.colorEn ? item.variant.colorEn : item.variant.color}</span>
                                         </div>
                                     )}
                                     <div className="text-xs font-bold uppercase tracking-wider mt-1">
@@ -266,7 +285,7 @@ export default function CartContent() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("price")}</span>
                                 <span className="text-lg font-bold text-[#1A1A1A]">
-                                    {formatPrice(item.product.price)}
+                                    {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice(r.salePrice ?? r.price) : "—"; })()}
                                 </span>
                             </div>
 
@@ -298,7 +317,7 @@ export default function CartContent() {
                             <div className="flex items-center justify-between pt-3 border-t border-[#A9A9A9]/20">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("subtotal")}</span>
                                 <span className="text-xl font-extrabold text-[#C8102E]">
-                                    {formatPrice(item.product.price * item.quantity)}
+                                    {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice((r.salePrice ?? r.price) * item.quantity) : "—"; })()}
                                 </span>
                             </div>
 
@@ -369,7 +388,7 @@ export default function CartContent() {
                                                         {item.variant.colorHex && (
                                                             <div className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: item.variant.colorHex }} />
                                                         )}
-                                                        <span className="text-xs text-gray-500 font-medium">{item.variant.color}</span>
+                                                        <span className="text-xs text-gray-500 font-medium">{locale === "en" && item.variant.colorEn ? item.variant.colorEn : item.variant.color}</span>
                                                     </div>
                                                 )}
                                                 <div className="text-xs font-bold uppercase tracking-wider">
@@ -383,7 +402,7 @@ export default function CartContent() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right font-bold text-[#1A1A1A]">
-                                        {formatPrice(item.product.price)}
+                                        {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice(r.salePrice ?? r.price) : "—"; })()}
                                     </td>
                                     <td className="px-6 py-6">
                                         <div className="flex items-center justify-center gap-3">
@@ -407,7 +426,7 @@ export default function CartContent() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right font-extrabold text-[#C8102E] text-lg">
-                                        {formatPrice(item.product.price * item.quantity)}
+                                        {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice((r.salePrice ?? r.price) * item.quantity) : "—"; })()}
                                     </td>
                                     <td className="px-6 py-6 text-center">
                                         <button
@@ -467,7 +486,7 @@ export default function CartContent() {
                                     <span className="text-2xl font-black text-[#C8102E] block">
                                         {formatPrice(totals.total)}
                                     </span>
-                                    {totals.shippingAmount === 0 && config.freeShippingThreshold > 0 && (
+                                    {totals.shippingAmount === 0 && (currency === "USD" ? config.usdFreeShippingThreshold : config.freeShippingThreshold) > 0 && (
                                         <p className="text-xs text-emerald-600 font-bold mt-1">{t("freeShippingApplied")}</p>
                                     )}
                                 </div>

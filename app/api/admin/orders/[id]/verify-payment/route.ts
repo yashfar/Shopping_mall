@@ -65,6 +65,7 @@ export async function POST(
                     select: {
                         orderNumber: true,
                         total: true,
+                        currencyCode: true,
                         user: { select: { email: true, firstName: true, locale: true } },
                         items: {
                             select: {
@@ -80,9 +81,11 @@ export async function POST(
 
                 if (fullOrder?.orderNumber) {
                     const userLocale = (fullOrder.user.locale === "tr" ? "tr" : "en") as "tr" | "en";
+                    const orderCurrency = (fullOrder.currencyCode === "USD" ? "USD" : "TRY") as "TRY" | "USD";
                     await sendOrderConfirmationEmail(fullOrder.user.email, {
                         orderNumber: fullOrder.orderNumber,
                         total: fullOrder.total,
+                        currencyCode: orderCurrency,
                         firstName: fullOrder.user.firstName,
                         locale: userLocale,
                         items: fullOrder.items.map((item) => ({

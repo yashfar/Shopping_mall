@@ -32,32 +32,29 @@ export async function GET() {
         }
 
         // Find or create cart for user
-        let cart = await prisma.cart.findUnique({
-            where: { userId: session.user.id },
-            include: {
-                items: {
-                    include: {
-                        product: true,
-                        variant: true,
+        const cartInclude = {
+            items: {
+                include: {
+                    product: {
+                        include: {
+                            prices: { select: { currencyCode: true, price: true, salePrice: true } },
+                        },
                     },
+                    variant: true,
                 },
             },
+        } as const;
+
+        let cart = await prisma.cart.findUnique({
+            where: { userId: session.user.id },
+            include: cartInclude,
         });
 
         // Create cart if it doesn't exist
         if (!cart) {
             cart = await prisma.cart.create({
-                data: {
-                    userId: session.user.id,
-                },
-                include: {
-                    items: {
-                        include: {
-                            product: true,
-                            variant: true,
-                        },
-                    },
-                },
+                data: { userId: session.user.id },
+                include: cartInclude,
             });
         }
 

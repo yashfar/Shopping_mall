@@ -77,6 +77,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             variants: { select: { id: true, color: true, colorHex: true, stock: true } },
             category: { select: { id: true, name: true, nameEn: true } },
             translations: { where: { locale }, select: { title: true, description: true } },
+            prices: { select: { currencyCode: true, price: true, salePrice: true } },
         },
         orderBy: getSortOrder(sort),
         take: 12,

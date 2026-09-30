@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       userId: session.user.id,
       addressId: body.addressId,
       couponCode: body.couponCode,
+      currencyCode: body.currencyCode === "USD" ? "USD" : "TRY",
       locale,
     }));
 

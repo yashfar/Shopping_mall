@@ -36,6 +36,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("search") ?? undefined;
+    const locale = searchParams.get("locale") ?? "tr";
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
     const skip = (page - 1) * limit;
@@ -50,16 +51,29 @@ export async function GET(req: Request) {
               }
             : {};
 
-        const [products, total] = await Promise.all([
+        const [rawProducts, total] = await Promise.all([
             prisma.product.findMany({
                 where,
-                include: { variants: { select: { id: true, stock: true } } },
+                include: {
+                    variants: { select: { id: true, stock: true } },
+                    prices: { select: { currencyCode: true, price: true, salePrice: true } },
+                    translations: { where: { locale }, select: { title: true, description: true } },
+                },
                 orderBy: { createdAt: "desc" },
                 skip,
                 take: limit,
             }),
             prisma.product.count({ where }),
         ]);
+
+        const products = rawProducts.map(({ translations, ...p }) => {
+            const tr = translations[0];
+            return {
+                ...p,
+                title: tr?.title ?? p.title,
+                description: tr?.description ?? p.description,
+            };
+        });
 
         return NextResponse.json({
             products,

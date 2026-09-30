@@ -4,12 +4,13 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { formatPrice as formatPriceFixed, type SupportedCurrency } from "@@/lib/format-price";
 
 type Order = {
     id: string;
     orderNumber?: string | null;
     total: number;
+    currencyCode?: string;
     status: string;
     createdAt: string;
     user: {
@@ -29,7 +30,6 @@ type Props = {
 
 export default function AdminOrdersList({ initialStatus }: Props) {
     const t = useTranslations("adminOrders");
-    const { formatPrice } = useCurrency();
 
     const FILTER_OPTIONS: FilterOption[] = [
         { label: t("allOrders"), value: null, description: t("showAllOrders") },
@@ -404,8 +404,11 @@ export default function AdminOrdersList({ initialStatus }: Props) {
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 <span className="font-black text-[#1A1A1A] text-lg">
-                                                    {formatPrice(order.total)}
+                                                    {formatPriceFixed(order.total, (order.currencyCode ?? "TRY") as SupportedCurrency)}
                                                 </span>
+                                                {order.currencyCode === "USD" && (
+                                                    <span className="ml-1 text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">USD</span>
+                                                )}
                                             </td>
                                             <td className="px-8 py-6 text-center">
                                                 <Link
@@ -465,7 +468,12 @@ export default function AdminOrdersList({ initialStatus }: Props) {
                                     <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
                                         <div>
                                             <span className="text-[10px] font-black text-[#A9A9A9] uppercase tracking-widest block">{t("total")}</span>
-                                            <p className="text-lg font-black text-[#C8102E]">{formatPrice(order.total)}</p>
+                                            <p className="text-lg font-black text-[#C8102E]">
+                                                {formatPriceFixed(order.total, (order.currencyCode ?? "TRY") as SupportedCurrency)}
+                                                {order.currencyCode === "USD" && (
+                                                    <span className="ml-1 text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded align-middle">USD</span>
+                                                )}
+                                            </p>
                                         </div>
                                         <Link
                                             href={`/admin/orders/${order.id}`}
