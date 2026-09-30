@@ -14,7 +14,14 @@ export function validateAgreementAcceptance(input: unknown): boolean {
 
 export async function buildCheckoutAgreement(
   db: Db,
-  input: { userId: string; addressId: string; couponCode?: string; currencyCode?: "TRY" | "USD"; locale: AgreementLocale },
+  input: {
+    userId: string;
+    addressId: string;
+    couponCode?: string;
+    currencyCode?: "TRY" | "USD";
+    locale: AgreementLocale;
+    paymentMethod?: "BANK_TRANSFER" | "IYZICO";
+  },
 ) {
   const [user, address, cart, storedConfig] = await Promise.all([
     db.user.findUnique({ where: { id: input.userId }, select: { email: true, firstName: true, lastName: true, phone: true } }),
@@ -115,6 +122,7 @@ export async function buildCheckoutAgreement(
     shippingAmount: totals.shippingAmount,
     total,
     couponCode: coupon?.code ?? null,
+    paymentMethod: input.paymentMethod ?? "BANK_TRANSFER",
   });
 
   return { user, address, cart, coupon, totals, discountAmount, total, buyerName, deliveryAddress, resolvedItems, items, agreement };

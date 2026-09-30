@@ -13,6 +13,10 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
+    const paymentMethod = body.paymentMethod ?? "BANK_TRANSFER";
+    if (paymentMethod !== "BANK_TRANSFER" && paymentMethod !== "IYZICO") {
+      return NextResponse.json({ error: "INVALID_PAYMENT_METHOD" }, { status: 400 });
+    }
     if (!validateAgreementAcceptance(body)) {
       return NextResponse.json({ error: "DOCUMENT_ACCEPTANCE_REQUIRED" }, { status: 400 });
     }
@@ -20,6 +24,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "DELIVERY_ADDRESS_REQUIRED" }, { status: 400 });
     }
     const currencyCode: "TRY" | "USD" = body.currencyCode === "USD" ? "USD" : "TRY";
+    if (body.identityNumber != null && typeof body.identityNumber !== "string") {
+      return NextResponse.json({ error: "INVALID_IDENTITY_NUMBER" }, { status: 400 });
+    }
+    const identityNumber = typeof body.identityNumber === "string" ? body.identityNumber.trim() : "";
+    if ((identityNumber && !/^\d{11}$/.test(identityNumber)) || (paymentMethod === "IYZICO" && !identityNumber)) {
+      return NextResponse.json({ error: "INVALID_IDENTITY_NUMBER" }, { status: 400 });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const quote = await buildCheckoutAgreement(tx, {
@@ -28,6 +39,7 @@ export async function POST(req: Request) {
         couponCode: body.couponCode,
         currencyCode,
         locale,
+        paymentMethod,
       });
       if (quote.agreement.bundleHash !== body.acceptedBundleHash) throw new Error("AGREEMENT_CHANGED");
 
@@ -40,9 +52,11 @@ export async function POST(req: Request) {
           total: quote.total,
           currencyCode,
           status: "PENDING",
+          paymentMethod,
           shippingName: quote.buyerName,
           shippingPhone: quote.address.phone,
           shippingAddress: quote.deliveryAddress,
+          ...(identityNumber ? { identityNumber } : {}),
           ...(quote.coupon ? { couponId: quote.coupon.id, discountAmount: quote.discountAmount } : {}),
           items: {
             create: quote.resolvedItems.map((item) => ({
@@ -53,6 +67,15 @@ export async function POST(req: Request) {
               price: item.price,
             })),
           },
+          ...(paymentMethod === "BANK_TRANSFER" ? { payments: {
+            create: {
+              provider: "MANUAL",
+              method: "BANK_TRANSFER",
+              status: "PENDING",
+              amount: quote.total,
+               currencyCode,
+            },
+          }} : {}),
           agreementSnapshots: {
             create: [
               { documentType: "PRE_CONTRACT_INFORMATION", templateVersion: quote.agreement.templateVersion, locale, contentHtml: quote.agreement.preContractHtml, integrityHash: quote.agreement.preContractHash, acceptedAt },

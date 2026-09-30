@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@@/lib/auth-helper";
 import { prisma } from "@/lib/prisma";
+import { isIyzicoProcessingSessionActive } from "@@/lib/payments/iyzico-session";
 
 /**
  * GET /api/admin/orders/[id]
@@ -25,8 +26,9 @@ export async function GET(
                 id: true,
                 orderNumber: true,
                 total: true,
-                currencyCode: true,
+                 currencyCode: true,
                 status: true,
+                paymentMethod: true,
                 createdAt: true,
                 trackingNumber: true,
                 shippingCompany: true,
@@ -55,6 +57,17 @@ export async function GET(
                     },
                 },
                 returnRequest: true,
+                payments: {
+                    select: {
+                        provider: true,
+                        method: true,
+                        status: true,
+                        paymentId: true,
+                        paidAt: true,
+                        createdAt: true,
+                        updatedAt: true,
+                    },
+                },
             },
         });
 
@@ -68,7 +81,25 @@ export async function GET(
             orderBy: { createdAt: "desc" },
         }) : null;
 
-        return NextResponse.json({ order, address });
+        const hasSuccessfulPayment = order.payments.some((payment) => payment.status === "SUCCESS");
+        const hasActiveIyzicoPayment = order.payments.some((payment) =>
+            payment.provider === "IYZICO"
+            && payment.method === "IYZICO"
+            && isIyzicoProcessingSessionActive(payment),
+        );
+        const safeOrder = Object.fromEntries(
+            Object.entries(order).filter(([key]) => key !== "payments"),
+        );
+
+        return NextResponse.json({
+            order: {
+                ...safeOrder,
+                canMarkPaidManually: !hasSuccessfulPayment
+                    && (order.status === "PENDING" || order.status === "PAYMENT_REJECTED"),
+                hasActiveIyzicoPayment,
+            },
+            address,
+        });
     } catch (error) {
         console.error("Error fetching order:", error);
         return NextResponse.json(

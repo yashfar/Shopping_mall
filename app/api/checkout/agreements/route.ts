@@ -11,6 +11,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     if (!body.addressId) return NextResponse.json({ error: "Delivery address is required" }, { status: 400 });
+    const paymentMethod = body.paymentMethod ?? "BANK_TRANSFER";
+    if (paymentMethod !== "BANK_TRANSFER" && paymentMethod !== "IYZICO") {
+      return NextResponse.json({ error: "INVALID_PAYMENT_METHOD" }, { status: 400 });
+    }
     const locale = getLocaleFromRequest(req) === "tr" ? "tr" : "en";
     const quote = await prisma.$transaction((tx) => buildCheckoutAgreement(tx, {
       userId: session.user.id,
@@ -18,6 +22,7 @@ export async function POST(req: Request) {
       couponCode: body.couponCode,
       currencyCode: body.currencyCode === "USD" ? "USD" : "TRY",
       locale,
+      paymentMethod,
     }));
 
     return NextResponse.json({

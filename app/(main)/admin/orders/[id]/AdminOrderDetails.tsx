@@ -60,6 +60,9 @@ type Order = {
     total: number;
     currencyCode?: string;
     status: string;
+    paymentMethod: "BANK_TRANSFER" | "IYZICO";
+    canMarkPaidManually: boolean;
+    hasActiveIyzicoPayment: boolean;
     createdAt: string;
     user?: User | null;
     items?: OrderItem[];
@@ -108,6 +111,14 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
     const [trackingUrl, setTrackingUrl] = useState("");
     const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [paymentConfirm, setPaymentConfirm] = useState<"approve" | "reject" | null>(null);
+    const [showManualPayment, setShowManualPayment] = useState(false);
+    const [manualPaymentMethod, setManualPaymentMethod] = useState<"BANK_TRANSFER" | "CASH">("BANK_TRANSFER");
+    const [manualAmount, setManualAmount] = useState("");
+    const [manualPaidAt, setManualPaidAt] = useState("");
+    const [manualReference, setManualReference] = useState("");
+    const [manualNote, setManualNote] = useState("");
+    const [confirmActiveIyzico, setConfirmActiveIyzico] = useState(false);
+    const [settlingManually, setSettlingManually] = useState(false);
 
     useEffect(() => {
         fetchOrder();
@@ -124,10 +135,58 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             setTrackingNumber(data.order.trackingNumber || "");
             setShippingCompany(data.order.shippingCompany || "");
             setTrackingUrl(data.order.trackingUrl || "");
+            setManualAmount((data.order.total / 100).toFixed(2));
+            setManualPaidAt(new Date().toISOString().slice(0, 16));
         } catch (err: any) {
             setError(err.message || "Failed to load order");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleManualSettlement = async () => {
+        if (!order || settlingManually) return;
+        const amount = Math.round(Number(manualAmount) * 100);
+        if (!Number.isSafeInteger(amount) || amount <= 0) {
+            toast.error(t("invalidManualAmount"));
+            return;
+        }
+        if (order.hasActiveIyzicoPayment && !confirmActiveIyzico) {
+            toast.error(t("activeIyzicoConfirmationRequired"));
+            return;
+        }
+
+        setSettlingManually(true);
+        try {
+            const response = await fetch(`/api/admin/orders/${orderId}/manual-payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    method: manualPaymentMethod,
+                    amount,
+                    paidAt: new Date(manualPaidAt).toISOString(),
+                    reference: manualReference,
+                    note: manualNote,
+                    confirmActiveIyzico,
+                }),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                const messages: Record<string, string> = {
+                    ORDER_ALREADY_PAID: t("manualAlreadyPaid"),
+                    ACTIVE_IYZICO_CONFIRMATION_REQUIRED: t("activeIyzicoConfirmationRequired"),
+                    USE_BANK_TRANSFER_APPROVAL: t("useBankTransferApproval"),
+                    PAYMENT_AMOUNT_MUST_MATCH_ORDER_TOTAL: t("manualAmountMustMatch"),
+                };
+                throw new Error(messages[data.error] || t("manualPaymentFailed"));
+            }
+            toast.success(t("manualPaymentSuccess"));
+            setShowManualPayment(false);
+            await fetchOrder();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : t("manualPaymentFailed"));
+        } finally {
+            setSettlingManually(false);
         }
     };
 
@@ -531,6 +590,56 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
             {/* Right Column - Sidebar (1/3 width) */}
             <div className="space-y-6">
 
+                {order.canMarkPaidManually && (
+                    <div className="bg-white rounded-3xl border border-amber-200 shadow-xl shadow-amber-100/40 p-6">
+                        <Button
+                            onClick={() => setShowManualPayment((visible) => !visible)}
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl"
+                        >
+                            {t("markPaidManually")}
+                        </Button>
+
+                        {showManualPayment && (
+                            <div className="mt-5 space-y-4">
+                                {order.paymentMethod === "IYZICO" && (
+                                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                        {t("manualIyzicoNotice")}
+                                    </p>
+                                )}
+                                <div>
+                                    <label className="text-xs font-bold text-gray-900 block mb-2">{t("manualPaymentMethod")}</label>
+                                    <Select value={manualPaymentMethod} onValueChange={(value) => setManualPaymentMethod(value as "BANK_TRANSFER" | "CASH")}>
+                                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="bg-white">
+                                            <SelectItem value="BANK_TRANSFER">{t("manualMethodBankTransfer")}</SelectItem>
+                                            <SelectItem value="CASH">{t("manualMethodCash")}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-900 block mb-2">{t("manualAmount")}</label>
+                                    <input type="number" min="0.01" step="0.01" value={manualAmount} onChange={(event) => setManualAmount(event.target.value)} className="w-full h-10 px-3 rounded-xl border border-gray-200" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-900 block mb-2">{t("manualPaymentDate")}</label>
+                                    <input type="datetime-local" value={manualPaidAt} onChange={(event) => setManualPaidAt(event.target.value)} className="w-full h-10 px-3 rounded-xl border border-gray-200" />
+                                </div>
+                                <input type="text" maxLength={120} value={manualReference} onChange={(event) => setManualReference(event.target.value)} placeholder={t("manualReferencePlaceholder")} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm" />
+                                <textarea maxLength={500} rows={2} value={manualNote} onChange={(event) => setManualNote(event.target.value)} placeholder={t("manualNotePlaceholder")} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none" />
+                                {order.hasActiveIyzicoPayment && (
+                                    <label className="flex gap-2 items-start text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+                                        <input type="checkbox" checked={confirmActiveIyzico} onChange={(event) => setConfirmActiveIyzico(event.target.checked)} className="mt-0.5" />
+                                        <span>{t("confirmActiveIyzico")}</span>
+                                    </label>
+                                )}
+                                <Button onClick={handleManualSettlement} disabled={settlingManually} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                                    {settlingManually ? t("processing") : t("confirmManualPayment")}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Status Card */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-6 pointer-events-none">
@@ -570,7 +679,6 @@ export default function AdminOrderDetails({ orderId }: { orderId: string }) {
                                 <SelectItem value="pending">{t("statusPendingPayment")}</SelectItem>
                                 <SelectItem value="payment_uploaded">{t("statusPaymentUploaded")}</SelectItem>
                                 <SelectItem value="payment_rejected">{t("statusPaymentRejected")}</SelectItem>
-                                <SelectItem value="ready_to_ship">{t("statusReadyToShip")}</SelectItem>
                                 <SelectItem value="shipped">{t("statusShipped")}</SelectItem>
                                 <SelectItem value="delivered">{t("statusDelivered")}</SelectItem>
                                 <SelectItem value="cancelled">{t("statusCancelled")}</SelectItem>
