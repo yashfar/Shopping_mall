@@ -1,28 +1,73 @@
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
 const require = createRequire(import.meta.url);
 const packageRoot = dirname(require.resolve("iyzipay/package.json"));
 const source = join(packageRoot, "lib");
-const destination = resolve(process.cwd(), "vendor", "iyzipay", "lib");
+const vendorRoot = resolve(process.cwd(), "vendor", "iyzipay");
+const destination = join(vendorRoot, "lib");
 
-rmSync(destination, { recursive: true, force: true });
-mkdirSync(dirname(destination), { recursive: true });
+rmSync(vendorRoot, { recursive: true, force: true });
+mkdirSync(vendorRoot, { recursive: true });
 cpSync(source, destination, { recursive: true, dereference: true });
 
-const resourceBase = join(destination, "IyzipayResource.js");
-const resourceSource = readFileSync(resourceBase, "utf8");
-const dependencyImport = "const request = require('postman-request');";
-if (!resourceSource.includes(dependencyImport)) {
-  throw new Error("Unexpected iyzipay IyzipayResource.js dependency import");
+function resolvePackageJson(packageName, issuerRequire) {
+  try {
+    return issuerRequire.resolve(`${packageName}/package.json`);
+  } catch {
+    let current = dirname(issuerRequire.resolve(packageName));
+    while (current !== dirname(current)) {
+      const candidate = join(current, "package.json");
+      if (existsSync(candidate)) {
+        const metadata = JSON.parse(readFileSync(candidate, "utf8"));
+        if (metadata.name === packageName) return candidate;
+      }
+      current = dirname(current);
+    }
+  }
+  throw new Error(`Unable to resolve package metadata for ${packageName}`);
 }
-writeFileSync(
-  resourceBase,
-  resourceSource.replace(
-    dependencyImport,
-    "const packageRequire = require('module').createRequire(require.resolve('iyzipay/package.json'));\nconst request = packageRequire('postman-request');",
-  ),
-);
 
-console.log("Prepared iyzipay runtime in vendor/iyzipay/lib");
+function copyPackageTree(packageName, issuerRequire, targetNodeModules, ancestry = new Set(), optional = false) {
+  let packageJson;
+  try {
+    packageJson = resolvePackageJson(packageName, issuerRequire);
+  } catch (error) {
+    if (optional) return false;
+    throw error;
+  }
+
+  const sourceRoot = dirname(packageJson);
+  const identity = `${packageName}:${sourceRoot}`;
+  if (ancestry.has(identity)) return true;
+
+  const targetRoot = join(targetNodeModules, ...packageName.split("/"));
+  mkdirSync(targetRoot, { recursive: true });
+  for (const entry of readdirSync(sourceRoot)) {
+    if (entry === "node_modules") continue;
+    cpSync(join(sourceRoot, entry), join(targetRoot, entry), {
+      recursive: true,
+      dereference: true,
+    });
+  }
+
+  const metadata = issuerRequire(packageJson);
+  const packageRequire = createRequire(packageJson);
+  const nextAncestry = new Set(ancestry).add(identity);
+  const nestedNodeModules = join(targetRoot, "node_modules");
+  for (const dependencyName of Object.keys(metadata.dependencies ?? {})) {
+    copyPackageTree(dependencyName, packageRequire, nestedNodeModules, nextAncestry);
+  }
+  for (const dependencyName of Object.keys(metadata.optionalDependencies ?? {})) {
+    copyPackageTree(dependencyName, packageRequire, nestedNodeModules, nextAncestry, true);
+  }
+  return true;
+}
+
+const iyzipayRequire = createRequire(require.resolve("iyzipay/package.json"));
+if (!copyPackageTree("postman-request", iyzipayRequire, join(vendorRoot, "node_modules"))) {
+  throw new Error("Unable to resolve iyzipay dependency postman-request");
+}
+
+console.log("Prepared iyzipay runtime and dependency tree in vendor/iyzipay");
