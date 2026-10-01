@@ -26,7 +26,7 @@ export default async function Navbar() {
 
   return (
     <nav className="sticky top-0 z-40 p-1 transition-all duration-300">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-2.5 flex items-center justify-between gap-6 bg-white/90 backdrop-blur-md rounded-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-[#A9A9A9]/10">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-1.5 md:py-2.5 flex items-center justify-between gap-3 md:gap-6 bg-white/90 backdrop-blur-md rounded-[10px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-[#A9A9A9]/10">
         {/* Logo/Brand */}
         <Link
           href="/"
@@ -37,7 +37,7 @@ export default async function Navbar() {
             alt={t("logoAlt")}
             width={120}
             height={40}
-            className="object-contain"
+            className="w-24 md:w-[120px] h-auto object-contain"
           />
         </Link>
 

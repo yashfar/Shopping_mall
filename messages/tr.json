@@ -72,7 +72,8 @@
     "signIn": "Giriş Yap",
     "createAccount": "Hesap Oluştur",
     "user": "Kullanıcı",
-    "language": "Dil"
+    "language": "Dil",
+    "currency": "Para Birimi"
   },
   "footer": {
     "storeName": "Creative Aventus",
@@ -652,7 +653,13 @@
   },
   "featuredCarousel": {
     "viewAll": "Tümünü Gör",
-    "outOfStock": "Tükendi"
+    "outOfStock": "Tükendi",
+    "bestSellerBadge": "Çok Satan",
+    "newBadge": "Yeni",
+    "bestSellersSubtitle": "Müşterilerimizin seçtiği en sevilen ürünlerimiz.",
+    "newArrivalsSubtitle": "En yeni tasarımlarımızı ve taze fikirleri keşfedin.",
+    "previousProducts": "Önceki ürünler",
+    "nextProducts": "Sonraki ürünler"
   },
   "productList": {
     "noProductsFound": "Ürün bulunamadı",

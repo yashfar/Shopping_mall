@@ -134,7 +134,7 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
 
     return (
         <div
-            className="relative w-full h-[300px] sm:h-[400px] md:h-auto md:aspect-video overflow-hidden mb-8 md:mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]"
+            className="relative w-full h-[300px] sm:h-[360px] md:h-[460px] xl:h-auto xl:aspect-video overflow-hidden mb-2 sm:mb-4 md:mb-8 xl:mb-12 shadow-2xl group border-y border-[#A9A9A9]/20 max-h-[calc(100vh-75px)]"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -256,14 +256,14 @@ export default function BannerCarousel({ banners, settings }: BannerCarouselProp
 
             {/* Indicators - Only show if more than 1 banner */}
             {banners.length > 1 && (
-                <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+                <div className="absolute bottom-3 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2 md:gap-3">
                     {banners.map((banner, index) => (
                         <button
                             key={banner.id}
                             onClick={() => goToSlide(index)}
                             className={`transition-all duration-300 rounded-full ${currentIndex === index
-                                ? "w-6 h-2 md:w-8 md:h-2.5 bg-white"
-                                : "w-2 h-2 md:w-2.5 md:h-2.5 bg-white/40 hover:bg-white/60"
+                                ? "w-5 h-1.5 md:w-8 md:h-2.5 bg-white"
+                                : "w-1.5 h-1.5 md:w-2.5 md:h-2.5 bg-white/40 hover:bg-white/60"
                                 }`}
                             aria-label={`Go to banner ${index + 1}`}
                         />

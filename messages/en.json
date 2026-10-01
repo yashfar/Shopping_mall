@@ -72,7 +72,8 @@
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "user": "User",
-    "language": "Language"
+    "language": "Language",
+    "currency": "Currency"
   },
   "footer": {
     "storeName": "Creative Aventus",
@@ -652,7 +653,13 @@
   },
   "featuredCarousel": {
     "viewAll": "View All",
-    "outOfStock": "Out of Stock"
+    "outOfStock": "Out of Stock",
+    "bestSellerBadge": "Best Seller",
+    "newBadge": "New",
+    "bestSellersSubtitle": "Our most loved products, chosen by our customers.",
+    "newArrivalsSubtitle": "Discover our latest designs and fresh ideas.",
+    "previousProducts": "Previous products",
+    "nextProducts": "Next products"
   },
   "productList": {
     "noProductsFound": "No products found",

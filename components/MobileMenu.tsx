@@ -56,23 +56,23 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden text-[#C9B99A]"
+          className="md:hidden h-9 w-9 shrink-0 text-[#C9B99A]"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-white"
+        className="w-[calc(100vw-1rem)] max-w-96 p-0 flex h-full min-h-0 flex-col overflow-hidden bg-white"
       >
-        <SheetHeader className="p-4 border-b border-gray-100 bg-gray-50/30">
+        <SheetHeader className="shrink-0 p-4 border-b border-gray-100 bg-gray-50/30">
           <SheetTitle className="text-left font-bold text-lg text-[#1A1A1A]">
             {t("menu")}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto py-4">
           <nav className="flex flex-col gap-2 px-4">
             {/* Public Navigation */}
             <div className="space-y-1">
@@ -190,15 +190,24 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
         </div>
 
         {/* Footer / User Profile */}
-        <div className="border-t border-gray-100 bg-gray-50/50">
+        <div className="shrink-0 border-t border-gray-100 bg-gray-50/50 pb-[env(safe-area-inset-bottom)]">
           {/* Language + Currency Switchers */}
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              {t("language")}
-            </span>
-            <div className="flex items-center gap-2">
-              <LanguageSwitcher />
-              <CurrencySwitcher />
+          <div className="space-y-2 border-b border-gray-100 px-4 py-3">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <span className="shrink-0 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {t("language")}
+              </span>
+              <div className="shrink-0">
+                <LanguageSwitcher />
+              </div>
+            </div>
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <span className="shrink-0 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {t("currency")}
+              </span>
+              <div className="shrink-0">
+                <CurrencySwitcher />
+              </div>
             </div>
           </div>
 
