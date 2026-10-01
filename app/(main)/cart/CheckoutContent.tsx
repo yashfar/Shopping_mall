@@ -73,8 +73,6 @@ export default function CheckoutContent() {
     useState<AgreementPreview | null>(null);
   const [agreementsAccepted, setAgreementsAccepted] = useState(false);
   const [reviewingAgreements, setReviewingAgreements] = useState(false);
-  const [identityNumber, setIdentityNumber] = useState("");
-  const [identityNumberError, setIdentityNumberError] = useState("");
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("BANK_TRANSFER");
 
@@ -216,15 +214,6 @@ export default function CheckoutContent() {
   };
 
   const createOrder = async () => {
-    const normalizedIdentityNumber = identityNumber.trim();
-    if (
-      (normalizedIdentityNumber && !/^\d{11}$/.test(normalizedIdentityNumber)) ||
-      (paymentMethod === "IYZICO" && !normalizedIdentityNumber)
-    ) {
-      setIdentityNumberError(t("identityNumberInvalid"));
-      return;
-    }
-
     try {
       setCreating(true);
       const response = await fetch("/api/orders/create", {
@@ -236,7 +225,6 @@ export default function CheckoutContent() {
           addressId: selectedAddressId,
           acceptedDocuments: agreementsAccepted,
           acceptedBundleHash: agreementPreview?.bundleHash,
-          identityNumber: normalizedIdentityNumber || undefined,
           paymentMethod,
         }),
       });
@@ -589,7 +577,6 @@ export default function CheckoutContent() {
                       checked={paymentMethod === method}
                       onChange={() => {
                         setPaymentMethod(method);
-                        setIdentityNumberError("");
                         setAgreementPreview(null);
                         setAgreementsAccepted(false);
                       }}
@@ -635,39 +622,6 @@ export default function CheckoutContent() {
                 </option>
               ))}
             </select>
-            {paymentMethod === "IYZICO" && (
-              <div className="space-y-1.5">
-                <label
-                  className="block text-sm font-bold text-gray-700"
-                  htmlFor="identity-number"
-                >
-                  {t("identityNumber")}
-                </label>
-                <input
-                  id="identity-number"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={11}
-                  value={identityNumber}
-                  onChange={(event) => {
-                    setIdentityNumber(event.target.value);
-                    setIdentityNumberError("");
-                  }}
-                  disabled={creating}
-                  aria-describedby="identity-number-help"
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
-                />
-                <p id="identity-number-help" className="text-xs text-gray-500">
-                  {t("identityNumberHelp")}
-                </p>
-                {identityNumberError && (
-                  <p className="text-xs font-medium text-red-500">
-                    {identityNumberError}
-                  </p>
-                )}
-              </div>
-            )}
             <button
               type="button"
               onClick={reviewAgreements}

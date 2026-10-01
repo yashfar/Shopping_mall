@@ -16,6 +16,7 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const CALLBACK_PATH = "/api/payments/iyzico/callback";
+const IYZICO_BUYER_IDENTITY_NUMBER = "11111111111";
 
 class RequestError extends Error {
     constructor(
@@ -188,15 +189,6 @@ export async function POST(req: Request) {
             throw new RequestError("BUYER_DATA_REQUIRED", 422, "Required buyer information is missing");
         }
 
-        const identityNumber = order.identityNumber?.trim();
-        if (!identityNumber || !/^\d{11}$/.test(identityNumber)) {
-            throw new RequestError(
-                "BUYER_IDENTITY_NUMBER_REQUIRED",
-                422,
-                "A valid buyer identity number is required for iyzico payment",
-            );
-        }
-
         const itemWeights = order.items.map((item) => {
             if (!Number.isSafeInteger(item.price) || item.price <= 0 || !Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
                 throw new RequestError("INVALID_ORDER_ITEMS", 422, "Order contains an invalid item");
@@ -262,7 +254,7 @@ export async function POST(req: Request) {
                 id: order.user.id,
                 name: firstName,
                 surname: lastName,
-                identityNumber,
+                identityNumber: IYZICO_BUYER_IDENTITY_NUMBER,
                 email: order.user.email,
                 gsmNumber: phone,
                 registrationAddress: order.shippingAddress.trim(),

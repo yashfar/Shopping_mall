@@ -24,14 +24,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "DELIVERY_ADDRESS_REQUIRED" }, { status: 400 });
     }
     const currencyCode: "TRY" | "USD" = body.currencyCode === "USD" ? "USD" : "TRY";
-    if (body.identityNumber != null && typeof body.identityNumber !== "string") {
-      return NextResponse.json({ error: "INVALID_IDENTITY_NUMBER" }, { status: 400 });
-    }
-    const identityNumber = typeof body.identityNumber === "string" ? body.identityNumber.trim() : "";
-    if ((identityNumber && !/^\d{11}$/.test(identityNumber)) || (paymentMethod === "IYZICO" && !identityNumber)) {
-      return NextResponse.json({ error: "INVALID_IDENTITY_NUMBER" }, { status: 400 });
-    }
-
     const result = await prisma.$transaction(async (tx) => {
       const quote = await buildCheckoutAgreement(tx, {
         userId: session.user.id,
@@ -56,7 +48,6 @@ export async function POST(req: Request) {
           shippingName: quote.buyerName,
           shippingPhone: quote.address.phone,
           shippingAddress: quote.deliveryAddress,
-          ...(identityNumber ? { identityNumber } : {}),
           ...(quote.coupon ? { couponId: quote.coupon.id, discountAmount: quote.discountAmount } : {}),
           items: {
             create: quote.resolvedItems.map((item) => ({
