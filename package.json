@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm run prepare:iyzipay-runtime && pnpm run verify:iyzipay-runtime && prisma generate && next build --webpack",
+    "build": "pnpm run prepare:iyzipay-runtime && pnpm run verify:iyzipay-runtime && prisma generate && next build --webpack && pnpm run verify:iyzipay-traces",
     "start": "next start",
     "lint": "eslint",
     "test:csv": "node --require tsx/cjs --test app/lib/csv/__tests__/serializer.test.ts",
@@ -14,6 +14,7 @@
     "test:agreements:integration": "node --require tsx/cjs scripts/test-order-agreements-integration.ts",
     "prepare:iyzipay-runtime": "node scripts/prepare-iyzipay-runtime.mjs",
     "verify:iyzipay-runtime": "node scripts/verify-iyzipay-runtime.mjs",
+    "verify:iyzipay-traces": "node scripts/verify-iyzipay-build-traces.mjs",
     "postinstall": "pnpm run prepare:iyzipay-runtime && pnpm run verify:iyzipay-runtime && prisma generate"
   },
   "dependencies": {

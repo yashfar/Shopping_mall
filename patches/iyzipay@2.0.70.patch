@@ -1,21 +1,38 @@
 diff --git a/lib/Iyzipay.js b/lib/Iyzipay.js
-index a2419233197b5cdd411e7700d3063295599beb2e..4c8de97e4c5145de59019616e1553b87568cb86e 100644
+index a2419233197b5cdd411e7700d3063295599beb2e..c47dbce3f8840b04d4f1f5982182ebeb570875fb 100644
 --- a/lib/Iyzipay.js
 +++ b/lib/Iyzipay.js
-@@ -1,6 +1,7 @@
+@@ -1,6 +1,5 @@
  'use strict';
  
- var fs = require('fs');
-+var path = require('path');
+-var fs = require('fs');
  
  function Iyzipay(config) {
      if (!(this instanceof Iyzipay)) {
-@@ -41,7 +42,7 @@ function Iyzipay(config) {
+@@ -40,14 +39,19 @@ function Iyzipay(config) {
+     this._initResources();
+ }
  
++Iyzipay._runtimeResources = null;
++
++Iyzipay.setRuntimeResources = function (resources) {
++    Iyzipay._runtimeResources = resources;
++};
++
  Iyzipay.prototype._initResources = function () {
      var _self = this;
 -    var modelsPath = __dirname + '/resources';
-+    var modelsPath = path.resolve(process.cwd(), 'vendor', 'iyzipay', 'lib', 'resources');
-     fs.readdirSync(modelsPath).forEach(function (fileName) {
-         if (~fileName.indexOf('.js')) {
-             var resource = require(modelsPath + '/' + fileName);
+-    fs.readdirSync(modelsPath).forEach(function (fileName) {
+-        if (~fileName.indexOf('.js')) {
+-            var resource = require(modelsPath + '/' + fileName);
+-            var resourceName = fileName.split('.js')[0];
+-            _self[resourceName[0].toLowerCase() + resourceName.substring(1)] = new resource(_self._config);
+-        }
++    if (!Iyzipay._runtimeResources) {
++        throw new Error('iyzipay runtime resources are not configured');
++    }
++    Object.keys(Iyzipay._runtimeResources).forEach(function (resourceName) {
++        var resource = Iyzipay._runtimeResources[resourceName];
++        _self[resourceName[0].toLowerCase() + resourceName.substring(1)] = new resource(_self._config);
+     });
+ };
