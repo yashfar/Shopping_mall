@@ -1,11 +1,16 @@
-import { lstatSync, readFileSync, readdirSync } from "node:fs";
+import { lstatSync, readdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
-const runtimeRoot = resolve(process.cwd(), "vendor", "iyzipay", "lib");
+const require = createRequire(import.meta.url);
+
+const vendorRoot = resolve(process.cwd(), "vendor", "iyzipay");
+const runtimeRoot = join(vendorRoot, "lib");
 const requiredFiles = [
   join(runtimeRoot, "resources", "CheckoutForm.js"),
   join(runtimeRoot, "resources", "CheckoutFormInitialize.js"),
   join(runtimeRoot, "IyzipayResource.js"),
+  join(vendorRoot, "node_modules", "postman-request", "package.json"),
 ];
 
 function assertRealTree(directory) {
@@ -21,9 +26,16 @@ for (const file of requiredFiles) {
     throw new Error(`Required iyzipay runtime file is not a real file: ${file}`);
   }
 }
-assertRealTree(runtimeRoot);
-if (!readFileSync(join(runtimeRoot, "IyzipayResource.js"), "utf8").includes("packageRequire('postman-request')")) {
-  throw new Error("Vendored iyzipay dependency bridge is missing");
+assertRealTree(vendorRoot);
+
+const Iyzipay = require("iyzipay");
+const client = new Iyzipay({
+  apiKey: "build-verification",
+  secretKey: "build-verification",
+  uri: "https://sandbox-api.iyzipay.com",
+});
+if (!client.checkoutForm || !client.checkoutFormInitialize) {
+  throw new Error("Vendored iyzipay Checkout Form resources did not initialize");
 }
 
 console.log("Verified project-owned iyzipay runtime");

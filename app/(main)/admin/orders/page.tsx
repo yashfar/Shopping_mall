@@ -9,10 +9,11 @@ type SearchParams = {
 };
 
 type PageProps = {
-    searchParams: SearchParams;
+    searchParams: Promise<SearchParams>;
 };
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
+    const resolvedSearchParams = await searchParams;
     const t = await getTranslations("adminOrders");
     const session = await auth();
 
@@ -40,7 +41,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                 <p className="text-gray-500 mt-1 font-medium">{t("orderManagementDesc")}</p>
             </div>
 
-            <AdminOrdersList initialStatus={searchParams.status} />
+            <AdminOrdersList initialStatus={resolvedSearchParams.status} />
         </div>
     );
 }
