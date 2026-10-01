@@ -1,0 +1,21 @@
+diff --git a/lib/Iyzipay.js b/lib/Iyzipay.js
+index a2419233197b5cdd411e7700d3063295599beb2e..4c8de97e4c5145de59019616e1553b87568cb86e 100644
+--- a/lib/Iyzipay.js
++++ b/lib/Iyzipay.js
+@@ -1,6 +1,7 @@
+ 'use strict';
+ 
+ var fs = require('fs');
++var path = require('path');
+ 
+ function Iyzipay(config) {
+     if (!(this instanceof Iyzipay)) {
+@@ -41,7 +42,7 @@ function Iyzipay(config) {
+ 
+ Iyzipay.prototype._initResources = function () {
+     var _self = this;
+-    var modelsPath = __dirname + '/resources';
++    var modelsPath = path.resolve(process.cwd(), 'vendor', 'iyzipay', 'lib', 'resources');
+     fs.readdirSync(modelsPath).forEach(function (fileName) {
+         if (~fileName.indexOf('.js')) {
+             var resource = require(modelsPath + '/' + fileName);
