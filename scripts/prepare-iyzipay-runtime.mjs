@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
@@ -11,6 +11,23 @@ const destination = join(vendorRoot, "lib");
 rmSync(vendorRoot, { recursive: true, force: true });
 mkdirSync(vendorRoot, { recursive: true });
 cpSync(source, destination, { recursive: true, dereference: true });
+
+const resourcesRoot = join(destination, "resources");
+const resourceFiles = readdirSync(resourcesRoot)
+  .filter((fileName) => fileName.endsWith(".js"))
+  .sort();
+const resourceManifest = [
+  '"use strict";',
+  "",
+  "module.exports = {",
+  ...resourceFiles.map((fileName) => {
+    const resourceName = fileName.slice(0, -3);
+    return `  ${JSON.stringify(resourceName)}: require(${JSON.stringify(`./lib/resources/${fileName}`)}),`;
+  }),
+  "};",
+  "",
+].join("\n");
+writeFileSync(join(vendorRoot, "resource-manifest.js"), resourceManifest, "utf8");
 
 function resolvePackageJson(packageName, issuerRequire) {
   try {

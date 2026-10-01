@@ -1,6 +1,9 @@
 import "server-only";
 
 import Iyzipay from "iyzipay";
+import iyzipayResources from "@@/vendor/iyzipay/resource-manifest.js";
+
+Iyzipay.setRuntimeResources(iyzipayResources);
 
 const SANDBOX_BASE_URL = "https://sandbox-api.iyzipay.com";
 

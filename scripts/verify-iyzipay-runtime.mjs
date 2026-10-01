@@ -7,9 +7,11 @@ const require = createRequire(import.meta.url);
 const vendorRoot = resolve(process.cwd(), "vendor", "iyzipay");
 const runtimeRoot = join(vendorRoot, "lib");
 const requiredFiles = [
+  join(runtimeRoot, "resources", "ApiTest.js"),
   join(runtimeRoot, "resources", "CheckoutForm.js"),
   join(runtimeRoot, "resources", "CheckoutFormInitialize.js"),
   join(runtimeRoot, "IyzipayResource.js"),
+  join(vendorRoot, "resource-manifest.js"),
   join(vendorRoot, "node_modules", "postman-request", "package.json"),
 ];
 
@@ -29,6 +31,7 @@ for (const file of requiredFiles) {
 assertRealTree(vendorRoot);
 
 const Iyzipay = require("iyzipay");
+Iyzipay.setRuntimeResources(require(join(vendorRoot, "resource-manifest.js")));
 const client = new Iyzipay({
   apiKey: "build-verification",
   secretKey: "build-verification",

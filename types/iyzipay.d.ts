@@ -85,6 +85,8 @@ declare module "iyzipay" {
     };
 
     class Iyzipay {
+        static setRuntimeResources(resources: Record<string, new (config: IyzipayConfig) => unknown>): void;
+
         constructor(config: IyzipayConfig);
 
         checkoutFormInitialize: {
