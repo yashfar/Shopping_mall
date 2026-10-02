@@ -28,6 +28,7 @@ interface ProductInfiniteListProps {
     locale?: string;
     emptyMessage?: string;
     emptyDescription?: string;
+    variant?: "default" | "homeGrid";
 }
 
 export default function ProductInfiniteList({
@@ -36,6 +37,7 @@ export default function ProductInfiniteList({
     locale = "tr",
     emptyMessage,
     emptyDescription,
+    variant = "default",
 }: ProductInfiniteListProps) {
     const t = useTranslations("productList");
     const { products, loading, hasMore, loadMoreRef } = useInfiniteProducts({
@@ -75,9 +77,12 @@ export default function ProductInfiniteList({
     return (
         <div>
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className={variant === "homeGrid"
+                ? "grid grid-cols-1 gap-4 min-[360px]:grid-cols-2 min-[360px]:gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:gap-6"
+                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
+            }>
                 {products.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product} variant={variant} />
                 ))}
             </div>
 

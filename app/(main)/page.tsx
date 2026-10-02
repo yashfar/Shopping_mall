@@ -216,6 +216,7 @@ export default async function Home({ searchParams }: HomeProps) {
         initialProducts={filteredProducts}
         categories={categories}
         locale={locale}
+        variant="homeGrid"
         queryParams={{
           q: query,
           category,
