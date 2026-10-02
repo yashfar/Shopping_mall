@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useCurrency } from "@@/context/CurrencyContext";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,6 +18,8 @@ interface Product {
   id: string;
   title: string;
   price: number;
+  salePrice?: number | null;
+  prices?: PriceEntry[];
   thumbnail: string | null;
   stock: number;
   category?: { name: string } | null;
@@ -39,7 +41,7 @@ export default function FeaturedProductsCarousel({
   linkText,
 }: FeaturedProductsCarouselProps) {
   const t = useTranslations("featuredCarousel");
-  const { formatPrice } = useCurrency();
+  const { formatResolvedPrice, resolveProductPrice } = useCurrency();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -159,12 +161,15 @@ export default function FeaturedProductsCarousel({
           className="flex gap-4 overflow-x-auto px-1 pt-2 pb-4 snap-x snap-mandatory scrollbar-hide md:gap-6"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {products.map((product) => (
-            <Link
-              key={product.id}
-              href={`/product/${product.id}`}
-              className="group w-[clamp(170px,52vw,200px)] flex-shrink-0 snap-start rounded-2xl transition-transform duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:w-[220px] md:hover:-translate-y-1 lg:w-[240px]"
-            >
+          {products.map((product) => {
+            const resolved = resolveProductPrice(product);
+
+            return (
+              <Link
+                key={product.id}
+                href={`/product/${product.id}`}
+                className="group w-[clamp(170px,52vw,200px)] flex-shrink-0 snap-start rounded-2xl transition-transform duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:w-[220px] md:hover:-translate-y-1 lg:w-[240px]"
+              >
               <div
                 className={`relative mb-3 aspect-[3/4] overflow-hidden rounded-2xl border transition-shadow duration-300 ${
                   isBestSellers
@@ -224,15 +229,27 @@ export default function FeaturedProductsCarousel({
                   </span>
                 )}
               </div>
-              <p
-                className={`mt-2 text-foreground ${
-                  isBestSellers ? "text-base font-black" : "text-sm font-bold"
-                }`}
-              >
-                {formatPrice(product.price)}
-              </p>
-            </Link>
-          ))}
+                <p
+                  className={`mt-2 text-foreground ${
+                    isBestSellers ? "text-base font-black" : "text-sm font-bold"
+                  }`}
+                >
+                  {resolved === null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : resolved.salePrice ? (
+                    <>
+                      <span>{formatResolvedPrice({ ...resolved, price: resolved.salePrice })}</span>
+                      <span className="ml-2 text-xs font-medium text-muted-foreground line-through">
+                        {formatResolvedPrice(resolved)}
+                      </span>
+                    </>
+                  ) : (
+                    formatResolvedPrice(resolved)
+                  )}
+                </p>
+              </Link>
+            );
+          })}
 
           {/* View All Card */}
           {linkHref && (

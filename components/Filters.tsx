@@ -8,17 +8,21 @@ import { getCurrencySymbol } from "@@/lib/format-price";
 
 interface FiltersProps {
     categories: string[];
+    onPriceApplied?: () => void;
 }
 
-export default function Filters({ categories }: FiltersProps) {
+export default function Filters({ categories, onPriceApplied }: FiltersProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const t = useTranslations("filters");
     const { currency } = useCurrency();
     const currencySymbol = getCurrencySymbol(currency);
+    const queryPriceCurrency = searchParams.get("priceCurrency");
+    const isPriceCurrencyCurrent = !queryPriceCurrency || queryPriceCurrency === currency;
 
-    const [minPrice, setMinPrice] = useState(() => searchParams.get("min") || "");
-    const [maxPrice, setMaxPrice] = useState(() => searchParams.get("max") || "");
+    const [minPrice, setMinPrice] = useState(() => isPriceCurrencyCurrent ? searchParams.get("min") || "" : "");
+    const [maxPrice, setMaxPrice] = useState(() => isPriceCurrencyCurrent ? searchParams.get("max") || "" : "");
+    const [priceError, setPriceError] = useState("");
 
     // Get current filters from URL
     const currentCategory = searchParams.get("category") || "";
@@ -29,6 +33,12 @@ export default function Filters({ categories }: FiltersProps) {
 
     const updateFilters = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams.toString());
+
+        if (queryPriceCurrency && queryPriceCurrency !== currency) {
+            params.delete("min");
+            params.delete("max");
+            params.delete("priceCurrency");
+        }
 
         if (value) {
             params.set(key, value);
@@ -48,34 +58,65 @@ export default function Filters({ categories }: FiltersProps) {
     };
 
     const handlePriceFilter = () => {
+        const normalizedMin = minPrice.trim();
+        const normalizedMax = maxPrice.trim();
+        const validPricePattern = /^\d+(?:\.\d{1,2})?$/;
+
+        if (
+            (normalizedMin && !validPricePattern.test(normalizedMin)) ||
+            (normalizedMax && !validPricePattern.test(normalizedMax))
+        ) {
+            setPriceError(t("invalidPriceValue"));
+            return;
+        }
+
+        const minAmount = normalizedMin ? Number(normalizedMin) : undefined;
+        const maxAmount = normalizedMax ? Number(normalizedMax) : undefined;
+
+        if (minAmount !== undefined && maxAmount !== undefined && minAmount > maxAmount) {
+            setPriceError(t("invalidPriceRange"));
+            return;
+        }
+
         const params = new URLSearchParams(searchParams.toString());
 
-        if (minPrice) {
-            params.set("min", minPrice);
+        if (normalizedMin) {
+            params.set("min", normalizedMin);
         } else {
             params.delete("min");
         }
 
-        if (maxPrice) {
-            params.set("max", maxPrice);
+        if (normalizedMax) {
+            params.set("max", normalizedMax);
         } else {
             params.delete("max");
         }
 
+        if (normalizedMin || normalizedMax) {
+            params.set("priceCurrency", currency);
+        } else {
+            params.delete("priceCurrency");
+        }
+
+        setPriceError("");
         router.push(`/search?${params.toString()}`);
+        onPriceApplied?.();
     };
 
     const clearAllFilters = () => {
         setMinPrice("");
         setMaxPrice("");
-        if (currentQuery) {
-            router.push(`/search?q=${currentQuery}`);
-        } else {
-            router.push("/search");
-        }
+        setPriceError("");
+        const params = new URLSearchParams();
+        if (currentQuery) params.set("q", currentQuery);
+        const currentSort = searchParams.get("sort");
+        if (currentSort) params.set("sort", currentSort);
+        const query = params.toString();
+        router.push(query ? `/search?${query}` : "/search");
     };
 
-    const hasActiveFilters = currentCategory || currentRating || searchParams.get("min") || searchParams.get("max");
+    const hasActiveFilters = currentCategory || currentRating || inStockOnly || onSaleOnly ||
+        (isPriceCurrencyCurrent && (searchParams.get("min") || searchParams.get("max")));
 
     return (
         <div>
@@ -163,9 +204,13 @@ export default function Filters({ categories }: FiltersProps) {
                                 type="number"
                                 inputMode="decimal"
                                 value={minPrice}
-                                onChange={(e) => setMinPrice(e.target.value)}
+                                onChange={(e) => {
+                                    setMinPrice(e.target.value);
+                                    setPriceError("");
+                                }}
                                 placeholder={t("minPlaceholder")}
                                 min="0"
+                                step="0.01"
                                 className="h-10 w-full rounded-lg border border-border/45 bg-white px-3 text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary/50 focus:ring-2 focus:ring-ring/20"
                             />
                         </div>
@@ -178,9 +223,13 @@ export default function Filters({ categories }: FiltersProps) {
                                 type="number"
                                 inputMode="decimal"
                                 value={maxPrice}
-                                onChange={(e) => setMaxPrice(e.target.value)}
+                                onChange={(e) => {
+                                    setMaxPrice(e.target.value);
+                                    setPriceError("");
+                                }}
                                 placeholder={t("maxPlaceholder")}
                                 min="0"
+                                step="0.01"
                                 className="h-10 w-full rounded-lg border border-border/45 bg-white px-3 text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary/50 focus:ring-2 focus:ring-ring/20"
                             />
                         </div>
@@ -192,6 +241,11 @@ export default function Filters({ categories }: FiltersProps) {
                     >
                         {t("applyPriceFilter")}
                     </button>
+                    {priceError && (
+                        <p role="alert" className="text-xs font-semibold text-destructive">
+                            {priceError}
+                        </p>
+                    )}
                 </div>
             </section>
 

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSortOrder } from "@@/lib/sort-utils";
 import type { Prisma } from "@/generated/prisma/client";
 import type { SupportedCurrency } from "@@/lib/format-price";
-import { getProductPriceRangeFilter } from "@@/lib/product-price-filter";
+import { getProductPriceRangeFilter, parsePriceFilterAmount } from "@@/lib/product-price-filter";
 import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
@@ -14,13 +14,17 @@ export async function GET(req: Request) {
         const pageSize = parseInt(searchParams.get("pageSize") || "12");
         const query = searchParams.get("q") || "";
         const category = searchParams.get("category") || "";
-        const minPrice = searchParams.get("min") ? parseFloat(searchParams.get("min")!) * 100 : undefined;
-        const maxPrice = searchParams.get("max") ? parseFloat(searchParams.get("max")!) * 100 : undefined;
         const minRating = searchParams.get("rating") ? parseInt(searchParams.get("rating")!) : undefined;
         const sort = searchParams.get("sort") || undefined;
         const locale = searchParams.get("locale") || "tr";
+        const inStockOnly = searchParams.get("inStock") === "true";
+        const onSaleOnly = searchParams.get("onSale") === "true";
         const cookieStore = await cookies();
         const currency: SupportedCurrency = cookieStore.get("CURRENCY")?.value === "USD" ? "USD" : "TRY";
+        const priceCurrency = searchParams.get("priceCurrency");
+        const isPriceCurrencyCurrent = !priceCurrency || priceCurrency === currency;
+        const minPrice = parsePriceFilterAmount(isPriceCurrencyCurrent ? searchParams.get("min") : undefined);
+        const maxPrice = parsePriceFilterAmount(isPriceCurrencyCurrent ? searchParams.get("max") : undefined);
 
         const whereClause: Prisma.ProductWhereInput = { isActive: true };
 
@@ -43,6 +47,14 @@ export async function GET(req: Request) {
 
         if (minPrice !== undefined || maxPrice !== undefined) {
             Object.assign(whereClause, getProductPriceRangeFilter(currency, minPrice, maxPrice));
+        }
+
+        if (inStockOnly) {
+            whereClause.stock = { gt: 0 };
+        }
+
+        if (onSaleOnly) {
+            whereClause.salePrice = { not: null };
         }
 
         const skip = (page - 1) * pageSize;

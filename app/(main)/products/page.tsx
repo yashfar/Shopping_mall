@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import { getTranslations, getLocale } from "next-intl/server";
+import type { Prisma } from "@/generated/prisma/client";
+import type { SupportedCurrency } from "@@/lib/format-price";
+import { getProductPriceRangeFilter, parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { cookies } from "next/headers";
 
 interface ProductsPageProps {
     searchParams: Promise<{
@@ -13,6 +17,7 @@ interface ProductsPageProps {
         sort?: string;
         inStock?: string;
         onSale?: string;
+        priceCurrency?: string;
     }>;
 }
 
@@ -22,15 +27,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     const params = await searchParams;
     const query = params.q || "";
     const category = params.category || "";
-    const minPrice = params.min ? parseFloat(params.min) * 100 : undefined; // Convert to cents
-    const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined; // Convert to cents
     const minRating = params.rating ? parseInt(params.rating) : undefined;
     const sort = params.sort;
     const inStockOnly = params.inStock === "true";
     const onSaleOnly = params.onSale === "true";
+    const cookieStore = await cookies();
+    const currency: SupportedCurrency = cookieStore.get("CURRENCY")?.value === "USD" ? "USD" : "TRY";
+    const isPriceCurrencyCurrent = !params.priceCurrency || params.priceCurrency === currency;
+    const effectiveMin = isPriceCurrencyCurrent ? params.min : undefined;
+    const effectiveMax = isPriceCurrencyCurrent ? params.max : undefined;
+    const minPrice = parsePriceFilterAmount(effectiveMin);
+    const maxPrice = parsePriceFilterAmount(effectiveMax);
 
     // Build Prisma where clause
-    const whereClause: any = {
+    const whereClause: Prisma.ProductWhereInput = {
         isActive: true,
     };
 
@@ -54,9 +64,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
     // Price filter
     if (minPrice !== undefined || maxPrice !== undefined) {
-        whereClause.price = {};
-        if (minPrice !== undefined) whereClause.price.gte = minPrice;
-        if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+        Object.assign(whereClause, getProductPriceRangeFilter(currency, minPrice, maxPrice));
     }
 
     // In stock filter
@@ -123,15 +131,17 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             queryParams={{
                 q: query,
                 category,
-                min: params.min,
-                max: params.max,
+                min: effectiveMin,
+                max: effectiveMax,
                 rating: params.rating,
                 sort,
                 inStock: params.inStock,
                 onSale: params.onSale,
+                priceCurrency: isPriceCurrencyCurrent ? params.priceCurrency : undefined,
             }}
             title={t("allProducts")}
             description={t("browseCollection")}
+            variant="homeGrid"
         />
     );
 }

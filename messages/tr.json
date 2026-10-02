@@ -207,7 +207,10 @@
     "customerRating": "Müşteri Değerlendirmesi",
     "andUp": "ve üstü",
     "minPlaceholder": "0",
-    "maxPlaceholder": "Herhangi"
+    "maxPlaceholder": "Herhangi",
+    "invalidPriceValue": "En fazla iki ondalık basamak içeren geçerli, negatif olmayan bir fiyat girin.",
+    "invalidPriceRange": "Minimum fiyat maksimum fiyattan büyük olamaz.",
+    "removeFilter": "{filter} filtresini kaldır"
   },
   "sort": {
     "sortBy": "Sırala:",

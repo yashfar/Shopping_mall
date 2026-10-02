@@ -207,7 +207,10 @@
     "customerRating": "Customer Rating",
     "andUp": "& up",
     "minPlaceholder": "0",
-    "maxPlaceholder": "Any"
+    "maxPlaceholder": "Any",
+    "invalidPriceValue": "Enter a valid non-negative price with up to two decimal places.",
+    "invalidPriceRange": "Minimum price cannot be greater than maximum price.",
+    "removeFilter": "Remove {filter} filter"
   },
   "sort": {
     "sortBy": "Sort by:",

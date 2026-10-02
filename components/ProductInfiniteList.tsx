@@ -10,7 +10,7 @@ interface Product {
     price: number;
     thumbnail: string | null;
     reviews: { id: string; rating: number }[];
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface QueryParams {
@@ -20,6 +20,9 @@ interface QueryParams {
     max?: string;
     rating?: string;
     sort?: string;
+    inStock?: string;
+    onSale?: string;
+    priceCurrency?: string;
 }
 
 interface ProductInfiniteListProps {

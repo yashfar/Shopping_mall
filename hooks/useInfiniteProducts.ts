@@ -9,7 +9,7 @@ interface Product extends ProductWithReviews {
     price: number;
     thumbnail: string | null;
     reviews: { id: string; rating: number }[];
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface QueryParams {
@@ -19,6 +19,9 @@ interface QueryParams {
     max?: string;
     rating?: string;
     sort?: string;
+    inStock?: string;
+    onSale?: string;
+    priceCurrency?: string;
 }
 
 interface UseInfiniteProductsProps {
@@ -52,6 +55,9 @@ export function useInfiniteProducts({
         queryParams.max,
         queryParams.rating,
         queryParams.sort,
+        queryParams.inStock,
+        queryParams.onSale,
+        queryParams.priceCurrency,
         initialProducts,
         pageSize,
     ]);
@@ -85,7 +91,7 @@ export function useInfiniteProducts({
         } finally {
             setLoading(false);
         }
-    }, [loading, hasMore, currentPage, pageSize, queryParams]);
+    }, [loading, hasMore, currentPage, pageSize, locale, queryParams]);
 
     // Intersection Observer for infinite scroll
     useEffect(() => {

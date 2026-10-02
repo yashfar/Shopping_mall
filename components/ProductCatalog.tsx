@@ -6,6 +6,8 @@ import SortMenu from "./SortMenu";
 import ProductInfiniteList from "./ProductInfiniteList";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@@/context/CurrencyContext";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { X } from "lucide-react";
 
 interface Product {
     id: string;
@@ -29,6 +31,7 @@ interface ProductCatalogProps {
         sort?: string;
         inStock?: string;
         onSale?: string;
+        priceCurrency?: string;
     };
     title?: string;
     description?: string;
@@ -48,9 +51,46 @@ export default function ProductCatalog({
 }: ProductCatalogProps) {
     const t = useTranslations("catalog");
     const tf = useTranslations("filters");
-    const { formatPrice } = useCurrency();
+    const { currency, formatPrice } = useCurrency();
+    const pathname = usePathname();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const isHomeGrid = variant === "homeGrid";
+
+    const navigateWithParams = (params: URLSearchParams) => {
+        const query = params.toString();
+        router.push(query ? `${pathname}?${query}` : pathname);
+    };
+
+    const removeFilter = (key: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete(key);
+        if ((key === "min" || key === "max") && !params.has("min") && !params.has("max")) {
+            params.delete("priceCurrency");
+        }
+        navigateWithParams(params);
+    };
+
+    const clearAllFilters = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        ["category", "min", "max", "priceCurrency", "rating", "inStock", "onSale"].forEach((key) => params.delete(key));
+        navigateWithParams(params);
+    };
+
+    const activeFilterChip = (key: string, label: string) => (
+        <div key={key} className="inline-flex items-center gap-1 rounded-full bg-primary/5 py-1 pl-3 pr-1 text-xs font-semibold text-primary ring-1 ring-primary/10">
+            <span>{label}</span>
+            <button
+                type="button"
+                onClick={() => removeFilter(key)}
+                aria-label={tf("removeFilter", { filter: label })}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+        </div>
+    );
 
     // Prevent scrolling when drawer is open
     useEffect(() => {
@@ -127,7 +167,11 @@ export default function ProductCatalog({
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:px-6">
-                            <Filters categories={categories} />
+                            <Filters
+                                key={currency}
+                                categories={categories}
+                                onPriceApplied={() => setIsFilterOpen(false)}
+                            />
                         </div>
                     </div>
                 </div>
@@ -147,33 +191,15 @@ export default function ProductCatalog({
                     {(queryParams.category || queryParams.min || queryParams.max || queryParams.rating || queryParams.inStock || queryParams.onSale) && (
                         <div className="mb-8 flex flex-wrap gap-2.5 items-center">
                             <span className="text-xs font-black text-[#A9A9A9] uppercase tracking-wider mr-1">{t("active")}</span>
-                            {queryParams.category && (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    {queryParams.category}
-                                </span>
-                            )}
-                            {(queryParams.min || queryParams.max) && (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    {queryParams.min ? formatPrice(Math.round(parseFloat(queryParams.min) * 100)) : formatPrice(0)} - {queryParams.max ? formatPrice(Math.round(parseFloat(queryParams.max) * 100)) : "∞"}
-                                </span>
-                            )}
-                            {queryParams.rating && (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    {t("stars", { count: queryParams.rating })}
-                                </span>
-                            )}
-                            {queryParams.inStock === "true" && (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100 shadow-sm">
-                                    {tf("inStockOnly")}
-                                </span>
-                            )}
-                            {queryParams.onSale === "true" && (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    {tf("onSale")}
-                                </span>
-                            )}
+                            {queryParams.category && activeFilterChip("category", `${tf("category")}: ${queryParams.category}`)}
+                            {queryParams.min && activeFilterChip("min", `${tf("minPrice")}: ${formatPrice(Math.round(parseFloat(queryParams.min) * 100))}`)}
+                            {queryParams.max && activeFilterChip("max", `${tf("maxPrice")}: ${formatPrice(Math.round(parseFloat(queryParams.max) * 100))}`)}
+                            {queryParams.rating && activeFilterChip("rating", t("stars", { count: queryParams.rating }))}
+                            {queryParams.inStock === "true" && activeFilterChip("inStock", tf("inStockOnly"))}
+                            {queryParams.onSale === "true" && activeFilterChip("onSale", tf("onSale"))}
                             <button
-                                onClick={() => window.location.href = window.location.pathname}
+                                type="button"
+                                onClick={clearAllFilters}
                                 className="text-sm font-bold text-[#A9A9A9] hover:text-[#C8102E] ml-2 transition-colors border-b-2 border-transparent hover:border-[#C8102E]/30 pb-0.5"
                             >
                                 {t("clearAllFilters")}
