@@ -3,134 +3,108 @@
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
+import CreativeAventusLogo from "@@/public/logo/Creative_Aventus_Logo_6.png";
 
 export default function Footer() {
     const t = useTranslations("footer");
+    const linkClassName = "inline-block rounded-sm text-[0.82rem] font-medium leading-5 text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBF8F2] md:text-sm";
+
     return (
-        <footer className="bg-white text-[#A9A9A9] mt-auto border-t border-gray-200">
-            <div className="max-w-[1400px] mx-auto px-6 md:px-8 py-12 md:py-16 pb-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
-                    {/* Company Info */}
-                    <div className="flex flex-col gap-5">
-                        <h3 className="text-2xl font-extrabold text-[#1A1A1A] m-0 tracking-tight">{t("storeName")}</h3>
-                        <p className="text-[#A9A9A9] text-[0.95rem] leading-relaxed m-0">
+        <footer className="mt-auto border-t border-border/15 bg-[#FBF8F2] text-muted-foreground">
+            <div className="mx-auto max-w-[1400px] px-4 pb-5 pt-8 min-[360px]:px-5 md:px-8 md:pb-6 md:pt-12">
+                <div className="grid gap-8 md:grid-cols-[minmax(220px,1.05fr)_minmax(0,2fr)] md:gap-12 lg:gap-20">
+                    {/* Brand */}
+                    <div className="max-w-xs">
+                        <Link
+                            href="/"
+                            className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBF8F2]"
+                        >
+                            <Image
+                                src={CreativeAventusLogo}
+                                alt={t("storeName")}
+                                width={180}
+                                height={68}
+                                className="h-auto w-[155px] object-contain md:w-[180px]"
+                            />
+                        </Link>
+                        <p className="mt-3 max-w-[18rem] text-[0.82rem] font-medium leading-5 text-muted-foreground md:text-sm md:leading-6">
                             {t("storeDescription")}
                         </p>
                     </div>
 
-                    {/* Quick Links */}
-                    <div className="flex flex-col gap-5">
-                        <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("quickLinks")}</h4>
-                        <ul className="list-none p-0 m-0 flex flex-col gap-3">
-                            <li>
-                                <Link href="/about" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("aboutUs")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/products" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("products")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/orders" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("orders")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/cart" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("cart")}
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    {/* Navigation */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-7 min-[360px]:gap-x-8 sm:grid-cols-3 md:gap-x-10">
+                        <nav aria-labelledby="footer-quick-links">
+                            <h2 id="footer-quick-links" className="mb-3 text-sm font-bold text-foreground md:text-[0.95rem]">
+                                {t("quickLinks")}
+                            </h2>
+                            <ul className="space-y-2">
+                                <li><Link href="/about" className={linkClassName}>{t("aboutUs")}</Link></li>
+                                <li><Link href="/products" className={linkClassName}>{t("products")}</Link></li>
+                                <li><Link href="/orders" className={linkClassName}>{t("orders")}</Link></li>
+                                <li><Link href="/cart" className={linkClassName}>{t("cart")}</Link></li>
+                            </ul>
+                        </nav>
 
-                    {/* Support */}
-                    <div className="flex flex-col gap-5">
-                        <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("support")}</h4>
-                        <ul className="list-none p-0 m-0 flex flex-col gap-3">
-                            <li>
-                                <Link href="/contact" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("contactUs")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/faq" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("faq")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/shipping" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("shippingInfo")}
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                        <nav aria-labelledby="footer-support-links">
+                            <h2 id="footer-support-links" className="mb-3 text-sm font-bold text-foreground md:text-[0.95rem]">
+                                {t("support")}
+                            </h2>
+                            <ul className="space-y-2">
+                                <li><Link href="/contact" className={linkClassName}>{t("contactUs")}</Link></li>
+                                <li><Link href="/faq" className={linkClassName}>{t("faq")}</Link></li>
+                                <li><Link href="/shipping" className={linkClassName}>{t("shippingInfo")}</Link></li>
+                            </ul>
+                        </nav>
 
-                    {/* Legal */}
-                    <div className="flex flex-col gap-5">
-                        <h4 className="text-[1.1rem] font-bold text-[#1A1A1A] m-0 mb-2">{t("legal")}</h4>
-                        <ul className="list-none p-0 m-0 flex flex-col gap-3">
-                            <li>
-                                <Link href="/privacy" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("privacyPolicy")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/terms" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("termsOfService")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/distance-sales-agreement" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("distanceSalesAgreement")}
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/returns" className="text-[#A9A9A9] no-underline text-[0.9rem] font-medium transition-all duration-200 hover:text-[#C8102E] hover:translate-x-1 inline-block">
-                                    {t("returns")}
-                                </Link>
-                            </li>
-                        </ul>
+                        <nav aria-labelledby="footer-legal-links" className="col-span-2 sm:col-span-1">
+                            <h2 id="footer-legal-links" className="mb-3 text-sm font-bold text-foreground md:text-[0.95rem]">
+                                {t("legal")}
+                            </h2>
+                            <ul className="grid grid-cols-2 gap-x-5 gap-y-2 sm:block sm:space-y-2">
+                                <li><Link href="/privacy" className={linkClassName}>{t("privacyPolicy")}</Link></li>
+                                <li><Link href="/terms" className={linkClassName}>{t("termsOfService")}</Link></li>
+                                <li><Link href="/distance-sales-agreement" className={linkClassName}>{t("distanceSalesAgreement")}</Link></li>
+                                <li><Link href="/returns" className={linkClassName}>{t("returns")}</Link></li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
 
-                <div
-                    className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5 border-t border-[#A9A9A9]/20 py-8 sm:gap-x-10"
-                    aria-label="iyzico ile Öde, Visa and Mastercard"
-                >
-                    <div className="flex min-h-14 items-center justify-center px-3">
+                {/* Payment methods */}
+                <div className="mt-8 flex items-center justify-center gap-6 border-t border-border/15 py-5 min-[360px]:gap-8 md:mt-10 md:py-6">
+                    <div className="flex items-center justify-center">
                         <Image
                             src="/assets/payment/iyzico-ile-ode.svg"
                             alt="iyzico ile Öde"
                             width={107}
                             height={38}
-                            className="h-auto w-[107px]"
+                            className="h-auto w-[82px] min-[360px]:w-[90px] md:w-[100px]"
                         />
                     </div>
-                    <div className="flex min-h-14 items-center justify-center px-3">
+                    <div className="flex items-center justify-center">
                         <Image
                             src="/assets/payment/visa.webp"
                             alt="Visa"
                             width={90}
                             height={30}
-                            className="h-auto w-[82px] sm:w-[90px]"
+                            className="h-auto w-[60px] min-[360px]:w-[66px] md:w-[78px]"
                         />
                     </div>
-                    <div className="flex min-h-14 items-center justify-center px-3">
+                    <div className="flex items-center justify-center">
                         <Image
                             src="/assets/payment/mastercard.webp"
                             alt="Mastercard"
                             width={58}
                             height={36}
-                            className="h-auto w-[54px] sm:w-[58px]"
+                            className="h-auto w-[40px] min-[360px]:w-[44px] md:w-[50px]"
                         />
                     </div>
                 </div>
 
                 {/* Copyright */}
-                <div className="pt-8 border-t border-[#A9A9A9]/20 text-center">
-                    <p className="text-[#A9A9A9] text-sm m-0 font-medium">
+                <div className="border-t border-border/15 pt-4 text-center md:pt-5">
+                    <p className="text-xs font-medium text-muted-foreground md:text-[0.82rem]">
                         {t("copyright", { year: new Date().getFullYear() })}
                     </p>
                 </div>

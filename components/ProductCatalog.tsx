@@ -5,6 +5,7 @@ import Filters from "./Filters";
 import SortMenu from "./SortMenu";
 import ProductInfiniteList from "./ProductInfiniteList";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@@/context/CurrencyContext";
 
 interface Product {
     id: string;
@@ -12,7 +13,7 @@ interface Product {
     price: number;
     thumbnail: string | null;
     reviews: { id: string; rating: number }[];
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface ProductCatalogProps {
@@ -47,6 +48,7 @@ export default function ProductCatalog({
 }: ProductCatalogProps) {
     const t = useTranslations("catalog");
     const tf = useTranslations("filters");
+    const { formatPrice } = useCurrency();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const isHomeGrid = variant === "homeGrid";
 
@@ -107,14 +109,16 @@ export default function ProductCatalog({
 
                     {/* Drawer Panel */}
                     <div
-                        className="relative w-[90%] max-w-sm bg-white h-full shadow-2xl overflow-y-auto animate-slide-in border-l border-[#A9A9A9]"
+                        className="relative flex h-dvh w-[calc(100vw-1rem)] max-w-sm flex-col overflow-hidden border-l border-border/30 bg-white shadow-2xl animate-slide-in"
                         style={{ animation: "slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards" }}
                     >
-                        <div className="sticky top-0 bg-white z-10 px-8 py-6 border-b border-[#A9A9A9]/20 flex items-center justify-between">
+                        <div className="z-10 flex shrink-0 items-center justify-between border-b border-border/20 bg-white px-5 py-4 sm:px-6">
                             <h2 className="text-2xl font-black text-[#1A1A1A]">{t("filters")}</h2>
                             <button
+                                type="button"
                                 onClick={() => setIsFilterOpen(false)}
-                                className="p-2 text-[#A9A9A9] hover:bg-red-50 hover:text-[#C8102E] rounded-full transition-all duration-300"
+                                aria-label={tf("closeFilters")}
+                                className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -122,7 +126,7 @@ export default function ProductCatalog({
                             </button>
                         </div>
 
-                        <div className="p-8">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:px-6">
                             <Filters categories={categories} />
                         </div>
                     </div>
@@ -150,8 +154,7 @@ export default function ProductCatalog({
                             )}
                             {(queryParams.min || queryParams.max) && (
                                 <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-[#C8102E] rounded-xl text-sm font-bold border border-[#C8102E]/10 shadow-sm">
-                                    ${queryParams.min ? (parseFloat(queryParams.min) / 100).toFixed(0) : "0"} - $
-                                    {queryParams.max ? (parseFloat(queryParams.max) / 100).toFixed(0) : "∞"}
+                                    {queryParams.min ? formatPrice(Math.round(parseFloat(queryParams.min) * 100)) : formatPrice(0)} - {queryParams.max ? formatPrice(Math.round(parseFloat(queryParams.max) * 100)) : "∞"}
                                 </span>
                             )}
                             {queryParams.rating && (

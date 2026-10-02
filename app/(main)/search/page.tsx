@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import ProductCatalog from "@@/components/ProductCatalog";
 import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
+import type { SupportedCurrency } from "@@/lib/format-price";
+import { getProductPriceRangeFilter } from "@@/lib/product-price-filter";
+import { cookies } from "next/headers";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -26,6 +29,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const sort = params.sort;
   const inStockOnly = params.inStock === "true";
   const onSaleOnly = params.onSale === "true";
+  const cookieStore = await cookies();
+  const currency: SupportedCurrency = cookieStore.get("CURRENCY")?.value === "USD" ? "USD" : "TRY";
 
   const whereClause: Prisma.ProductWhereInput = {
     isActive: true,
@@ -36,9 +41,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ],
     }),
     ...(category && { category: { name: category } }),
-    ...((minPrice !== undefined || maxPrice !== undefined) && {
-      price: { gte: minPrice, lte: maxPrice },
-    }),
+    ...((minPrice !== undefined || maxPrice !== undefined) && getProductPriceRangeFilter(currency, minPrice, maxPrice)),
     ...(inStockOnly && { stock: { gt: 0 } }),
     ...(onSaleOnly && { salePrice: { not: null } }),
   };
@@ -50,6 +53,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       variants: {
         select: { id: true, color: true, colorHex: true, stock: true },
       },
+      prices: { select: { currencyCode: true, price: true, salePrice: true } },
     },
     orderBy: getSortOrder(sort),
     take: 12,

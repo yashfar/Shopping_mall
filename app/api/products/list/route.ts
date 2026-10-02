@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSortOrder } from "@@/lib/sort-utils";
+import type { Prisma } from "@/generated/prisma/client";
+import type { SupportedCurrency } from "@@/lib/format-price";
+import { getProductPriceRangeFilter } from "@@/lib/product-price-filter";
+import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
     try {
@@ -15,8 +19,10 @@ export async function GET(req: Request) {
         const minRating = searchParams.get("rating") ? parseInt(searchParams.get("rating")!) : undefined;
         const sort = searchParams.get("sort") || undefined;
         const locale = searchParams.get("locale") || "tr";
+        const cookieStore = await cookies();
+        const currency: SupportedCurrency = cookieStore.get("CURRENCY")?.value === "USD" ? "USD" : "TRY";
 
-        const whereClause: any = { isActive: true };
+        const whereClause: Prisma.ProductWhereInput = { isActive: true };
 
         if (query) {
             whereClause.OR = [
@@ -36,9 +42,7 @@ export async function GET(req: Request) {
         }
 
         if (minPrice !== undefined || maxPrice !== undefined) {
-            whereClause.price = {};
-            if (minPrice !== undefined) whereClause.price.gte = minPrice;
-            if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+            Object.assign(whereClause, getProductPriceRangeFilter(currency, minPrice, maxPrice));
         }
 
         const skip = (page - 1) * pageSize;
