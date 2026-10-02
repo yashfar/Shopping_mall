@@ -72,7 +72,8 @@
     "signIn": "Giriş Yap",
     "createAccount": "Hesap Oluştur",
     "user": "Kullanıcı",
-    "language": "Dil"
+    "language": "Dil",
+    "currency": "Para Birimi"
   },
   "footer": {
     "storeName": "Creative Aventus",
@@ -193,13 +194,15 @@
   },
   "filters": {
     "title": "Filtreler",
+    "availability": "Durum",
+    "closeFilters": "Filtreleri kapat",
     "clearAll": "Tümünü Temizle",
     "inStockOnly": "Sadece Stokta Olanlar",
     "onSale": "İndirimde",
     "category": "Kategori",
     "priceRange": "Fiyat Aralığı",
-    "minPrice": "Min (₺)",
-    "maxPrice": "Maks (₺)",
+    "minPrice": "Min",
+    "maxPrice": "Maks",
     "applyPriceFilter": "Fiyat Filtresini Uygula",
     "customerRating": "Müşteri Değerlendirmesi",
     "andUp": "ve üstü",
@@ -652,7 +655,13 @@
   },
   "featuredCarousel": {
     "viewAll": "Tümünü Gör",
-    "outOfStock": "Tükendi"
+    "outOfStock": "Tükendi",
+    "bestSellerBadge": "Çok Satan",
+    "newBadge": "Yeni",
+    "bestSellersSubtitle": "Müşterilerimizin seçtiği en sevilen ürünlerimiz.",
+    "newArrivalsSubtitle": "En yeni tasarımlarımızı ve taze fikirleri keşfedin.",
+    "previousProducts": "Önceki ürünler",
+    "nextProducts": "Sonraki ürünler"
   },
   "productList": {
     "noProductsFound": "Ürün bulunamadı",

@@ -20,6 +20,15 @@ export function formatPrice(amount: number, currency: SupportedCurrency = "TRY")
     }).format(amount / 100);
 }
 
+export function getCurrencySymbol(currency: SupportedCurrency): string {
+    const { locale } = CURRENCY_CONFIG[currency];
+    return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        currencyDisplay: "narrowSymbol",
+    }).formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;
+}
+
 /**
  * Determines currency from a country code.
  */

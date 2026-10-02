@@ -4,7 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 
-export default function SortMenu() {
+interface SortMenuProps {
+    variant?: "default" | "homeGrid";
+}
+
+export default function SortMenu({ variant = "default" }: SortMenuProps) {
     const t = useTranslations("sort");
 
     const sortOptions = [
@@ -44,12 +48,12 @@ export default function SortMenu() {
     }, []);
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className={variant === "homeGrid" ? "relative min-w-0 w-full md:w-auto" : "relative"} ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="group flex items-center gap-2.5 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-[#1A1A1A] font-bold transition-all duration-300 hover:border-[#C8102E] hover:text-[#C8102E] shadow-sm hover:shadow-md active:scale-95"
+                className={`group flex items-center bg-white border border-gray-200 text-[#1A1A1A] font-bold transition-all duration-300 hover:border-[#C8102E] hover:text-[#C8102E] shadow-sm hover:shadow-md active:scale-95 ${variant === "homeGrid" ? "h-10 w-full min-w-0 justify-center gap-1.5 rounded-xl px-2.5 text-sm md:h-auto md:w-auto md:gap-2.5 md:rounded-full md:px-5 md:py-2.5" : "gap-2.5 px-5 py-2.5 rounded-full"}`}
             >
-                <span className="p-1.5 bg-gray-50 rounded-full group-hover:bg-red-50 text-gray-400 group-hover:text-[#C8102E] transition-colors">
+                <span className={`${variant === "homeGrid" ? "p-1 md:p-1.5" : "p-1.5"} bg-gray-50 rounded-full group-hover:bg-red-50 text-gray-400 group-hover:text-[#C8102E] transition-colors`}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -66,7 +70,7 @@ export default function SortMenu() {
                     </svg>
                 </span>
                 <span className="hidden sm:inline text-gray-400 font-medium whitespace-nowrap">{t("sortBy")}</span>
-                <span className="whitespace-nowrap">{currentLabel}</span>
+                <span className={variant === "homeGrid" ? "min-w-0 truncate whitespace-nowrap" : "whitespace-nowrap"}>{currentLabel}</span>
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -80,7 +84,7 @@ export default function SortMenu() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 p-1.5">
+                <div className={`absolute right-0 mt-3 bg-white border border-gray-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 p-1.5 ${variant === "homeGrid" ? "w-[min(16rem,calc(100vw-2rem))]" : "w-64"}`}>
                     {sortOptions.map((option) => (
                         <button
                             key={option.value}

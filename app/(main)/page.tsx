@@ -196,6 +196,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <FeaturedProductsCarousel
               title={t("bestSellers")}
               products={bestSellers}
+              variant="bestSellers"
               linkHref="/search?sort=popular"
             />
           )}
@@ -204,6 +205,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <FeaturedProductsCarousel
               title={t("newArrivals")}
               products={newProducts}
+              variant="newArrivals"
               linkHref="/search?sort=newest"
             />
           )}
@@ -214,6 +216,7 @@ export default async function Home({ searchParams }: HomeProps) {
         initialProducts={filteredProducts}
         categories={categories}
         locale={locale}
+        variant="homeGrid"
         queryParams={{
           q: query,
           category,

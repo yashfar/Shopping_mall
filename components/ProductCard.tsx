@@ -37,9 +37,10 @@ interface Product {
 
 interface ProductCardProps {
     product: Product;
+    variant?: "default" | "homeGrid";
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, variant = "default" }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggle, isWishlisted } = useWishlist();
     const t = useTranslations("productCard");
@@ -47,6 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const resolved = resolveProductPrice(product);
     const router = useRouter();
     const wishlisted = isWishlisted(product.id);
+    const isHomeGrid = variant === "homeGrid";
 
     const [isAdding, setIsAdding] = useState(false);
     const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -145,17 +147,17 @@ export default function ProductCard({ product }: ProductCardProps) {
 
             <div
                 onClick={handleClick}
-                className="group relative bg-white rounded-2xl transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 cursor-pointer border border-[#E5E5E5] overflow-hidden flex flex-col h-full"
+                className={`group relative transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full ${isHomeGrid ? "rounded-2xl bg-card ring-1 ring-border/25 shadow-[0_3px_18px_rgba(15,23,42,0.05)] hover:ring-border/40 hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)] md:hover:-translate-y-0.5" : "bg-white rounded-2xl border border-[#E5E5E5] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1"}`}
             >
                 {/* Image Container */}
-                <div className="relative aspect-[3/4] h-[200px] md:h-auto w-full bg-[#f9f9f9] overflow-hidden">
+                <div className={isHomeGrid ? "relative aspect-[5/6] w-full bg-muted/30 overflow-hidden" : "relative aspect-[3/4] h-[200px] md:h-auto w-full bg-[#f9f9f9] overflow-hidden"}>
                     {product.thumbnail && (product.thumbnail.startsWith("/") || product.thumbnail.startsWith("http")) ? (
                         <Image
                             src={product.thumbnail}
                             alt={product.title}
                             fill
-                            className="object-cover object-center transition-transform duration-700 group-hover:scale-110"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className={`object-cover object-center transition-transform duration-700 ${isHomeGrid ? "group-hover:scale-105" : "group-hover:scale-110"}`}
+                            sizes={isHomeGrid ? "(max-width: 359px) calc(100vw - 2rem), (max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw" : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -168,26 +170,32 @@ export default function ProductCard({ product }: ProductCardProps) {
                     {/* Wishlist Button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); toggle(product.id); }}
-                        className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110"
+                        className={`absolute z-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${isHomeGrid ? "top-2 right-2 h-9 w-9 text-muted-foreground" : "top-3 right-3 h-8 w-8 bg-white/90 backdrop-blur-sm shadow-sm"}`}
                         title={wishlisted ? t("removeFromWishlist") : t("addToWishlist")}
                     >
-                        <Heart className={`w-4 h-4 transition-colors ${wishlisted ? "fill-[#C8102E] text-[#C8102E]" : "text-gray-400"}`} />
+                        {isHomeGrid ? (
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 ring-1 ring-border/30 shadow-sm backdrop-blur-sm md:h-9 md:w-9">
+                                <Heart className={`h-3.5 w-3.5 transition-colors md:h-4 md:w-4 ${wishlisted ? "fill-[#C8102E] text-[#C8102E]" : "text-gray-400"}`} />
+                            </span>
+                        ) : (
+                            <Heart className={`w-4 h-4 transition-colors ${wishlisted ? "fill-[#C8102E] text-[#C8102E]" : "text-gray-400"}`} />
+                        )}
                     </button>
 
                     {/* Badges */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                    <div className={`absolute flex flex-col z-10 ${isHomeGrid ? "top-2 left-2 gap-1.5" : "top-3 left-3 gap-2"}`}>
                         {isNew && (
                             <span className="bg-[#1A1A1A] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
                                 {t("new")}
                             </span>
                         )}
                         {resolved?.salePrice && product.stock !== 0 && (
-                            <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                            <span className={`bg-[#C8102E] text-white font-bold rounded-full uppercase tracking-wider ${isHomeGrid ? "px-2 py-1 text-[9px]" : "text-[10px] px-2 py-1 shadow-sm"}`}>
                                 -{Math.round((1 - resolved.salePrice / resolved.price) * 100)}%
                             </span>
                         )}
                         {!hasAnyStock && (
-                            <span className="bg-[#C8102E] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                            <span className={`bg-[#C8102E] text-white font-bold rounded-full uppercase tracking-wider ${isHomeGrid ? "px-2 py-1 text-[9px]" : "text-[10px] px-2 py-1 shadow-sm"}`}>
                                 {t("outOfStock")}
                             </span>
                         )}
@@ -197,7 +205,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <button
                         onClick={handleAddToCart}
                         disabled={isAdding || !hasAnyStock}
-                        className={`absolute bottom-3 right-3 h-10 w-10 bg-white text-[#1A1A1A] rounded-full shadow-lg items-center justify-center transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#C8102E] hover:text-white lg:flex hidden ${cartButtonClass}`}
+                        className={`absolute bottom-3 right-3 bg-white text-[#1A1A1A] rounded-full items-center justify-center transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#C8102E] hover:text-white lg:flex hidden ${isHomeGrid ? "h-9 w-9 ring-1 ring-border/30 shadow-md" : "h-10 w-10 shadow-lg"} ${cartButtonClass}`}
                         title={t("addToCart")}
                     >
                         {isAdding ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
@@ -205,22 +213,22 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </div>
 
                 {/* Content Info */}
-                <div className="p-4 flex flex-col gap-2 flex-grow relative">
+                <div className={`flex flex-col flex-grow relative ${isHomeGrid ? "p-2.5 gap-1 md:p-3 md:gap-1.5" : "p-4 gap-2"}`}>
                     {/* Category */}
                     {typeof product.category === "object" && product.category?.name && (
-                        <span className="text-[10px] font-bold text-[#C8102E] uppercase tracking-wider">
+                        <span className={`${isHomeGrid ? "line-clamp-1 text-[9px] leading-none text-primary/65" : "text-[10px] text-[#C8102E]"} font-bold uppercase tracking-wider`}>
                             {product.category.name}
                         </span>
                     )}
 
                     {/* Title */}
-                    <h3 className="text-[#1A1A1A] font-bold text-base leading-snug line-clamp-2 group-hover:text-[#C8102E] transition-colors">
+                    <h3 className={`text-[#1A1A1A] font-bold line-clamp-2 group-hover:text-[#C8102E] transition-colors ${isHomeGrid ? "min-h-9 text-[13px] leading-[1.125rem] min-[430px]:text-sm md:min-h-10 md:text-[15px] md:leading-5" : "text-base leading-snug"}`}>
                         {product.title}
                     </h3>
 
                     {/* Color variant dots — interactive */}
                     {hasVariants && (
-                        <div className="space-y-1.5">
+                        <div className={isHomeGrid ? "space-y-1" : "space-y-1.5"}>
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 {product.variants!.slice(0, 6).map((v, index) => {
                                     const isSelected = selectedVariant?.id === v.id;
@@ -231,7 +239,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                                             title={v.color}
                                             onClick={(e) => handleSelectVariant(e, v)}
                                             disabled={isOOS}
-                                            className={`relative w-5 h-5 rounded-full border-2 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                            className={`relative rounded-full border-2 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${isHomeGrid ? "w-4 h-4" : "w-5 h-5"} ${
                                                 isSelected
                                                     ? "border-[#C8102E] scale-110 shadow-sm"
                                                     : "border-gray-200 hover:border-gray-400 hover:scale-110"
@@ -276,37 +284,37 @@ export default function ProductCard({ product }: ProductCardProps) {
                     )}
 
                     {/* Rating */}
-                    <div className="flex items-center gap-1.5 mt-auto">
+                    {(!isHomeGrid || reviewCount > 0) && <div className={`flex items-center ${isHomeGrid ? "mt-0.5 gap-1" : "mt-auto gap-1.5"}`}>
                         <div className="flex text-yellow-400">
                             {[...Array(5)].map((_, i) => (
                                 <Star
                                     key={i}
                                     fill={i < Math.round(averageRating) ? "currentColor" : "none"}
-                                    className={`w-3.5 h-3.5 ${i < Math.round(averageRating) ? "text-yellow-400" : "text-gray-300"}`}
+                                    className={`${isHomeGrid ? "w-3 h-3" : "w-3.5 h-3.5"} ${i < Math.round(averageRating) ? "text-yellow-400" : "text-gray-300"}`}
                                 />
                             ))}
                         </div>
                         {reviewCount > 0 && (
-                            <span className="text-xs text-gray-400 font-medium pt-0.5">({reviewCount})</span>
+                            <span className={`${isHomeGrid ? "text-[10px]" : "text-xs"} text-gray-400 font-medium pt-0.5`}>({reviewCount})</span>
                         )}
-                    </div>
+                    </div>}
 
                     {/* Price & Mobile Add Button */}
-                    <div className="flex items-center justify-between pt-2">
+                    <div className={`flex items-center justify-between ${isHomeGrid ? "mt-auto gap-2 pt-1.5" : "pt-2"}`}>
                         <div className="flex flex-col">
                             {resolved === null ? (
                                 <span className="text-sm text-gray-400 italic">—</span>
                             ) : resolved.salePrice ? (
                                 <>
-                                    <span className="text-lg font-extrabold text-[#C8102E] tracking-tight">
+                                    <span className={`${isHomeGrid ? "text-base leading-none md:text-lg" : "text-lg"} font-extrabold text-[#C8102E] tracking-tight`}>
                                         {formatResolvedPrice({ ...resolved, price: resolved.salePrice })}
                                     </span>
-                                    <span className="text-xs text-gray-400 line-through">
+                                    <span className={`${isHomeGrid ? "mt-1 text-[10px] leading-none" : "text-xs"} text-gray-400 line-through`}>
                                         {formatResolvedPrice(resolved)}
                                     </span>
                                 </>
                             ) : (
-                                <span className="text-lg font-extrabold text-[#1A1A1A] tracking-tight">
+                                <span className={`${isHomeGrid ? "text-base leading-none md:text-lg" : "text-lg"} font-extrabold text-[#1A1A1A] tracking-tight`}>
                                     {formatResolvedPrice(resolved)}
                                 </span>
                             )}
@@ -316,9 +324,15 @@ export default function ProductCard({ product }: ProductCardProps) {
                         <button
                             onClick={handleAddToCart}
                             disabled={isAdding || !hasAnyStock}
-                            className={`lg:hidden h-9 w-9 bg-gray-100 text-[#1A1A1A] rounded-full flex items-center justify-center active:bg-[#C8102E] active:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${cartButtonClass}`}
+                            className={`lg:hidden h-9 w-9 text-[#1A1A1A] rounded-full flex shrink-0 items-center justify-center active:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHomeGrid ? "active:bg-transparent" : "bg-gray-100 active:bg-[#C8102E]"} ${cartButtonClass}`}
                         >
-                            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
+                            {isHomeGrid ? (
+                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 ring-1 ring-border/30 shadow-sm transition-colors active:bg-[#C8102E] md:h-9 md:w-9">
+                                    {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin md:h-4 md:w-4" /> : <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4" />}
+                                </span>
+                            ) : (
+                                isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />
+                            )}
                         </button>
                     </div>
                 </div>
