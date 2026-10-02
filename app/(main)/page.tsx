@@ -4,6 +4,7 @@ import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import BannerCarousel from "@@/components/BannerCarousel";
 import FeaturedProductsCarousel from "@@/components/FeaturedProductsCarousel";
 import { getTranslations, getLocale } from "next-intl/server";
+import type { Prisma } from "@/generated/prisma/client";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -28,7 +29,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const sort = params.sort;
 
   // Build Prisma where clause
-  const whereClause: any = {
+  const whereClause: Prisma.ProductWhereInput = {
     isActive: true,
   };
 
@@ -52,9 +53,10 @@ export default async function Home({ searchParams }: HomeProps) {
 
   // Price filter
   if (minPrice !== undefined || maxPrice !== undefined) {
-    whereClause.price = {};
-    if (minPrice !== undefined) whereClause.price.gte = minPrice;
-    if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+    whereClause.price = {
+      ...(minPrice !== undefined && { gte: minPrice }),
+      ...(maxPrice !== undefined && { lte: maxPrice }),
+    };
   }
 
   // Fetch initial page of products (12 items)
@@ -144,6 +146,7 @@ export default async function Home({ searchParams }: HomeProps) {
             include: {
               category: true,
               translations: { where: { locale }, select: { title: true, description: true } },
+              prices: { select: { currencyCode: true, price: true, salePrice: true } },
             },
           },
         },
@@ -161,6 +164,7 @@ export default async function Home({ searchParams }: HomeProps) {
             include: {
               category: true,
               translations: { where: { locale }, select: { title: true, description: true } },
+              prices: { select: { currencyCode: true, price: true, salePrice: true } },
             },
           },
         },
@@ -169,9 +173,10 @@ export default async function Home({ searchParams }: HomeProps) {
   });
 
   // Extract products from carousels, applying locale translation
-  const applyTranslation = (product: any) => {
-    const tr = product.translations?.[0];
-    const { translations, category, ...rest } = product;
+  type FeaturedProduct = NonNullable<typeof bestSellerCarousel>["items"][number]["product"];
+  const applyTranslation = (product: FeaturedProduct) => {
+    const { translations: productTranslations, category, ...rest } = product;
+    const tr = productTranslations[0];
     return {
       ...rest,
       title: tr?.title ?? product.title,

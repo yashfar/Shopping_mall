@@ -1,6 +1,18 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { SupportedCurrency } from "@@/lib/format-price";
 
+export function parsePriceFilterAmount(value?: string | null): number | undefined {
+    if (!value) return undefined;
+
+    const normalized = value.trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return undefined;
+
+    const [whole, fraction = ""] = normalized.split(".");
+    const amount = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+
+    return Number.isSafeInteger(amount) ? amount : undefined;
+}
+
 export function getProductPriceRangeFilter(
     currency: SupportedCurrency,
     minPrice?: number,
