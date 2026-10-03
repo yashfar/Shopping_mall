@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import ProductCatalog from "@@/components/ProductCatalog";
-import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import BannerCarousel from "@@/components/BannerCarousel";
 import FeaturedProductsCarousel from "@@/components/FeaturedProductsCarousel";
 import { getTranslations, getLocale } from "next-intl/server";
-import type { Prisma } from "@/generated/prisma/client";
+import { cookies } from "next/headers";
+import type { SupportedCurrency } from "@@/lib/format-price";
+import { parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { getCatalogPage } from "@@/lib/product-catalog-query";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -14,6 +16,7 @@ interface HomeProps {
     max?: string;
     rating?: string;
     sort?: string;
+    priceCurrency?: string;
   }>;
 }
 
@@ -23,79 +26,25 @@ export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const query = params.q || "";
   const category = params.category || "";
-  const minPrice = params.min ? parseFloat(params.min) * 100 : undefined; // Convert to cents
-  const maxPrice = params.max ? parseFloat(params.max) * 100 : undefined; // Convert to cents
   const minRating = params.rating ? parseInt(params.rating) : undefined;
   const sort = params.sort;
-
-  // Build Prisma where clause
-  const whereClause: Prisma.ProductWhereInput = {
-    isActive: true,
-  };
-
-  // Search query (optional for home, but good to have)
-  if (query) {
-    whereClause.OR = [
-      { title: { contains: query, mode: "insensitive" } },
-      { description: { contains: query, mode: "insensitive" } },
-    ];
-  }
-
-  // Category filter (match TR or EN name)
-  if (category) {
-    whereClause.category = {
-      OR: [
-        { name: { equals: category, mode: "insensitive" } },
-        { nameEn: { equals: category, mode: "insensitive" } },
-      ],
-    };
-  }
-
-  // Price filter
-  if (minPrice !== undefined || maxPrice !== undefined) {
-    whereClause.price = {
-      ...(minPrice !== undefined && { gte: minPrice }),
-      ...(maxPrice !== undefined && { lte: maxPrice }),
-    };
-  }
-
-  // Fetch initial page of products (12 items)
-  const rawProducts = await prisma.product.findMany({
-    where: whereClause,
-    include: {
-      reviews: { select: { id: true, rating: true } },
-      variants: { select: { id: true, color: true, colorHex: true, stock: true } },
-      category: { select: { id: true, name: true, nameEn: true } },
-      translations: { where: { locale }, select: { title: true, description: true } },
-      prices: { select: { currencyCode: true, price: true, salePrice: true } },
-    },
-    orderBy: getSortOrder(sort),
-    take: 12,
+  const cookieStore = await cookies();
+  const currency: SupportedCurrency = cookieStore.get("CURRENCY")?.value === "USD" ? "USD" : "TRY";
+  const isPriceCurrencyCurrent = !params.priceCurrency || params.priceCurrency === currency;
+  const effectiveMin = isPriceCurrencyCurrent ? params.min : undefined;
+  const effectiveMax = isPriceCurrencyCurrent ? params.max : undefined;
+  const minPrice = parsePriceFilterAmount(effectiveMin);
+  const maxPrice = parsePriceFilterAmount(effectiveMax);
+  const { products, hasMore } = await getCatalogPage({
+    query,
+    category,
+    minPrice,
+    maxPrice,
+    minRating,
+    sort,
+    currency,
+    locale,
   });
-
-  const products = rawProducts.map(({ translations, category, ...p }) => {
-    const tr = translations[0];
-    return {
-      ...p,
-      title: tr?.title ?? p.title,
-      description: tr?.description ?? p.description,
-      category: category ? { ...category, name: locale === "en" && category.nameEn ? category.nameEn : category.name } : null,
-    };
-  });
-
-  // Filter by rating (client-side)
-  let filteredProducts = minRating
-    ? products.filter((product) => {
-      if (product.reviews.length === 0) return false;
-      const avgRating =
-        product.reviews.reduce((sum, r) => sum + r.rating, 0) /
-        product.reviews.length;
-      return avgRating >= minRating;
-    })
-    : products;
-
-  // Apply sorting
-  filteredProducts = sortProducts(filteredProducts, sort);
 
   // Fetch all categories for the sidebar (locale-aware)
   const allCategories = await prisma.category.findMany({
@@ -218,17 +167,19 @@ export default async function Home({ searchParams }: HomeProps) {
       )}
 
       <ProductCatalog
-        initialProducts={filteredProducts}
+        initialProducts={products}
+        initialHasMore={hasMore}
         categories={categories}
         locale={locale}
         variant="homeGrid"
         queryParams={{
           q: query,
           category,
-          min: params.min,
-          max: params.max,
+          min: effectiveMin,
+          max: effectiveMax,
           rating: params.rating,
           sort,
+          priceCurrency: isPriceCurrencyCurrent ? params.priceCurrency : undefined,
         }}
         // Update title logic to show "All Products" below carousels
         title={query ? t("resultsFor", { query }) : t("allProducts")}

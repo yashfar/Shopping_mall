@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { sortProducts, type ProductWithReviews } from "@@/lib/sort-utils";
+import { buildCatalogRequestParams } from "@@/lib/catalog-query-params";
 
-interface Product extends ProductWithReviews {
+interface Product {
     id: string;
     title: string;
     price: number;
@@ -26,6 +26,7 @@ interface QueryParams {
 
 interface UseInfiniteProductsProps {
     initialProducts: Product[];
+    initialHasMore?: boolean;
     queryParams: QueryParams;
     locale?: string;
     pageSize?: number;
@@ -33,6 +34,7 @@ interface UseInfiniteProductsProps {
 
 export function useInfiniteProducts({
     initialProducts,
+    initialHasMore,
     queryParams,
     locale = "tr",
     pageSize = 12,
@@ -40,14 +42,14 @@ export function useInfiniteProducts({
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(initialProducts.length >= pageSize);
+    const [hasMore, setHasMore] = useState(initialHasMore ?? initialProducts.length >= pageSize);
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Reset when query params change
     useEffect(() => {
         setProducts(initialProducts);
         setCurrentPage(1);
-        setHasMore(initialProducts.length >= pageSize);
+        setHasMore(initialHasMore ?? initialProducts.length >= pageSize);
     }, [
         queryParams.q,
         queryParams.category,
@@ -59,6 +61,7 @@ export function useInfiniteProducts({
         queryParams.onSale,
         queryParams.priceCurrency,
         initialProducts,
+        initialHasMore,
         pageSize,
     ]);
 
@@ -68,21 +71,18 @@ export function useInfiniteProducts({
         setLoading(true);
 
         try {
-            const params = new URLSearchParams({
-                page: String(currentPage + 1),
-                pageSize: String(pageSize),
+            const params = buildCatalogRequestParams({
+                page: currentPage + 1,
+                pageSize,
                 locale,
-                ...queryParams,
+                queryParams,
             });
 
             const response = await fetch(`/api/products/list?${params.toString()}`);
             const data = await response.json();
 
             if (response.ok) {
-                // Apply client-side sorting for rating/reviews if needed
-                const sortedProducts: Product[] = sortProducts<Product>(data.products, queryParams.sort);
-
-                setProducts((prev) => [...prev, ...sortedProducts]);
+                setProducts((prev) => [...prev, ...data.products]);
                 setCurrentPage((prev) => prev + 1);
                 setHasMore(data.hasMore);
             }

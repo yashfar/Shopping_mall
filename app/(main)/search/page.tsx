@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@/generated/prisma/client";
 import ProductCatalog from "@@/components/ProductCatalog";
-import { getSortOrder, sortProducts } from "@@/lib/sort-utils";
 import type { SupportedCurrency } from "@@/lib/format-price";
-import { getProductPriceRangeFilter, parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { getCatalogPage } from "@@/lib/product-catalog-query";
 import { cookies } from "next/headers";
 import { getLocale } from "next-intl/server";
 
@@ -38,65 +37,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const minPrice = parsePriceFilterAmount(effectiveMin);
   const maxPrice = parsePriceFilterAmount(effectiveMax);
 
-  const whereClause: Prisma.ProductWhereInput = {
-    isActive: true,
-    ...(query && {
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { description: { contains: query, mode: "insensitive" } },
-      ],
-    }),
-    ...(category && {
-      category: {
-        OR: [
-          { name: { equals: category, mode: "insensitive" } },
-          { nameEn: { equals: category, mode: "insensitive" } },
-        ],
-      },
-    }),
-    ...((minPrice !== undefined || maxPrice !== undefined) && getProductPriceRangeFilter(currency, minPrice, maxPrice)),
-    ...(inStockOnly && { stock: { gt: 0 } }),
-    ...(onSaleOnly && { salePrice: { not: null } }),
-  };
-
-  const rawProducts = await prisma.product.findMany({
-    where: whereClause,
-    include: {
-      reviews: { select: { id: true, rating: true } },
-      variants: {
-        select: { id: true, color: true, colorHex: true, stock: true },
-      },
-      category: { select: { id: true, name: true, nameEn: true } },
-      translations: { where: { locale }, select: { title: true, description: true } },
-      prices: { select: { currencyCode: true, price: true, salePrice: true } },
-    },
-    orderBy: getSortOrder(sort),
-    take: 12,
+  const { products, hasMore } = await getCatalogPage({
+    query,
+    category,
+    minPrice,
+    maxPrice,
+    minRating,
+    sort,
+    inStockOnly,
+    onSaleOnly,
+    currency,
+    locale,
   });
-
-  const products = rawProducts.map(({ translations, category: productCategory, ...product }) => {
-    const translation = translations[0];
-    return {
-      ...product,
-      title: translation?.title ?? product.title,
-      description: translation?.description ?? product.description,
-      category: productCategory
-        ? { ...productCategory, name: locale === "en" && productCategory.nameEn ? productCategory.nameEn : productCategory.name }
-        : null,
-    };
-  });
-
-  let filteredProducts = minRating
-    ? products.filter((product) => {
-        if (product.reviews.length === 0) return false;
-        const avgRating =
-          product.reviews.reduce((sum, r) => sum + r.rating, 0) /
-          product.reviews.length;
-        return avgRating >= minRating;
-      })
-    : products;
-
-  filteredProducts = sortProducts(filteredProducts, sort);
 
   const allCategories = await prisma.category.findMany({
     where: {
@@ -112,7 +64,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <ProductCatalog
-      initialProducts={filteredProducts}
+      initialProducts={products}
+      initialHasMore={hasMore}
       categories={categories}
       locale={locale}
       queryParams={{
@@ -129,7 +82,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       title={query ? `Results for "${query}"` : "Search Results"}
       description={
         query
-          ? `Found ${filteredProducts.length} results`
+          ? `Found ${products.length} results`
           : "Search our collection"
       }
       variant="homeGrid"
