@@ -44,3 +44,35 @@ export function getProductPriceRangeFilter(
         },
     };
 }
+
+export function getProductOnSaleFilter(
+    currency: SupportedCurrency,
+): Prisma.ProductWhereInput {
+    if (currency === "TRY") {
+        return {
+            OR: [
+                {
+                    prices: {
+                        some: {
+                            currencyCode: "TRY",
+                            salePrice: { not: null },
+                        },
+                    },
+                },
+                {
+                    prices: { none: {} },
+                    salePrice: { not: null },
+                },
+            ],
+        };
+    }
+
+    return {
+        prices: {
+            some: {
+                currencyCode: currency,
+                salePrice: { not: null },
+            },
+        },
+    };
+}

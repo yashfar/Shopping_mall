@@ -27,6 +27,7 @@ interface QueryParams {
 
 interface ProductInfiniteListProps {
     initialProducts: Product[];
+    initialHasMore?: boolean;
     queryParams: QueryParams;
     locale?: string;
     emptyMessage?: string;
@@ -36,6 +37,7 @@ interface ProductInfiniteListProps {
 
 export default function ProductInfiniteList({
     initialProducts,
+    initialHasMore,
     queryParams,
     locale = "tr",
     emptyMessage,
@@ -45,6 +47,7 @@ export default function ProductInfiniteList({
     const t = useTranslations("productList");
     const { products, loading, hasMore, loadMoreRef } = useInfiniteProducts({
         initialProducts,
+        initialHasMore,
         queryParams,
         locale,
         pageSize: 12,

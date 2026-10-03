@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Filters from "./Filters";
 import SortMenu from "./SortMenu";
 import ProductInfiniteList from "./ProductInfiniteList";
@@ -20,6 +20,7 @@ interface Product {
 
 interface ProductCatalogProps {
     initialProducts: Product[];
+    initialHasMore?: boolean;
     categories: string[];
     locale?: string;
     queryParams: {
@@ -41,6 +42,7 @@ interface ProductCatalogProps {
 
 export default function ProductCatalog({
     initialProducts,
+    initialHasMore,
     categories,
     locale = "tr",
     queryParams,
@@ -56,7 +58,19 @@ export default function ProductCatalog({
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isFilterClosing, setIsFilterClosing] = useState(false);
     const isHomeGrid = variant === "homeGrid";
+
+    const openFilters = () => {
+        setIsFilterClosing(false);
+        setIsFilterOpen(true);
+    };
+
+    const closeFilters = useCallback(() => {
+        if (isFilterOpen) {
+            setIsFilterClosing(true);
+        }
+    }, [isFilterOpen]);
 
     const navigateWithParams = (params: URLSearchParams) => {
         const query = params.toString();
@@ -104,6 +118,19 @@ export default function ProductCatalog({
         };
     }, [isFilterOpen]);
 
+    useEffect(() => {
+        if (!isFilterOpen) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                closeFilters();
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [closeFilters, isFilterOpen]);
+
     return (
         <div className="min-h-screen bg-[#FAFAFA] pb-12">
             {/* Header Section */}
@@ -121,7 +148,7 @@ export default function ProductCatalog({
                         <div className={isHomeGrid ? "grid w-full grid-cols-2 items-center gap-2.5 md:flex md:w-auto md:gap-3" : "flex items-center gap-3"}>
                             {showFilters && (
                                 <button
-                                    onClick={() => setIsFilterOpen(true)}
+                                    onClick={openFilters}
                                     className={`group flex items-center justify-center bg-white border border-gray-200 text-[#1A1A1A] font-bold transition-all duration-300 hover:border-[#C8102E] hover:text-[#C8102E] active:scale-95 ${isHomeGrid ? "h-10 w-full gap-2 rounded-xl px-2.5 text-sm shadow-sm md:h-auto md:w-auto md:gap-2.5 md:rounded-full md:px-5 md:py-2.5 hover:shadow-md" : "gap-2.5 px-5 py-2.5 rounded-full shadow-sm hover:shadow-md"}`}
                                 >
                                     <span className={`${isHomeGrid ? "p-1 md:p-1.5" : "p-1.5"} bg-gray-50 rounded-full group-hover:bg-red-50 text-gray-400 group-hover:text-[#C8102E] transition-colors`}>
@@ -143,20 +170,28 @@ export default function ProductCatalog({
                 <div className="fixed inset-0 z-50 flex justify-end">
                     {/* Backdrop */}
                     <div
-                        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity opacity-100"
-                        onClick={() => setIsFilterOpen(false)}
+                        className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-[250ms] ease-out ${isFilterClosing ? "opacity-0" : "opacity-100"}`}
+                        onClick={closeFilters}
                     />
 
                     {/* Drawer Panel */}
                     <div
-                        className="relative flex h-dvh w-[calc(100vw-1rem)] max-w-sm flex-col overflow-hidden border-l border-border/30 bg-white shadow-2xl animate-slide-in"
-                        style={{ animation: "slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards" }}
+                        className="relative flex h-dvh w-[calc(100vw-1rem)] max-w-sm flex-col overflow-hidden border-l border-border/30 bg-white shadow-2xl"
+                        style={{
+                            animation: `${isFilterClosing ? "slideOutRight" : "slideInRight"} 250ms cubic-bezier(0, 0, 0.2, 1) forwards`,
+                        }}
+                        onAnimationEnd={(event) => {
+                            if (event.target === event.currentTarget && isFilterClosing) {
+                                setIsFilterOpen(false);
+                                setIsFilterClosing(false);
+                            }
+                        }}
                     >
                         <div className="z-10 flex shrink-0 items-center justify-between border-b border-border/20 bg-white px-5 py-4 sm:px-6">
                             <h2 className="text-2xl font-black text-[#1A1A1A]">{t("filters")}</h2>
                             <button
                                 type="button"
-                                onClick={() => setIsFilterOpen(false)}
+                                onClick={closeFilters}
                                 aria-label={tf("closeFilters")}
                                 className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
@@ -170,7 +205,7 @@ export default function ProductCatalog({
                             <Filters
                                 key={currency}
                                 categories={categories}
-                                onPriceApplied={() => setIsFilterOpen(false)}
+                                onPriceApplied={closeFilters}
                             />
                         </div>
                     </div>
@@ -181,6 +216,10 @@ export default function ProductCatalog({
                 @keyframes slideInRight {
                     from { transform: translateX(100%); }
                     to { transform: translateX(0); }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(100%); }
                 }
             `}</style>
 
@@ -209,6 +248,7 @@ export default function ProductCatalog({
 
                     <ProductInfiniteList
                         initialProducts={initialProducts}
+                        initialHasMore={initialHasMore}
                         queryParams={queryParams}
                         locale={locale}
                         variant={variant}

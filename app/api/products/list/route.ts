@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getSortOrder } from "@@/lib/sort-utils";
-import type { Prisma } from "@/generated/prisma/client";
 import type { SupportedCurrency } from "@@/lib/format-price";
-import { getProductPriceRangeFilter, parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { parsePriceFilterAmount } from "@@/lib/product-price-filter";
+import { getCatalogPage } from "@@/lib/product-catalog-query";
 import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
@@ -26,83 +24,22 @@ export async function GET(req: Request) {
         const minPrice = parsePriceFilterAmount(isPriceCurrencyCurrent ? searchParams.get("min") : undefined);
         const maxPrice = parsePriceFilterAmount(isPriceCurrencyCurrent ? searchParams.get("max") : undefined);
 
-        const whereClause: Prisma.ProductWhereInput = { isActive: true };
-
-        if (query) {
-            whereClause.OR = [
-                { title: { contains: query, mode: "insensitive" } },
-                { description: { contains: query, mode: "insensitive" } },
-            ];
-        }
-
-        if (category) {
-            // Match by Turkish name OR English name
-            whereClause.category = {
-                OR: [
-                    { name: { equals: category, mode: "insensitive" } },
-                    { nameEn: { equals: category, mode: "insensitive" } },
-                ],
-            };
-        }
-
-        if (minPrice !== undefined || maxPrice !== undefined) {
-            Object.assign(whereClause, getProductPriceRangeFilter(currency, minPrice, maxPrice));
-        }
-
-        if (inStockOnly) {
-            whereClause.stock = { gt: 0 };
-        }
-
-        if (onSaleOnly) {
-            whereClause.salePrice = { not: null };
-        }
-
-        const skip = (page - 1) * pageSize;
-        const take = pageSize + 1;
-
-        const products = await prisma.product.findMany({
-            where: whereClause,
-            include: {
-                reviews: { select: { id: true, rating: true } },
-                variants: { select: { id: true, color: true, colorHex: true, stock: true } },
-                category: { select: { id: true, name: true, nameEn: true } },
-                translations: {
-                    where: { locale },
-                    select: { title: true, description: true },
-                },
-                prices: { select: { currencyCode: true, price: true, salePrice: true } },
-            },
-            orderBy: getSortOrder(sort),
-            skip,
-            take,
+        const result = await getCatalogPage({
+            query,
+            category,
+            minPrice,
+            maxPrice,
+            minRating,
+            sort,
+            inStockOnly,
+            onSaleOnly,
+            currency,
+            locale,
+            page,
+            pageSize,
         });
 
-        let filteredProducts = minRating
-            ? products.filter((p) => {
-                if (p.reviews.length === 0) return false;
-                const avg = p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviews.length;
-                return avg >= minRating;
-            })
-            : products;
-
-        const hasMore = filteredProducts.length > pageSize;
-        if (hasMore) filteredProducts = filteredProducts.slice(0, pageSize);
-
-        // Apply locale translation
-        const localizedProducts = filteredProducts.map(({ translations, category, ...p }) => {
-            const tr = translations[0];
-            return {
-                ...p,
-                title: tr?.title ?? p.title,
-                description: tr?.description ?? p.description,
-                category: category ? {
-                    ...category,
-                    name: locale === "en" && category.nameEn ? category.nameEn : category.name,
-                } : null,
-            };
-        });
-
-        return NextResponse.json({ products: localizedProducts, hasMore });
+        return NextResponse.json(result);
     } catch (error) {
         console.error("Error fetching products:", error);
         return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
