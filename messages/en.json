@@ -1493,7 +1493,11 @@
     "personalizedContactTitle": "Discuss a Personalized Order",
     "personalizedContactBody": "Contact Yaşar Farhadi directly so the requested model, quantity, feasibility, price, and production schedule can be agreed before ordering.",
     "emailCta": "Email yasarfarhadi@gmail.com",
-    "phoneCta": "Call +90 551 082 72 15"
+    "phoneCta": "Call +90 551 082 72 15",
+    "metaDescription": "Learn about Creative Aventus preparation times, PTT Kargo, delivery conditions, shipping fees, and personalized orders.",
+    "breadcrumbLabel": "Breadcrumb",
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "Delivery and Shipping Conditions"
   },
   "legalPages": {
     "home": "Home",

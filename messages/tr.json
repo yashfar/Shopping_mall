@@ -1493,7 +1493,11 @@
     "personalizedContactTitle": "Kişiselleştirilmiş Siparişi Görüşün",
     "personalizedContactBody": "Talep edilen model, adet, uygulanabilirlik, fiyat ve üretim takviminin siparişten önce kararlaştırılması için Yaşar Farhadi ile doğrudan iletişime geçin.",
     "emailCta": "yasarfarhadi@gmail.com adresine yaz",
-    "phoneCta": "+90 551 082 72 15'i ara"
+    "phoneCta": "+90 551 082 72 15'i ara",
+    "metaDescription": "Creative Aventus hazırlık süresi, PTT Kargo, teslimat koşulları, kargo ücretleri ve kişiselleştirilmiş siparişler hakkında bilgi alın.",
+    "breadcrumbLabel": "Sayfa yolu",
+    "breadcrumbHome": "Ana Sayfa",
+    "breadcrumbCurrent": "Teslimat ve Kargo Koşulları"
   },
   "legalPages": {
     "home": "Ana Sayfa",
