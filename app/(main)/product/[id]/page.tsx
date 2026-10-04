@@ -48,6 +48,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         description: translation?.description ?? product.description,
         category: product.category ? {
             ...product.category,
+            routeName: product.category.name,
             name: locale === "en" && product.category.nameEn ? product.category.nameEn : product.category.name,
         } : null,
     };
