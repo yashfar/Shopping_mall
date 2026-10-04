@@ -110,14 +110,18 @@
     "invalidCredentials": "Geçersiz e-posta veya şifre",
     "googleError": "Google ile giriş yapılamadı",
     "emailPlaceholder": "ornek@email.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle"
   },
   "register": {
     "createAccount": "Hesap Oluştur",
     "subtitle": "Topluluğumuza bugün katılın",
     "email": "E-posta",
     "password": "Şifre",
+    "confirmPassword": "Şifreyi Onayla",
     "passwordHint": "En az 8 karakter olmalıdır",
+    "passwordMismatch": "Şifreler eşleşmiyor.",
     "creatingAccount": "Hesap oluşturuluyor...",
     "orContinueWith": "Veya şununla devam edin",
     "signUpWithGoogle": "Google ile kayıt ol",
@@ -129,7 +133,24 @@
     "unexpectedError": "Beklenmeyen bir hata oluştu",
     "googleError": "Google ile kayıt olunamadı",
     "emailPlaceholder": "ornek@email.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
+    "privacyConsent": "<privacy>Gizlilik Politikası</privacy>'nı okudum ve kabul ediyorum.",
+    "termsConsent": "<terms>Kullanım Koşulları</terms>'nı okudum ve kabul ediyorum.",
+    "privacyConsentLabel": "Gizlilik Politikasını kabul ediyorum",
+    "termsConsentLabel": "Kullanım Koşullarını kabul ediyorum",
+    "closeLegalDialog": "Kapat"
+  },
+  "authExperience": {
+    "eyebrow": "CREATIVE AVENTUS",
+    "headline": "Daha Güzel\nAlışveriş Deneyimi\nSizi Bekliyor",
+    "reliableShopping": "Güvenilir Alışveriş",
+    "reliableShoppingBody": "Kaliteli ürünler, hızlı teslimat.",
+    "securePayment": "Güvenli Ödeme",
+    "securePaymentBody": "Bilgileriniz her zaman güvende.",
+    "hereForYou": "Sizin İçin Buradayız",
+    "hereForYouBody": "Her adımda yanınızdayız."
   },
   "forgotPassword": {
     "title": "Şifrenizi mi Unuttunuz?",

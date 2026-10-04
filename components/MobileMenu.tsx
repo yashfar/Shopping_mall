@@ -49,6 +49,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const pathname = usePathname();
   const isAdmin = user?.role === "ADMIN";
+  const handleNavigation = () => setOpen(false);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -78,7 +79,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
             <div className="space-y-1">
               <Link
                 href="/"
-                onClick={() => setOpen(false)}
+                onClick={handleNavigation}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                   pathname === "/"
                     ? "bg-[#C8102E]/10 text-[#C8102E]"
@@ -89,7 +90,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
               </Link>
               <Link
                 href="/products"
-                onClick={() => setOpen(false)}
+                onClick={handleNavigation}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                   pathname === "/products"
                     ? "bg-[#C8102E]/10 text-[#C8102E]"
@@ -127,7 +128,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                   <Link
                     key={category.id}
                     href={`/products?category=${encodeURIComponent(category.name)}`}
-                    onClick={() => setOpen(false)}
+                    onClick={handleNavigation}
                     className="block px-3 py-2 pl-6 rounded-md text-sm text-gray-600 hover:text-[#C8102E] hover:bg-gray-50 transition-colors"
                   >
                     {category.name}
@@ -142,7 +143,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                 <div className="my-2 border-t border-gray-100" />
                 <Link
                   href="/wishlist"
-                  onClick={() => setOpen(false)}
+                  onClick={handleNavigation}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${pathname === "/wishlist" ? "bg-[#C8102E]/10 text-[#C8102E]" : "text-[#1A1A1A] hover:bg-gray-100"}`}
                 >
                   <Heart className="w-4 h-4" />
@@ -161,7 +162,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                   </p>
                   <Link
                     href="/admin"
-                    onClick={() => setOpen(false)}
+                    onClick={handleNavigation}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       pathname === "/admin"
                         ? "bg-gray-100 text-[#1A1A1A]"
@@ -173,7 +174,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                   </Link>
                   <Link
                     href="/admin/products"
-                    onClick={() => setOpen(false)}
+                    onClick={handleNavigation}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       pathname.startsWith("/admin/products")
                         ? "bg-gray-100 text-[#1A1A1A]"
@@ -216,7 +217,7 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
             {user ? (
               <Link
                 href="/profile"
-                onClick={() => setOpen(false)}
+                onClick={handleNavigation}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-200"
               >
                 <div className="w-10 h-10 rounded-full bg-[#C8102E]/10 flex items-center justify-center text-[#C8102E] overflow-hidden">
@@ -245,13 +246,15 @@ export default function MobileMenu({ categories, user }: MobileMenuProps) {
                   asChild
                   className="w-full bg-[#C8102E] hover:bg-[#A90D27] text-white"
                 >
-                  <Link href="/login">
+                  <Link href="/login" onClick={handleNavigation}>
                     <LogIn className="w-4 h-4 mr-2" />
                     {t("signIn")}
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href="/register">{t("createAccount")}</Link>
+                  <Link href="/register" onClick={handleNavigation}>
+                    {t("createAccount")}
+                  </Link>
                 </Button>
               </div>
             )}

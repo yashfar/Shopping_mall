@@ -110,14 +110,18 @@
     "invalidCredentials": "Invalid email or password",
     "googleError": "Failed to sign in with Google",
     "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "register": {
     "createAccount": "Create Account",
     "subtitle": "Join our community today",
     "email": "Email",
     "password": "Password",
+    "confirmPassword": "Confirm Password",
     "passwordHint": "Must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match.",
     "creatingAccount": "Creating Account...",
     "orContinueWith": "Or continue with",
     "signUpWithGoogle": "Sign up with Google",
@@ -129,7 +133,24 @@
     "unexpectedError": "An unexpected error occurred",
     "googleError": "Failed to sign in with Google",
     "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "privacyConsent": "I have read and accept the <privacy>Privacy Policy</privacy>.",
+    "termsConsent": "I have read and accept the <terms>Terms of Service</terms>.",
+    "privacyConsentLabel": "I accept the Privacy Policy",
+    "termsConsentLabel": "I accept the Terms of Service",
+    "closeLegalDialog": "Close"
+  },
+  "authExperience": {
+    "eyebrow": "CREATIVE AVENTUS",
+    "headline": "A Better\nShopping Experience\nAwaits You",
+    "reliableShopping": "Reliable Shopping",
+    "reliableShoppingBody": "Quality products, thoughtfully delivered.",
+    "securePayment": "Secure Payment",
+    "securePaymentBody": "Your information stays protected.",
+    "hereForYou": "Here for You",
+    "hereForYouBody": "With you at every step."
   },
   "forgotPassword": {
     "title": "Forgot Password?",
