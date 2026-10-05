@@ -810,6 +810,7 @@
     "selectNeighborhood": "Select neighborhood",
     "loadingDistricts": "Loading districts...",
     "loadingNeighborhoods": "Loading neighborhoods...",
+    "locationLoadError": "Location options could not be loaded. Please try again.",
     "fullAddress": "Full Address",
     "addressPlaceholder": "Street, building number, apartment, etc.",
     "cancel": "Cancel",

@@ -39,6 +39,16 @@ interface GeoItem {
     name: string;
 }
 
+async function fetchGeoItems(url: string): Promise<GeoItem[]> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Location lookup failed with ${response.status}`);
+
+    const data: unknown = await response.json();
+    if (!Array.isArray(data)) throw new Error("Location lookup returned invalid data");
+
+    return data as GeoItem[];
+}
+
 const emptyForm = {
     title: "",
     firstName: "",
@@ -75,13 +85,14 @@ export default function AddressModal({
     const districtIdRef = useRef("");
     const cascadeLoadedRef = useRef<string | null>(null); // hangi adres için yüklendi
 
-    // Load provinces once on mount
+    // Load provinces when the modal opens; a later reopen retries a failed lookup.
     useEffect(() => {
-        fetch("/api/address/provinces")
-            .then((r) => r.json())
-            .then((data) => setProvinces(Array.isArray(data) ? data : []))
-            .catch(() => {});
-    }, []);
+        if (!isOpen || provinces.length > 0) return;
+
+        fetchGeoItems("/api/address/provinces")
+            .then(setProvinces)
+            .catch(() => setError(t("locationLoadError")));
+    }, [isOpen, provinces.length, t]);
 
     // Modal açılınca form sıfırla
     useEffect(() => {
@@ -141,10 +152,8 @@ export default function AddressModal({
         provinceIdRef.current = province.id.toString();
         setLoadingDistricts(true);
 
-        fetch(`/api/address/districts?provinceId=${province.id}`)
-            .then((r) => r.json())
-            .then((raw) => {
-                const data: GeoItem[] = Array.isArray(raw) ? raw : [];
+        fetchGeoItems(`/api/address/districts?provinceId=${province.id}`)
+            .then((data) => {
                 setDistricts(data);
 
                 const district = data.find((d) => norm(d.name) === norm(existingAddress.district));
@@ -153,13 +162,15 @@ export default function AddressModal({
                 districtIdRef.current = district.id.toString();
                 setLoadingNeighborhoods(true);
 
-                fetch(`/api/address/neighborhoods?districtId=${district.id}`)
-                    .then((r2) => r2.json())
-                    .then((raw2) => setNeighborhoods(Array.isArray(raw2) ? raw2 : []))
-                    .finally(() => setLoadingNeighborhoods(false));
+                return fetchGeoItems(`/api/address/neighborhoods?districtId=${district.id}`)
+                    .then(setNeighborhoods);
             })
-            .finally(() => setLoadingDistricts(false));
-    }, [isOpen, provinces, mode, existingAddress]);
+            .catch(() => setError(t("locationLoadError")))
+            .finally(() => {
+                setLoadingDistricts(false);
+                setLoadingNeighborhoods(false);
+            });
+    }, [isOpen, provinces, mode, existingAddress, t]);
 
     const handleProvinceChange = async (name: string) => {
         const province = provinces.find((p) => p.name === name);
@@ -171,10 +182,12 @@ export default function AddressModal({
         setFormData((prev) => ({ ...prev, city: name, district: "", neighborhood: "" }));
 
         setLoadingDistricts(true);
+        setError("");
         try {
-            const res = await fetch(`/api/address/districts?provinceId=${province.id}`);
-            const data = await res.json();
-            setDistricts(Array.isArray(data) ? data : []);
+            const data = await fetchGeoItems(`/api/address/districts?provinceId=${province.id}`);
+            setDistricts(data);
+        } catch {
+            setError(t("locationLoadError"));
         } finally {
             setLoadingDistricts(false);
         }
@@ -188,10 +201,12 @@ export default function AddressModal({
         setFormData((prev) => ({ ...prev, district: name, neighborhood: "" }));
 
         setLoadingNeighborhoods(true);
+        setError("");
         try {
-            const res = await fetch(`/api/address/neighborhoods?districtId=${district.id}`);
-            const data = await res.json();
-            setNeighborhoods(Array.isArray(data) ? data : []);
+            const data = await fetchGeoItems(`/api/address/neighborhoods?districtId=${district.id}`);
+            setNeighborhoods(data);
+        } catch {
+            setError(t("locationLoadError"));
         } finally {
             setLoadingNeighborhoods(false);
         }

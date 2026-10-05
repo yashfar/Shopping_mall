@@ -810,6 +810,7 @@
     "selectNeighborhood": "Mahalle seçin",
     "loadingDistricts": "İlçeler yükleniyor...",
     "loadingNeighborhoods": "Mahalleler yükleniyor...",
+    "locationLoadError": "Konum seçenekleri yüklenemedi. Lütfen tekrar deneyin.",
     "fullAddress": "Açık Adres",
     "addressPlaceholder": "Sokak, bina numarası, daire, vb.",
     "cancel": "İptal",

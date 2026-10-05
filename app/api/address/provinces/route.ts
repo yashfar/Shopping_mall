@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
+import { fetchTurkiyeApiCollection } from "../_turkiye-api";
 
 export async function GET() {
-    const res = await fetch("https://turkiyeapi.dev/api/v1/provinces?limit=100&fields=id,name", {
-        next: { revalidate: 86400 },
-    });
-    if (!res.ok) return NextResponse.json({ error: "Failed to fetch provinces" }, { status: 502 });
-    const json = await res.json();
-    const data = json.data.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }));
-    return NextResponse.json(data);
+    try {
+        const provinces = await fetchTurkiyeApiCollection(
+            "/provinces?fields=id,name&sort=name&limit=100",
+            { dataset: "provinces" }
+        );
+        const data = provinces.map((province) => {
+            const item = province as { id: number; name: string };
+            return { id: item.id, name: item.name };
+        }).sort((a, b) => a.name.localeCompare(b.name, "tr"));
+
+        return NextResponse.json(data);
+    } catch (error) {
+        console.error(
+            "Address provinces lookup failed:",
+            error instanceof Error ? error.message : "Unknown upstream error"
+        );
+        return NextResponse.json(
+            { error: "Province service is temporarily unavailable" },
+            { status: 503, headers: { "Retry-After": "5" } }
+        );
+    }
 }
