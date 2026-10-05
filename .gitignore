@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.tmp/
 /.tmp-return-db/
 
 # next.js

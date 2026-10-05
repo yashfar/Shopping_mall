@@ -54,12 +54,14 @@ export default async function Navbar() {
         </div>
 
         {/* Right Side - Auth & Cart */}
-        <div className="flex items-center gap-2 md:gap-6">
-          {/* Language + Currency Switchers - Desktop */}
-          <div className="hidden md:flex items-center gap-2">
-            <LanguageSwitcher />
-            <CurrencySwitcher />
-          </div>
+        <div className={`flex items-center gap-2 md:gap-6 ${session ? "md:min-w-0 md:flex-[1.35] md:justify-end" : ""}`}>
+          {/* Guest Language + Currency Switchers - Desktop */}
+          {!session && (
+            <div className="hidden md:flex items-center gap-2">
+              <LanguageSwitcher />
+              <CurrencySwitcher />
+            </div>
+          )}
 
           {!session ? (
             // Not authenticated - show Login/Register (Desktop only)
@@ -82,7 +84,7 @@ export default async function Navbar() {
             </div>
           ) : (
             // Authenticated - show user info and cart
-            <div className="flex items-center gap-0 md:gap-6">
+            <div className="flex min-w-0 items-center gap-0 md:flex-1 md:gap-6">
               <NavbarClient
                 user={{
                   email: session.user.email || "",

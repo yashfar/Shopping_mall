@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AddressModal, { Address } from "@@/components/AddressModal";
 import { ConfirmDialog } from "@@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { ArrowRight, MapPin, Pencil, Phone, Plus, Trash2, UserRound } from "lucide-react";
 import "./addresses.css";
 
 function AddressesContent() {
@@ -21,11 +22,7 @@ function AddressesContent() {
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchAddresses();
-    }, []);
-
-    const fetchAddresses = async () => {
+    const fetchAddresses = useCallback(async () => {
         try {
             setLoading(true);
             const response = await fetch("/api/address/list");
@@ -35,12 +32,16 @@ function AddressesContent() {
             } else {
                 setError(t("failedToLoad"));
             }
-        } catch (err) {
+        } catch {
             setError(t("failedToLoadError"));
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
+
+    useEffect(() => {
+        fetchAddresses();
+    }, [fetchAddresses]);
 
     const maskPhone = (phone: string) => {
         if (phone.length < 4) return phone;
@@ -88,7 +89,7 @@ function AddressesContent() {
             } else {
                 toast.error(t("failedToDelete"));
             }
-        } catch (err) {
+        } catch {
             toast.error(t("failedToDeleteError"));
         } finally {
             setDeleteId(null);
@@ -100,7 +101,7 @@ function AddressesContent() {
             <div className="addresses-page">
                 <div className="addresses-container">
                     <div className="loading-state">
-                        <div className="spinner"></div>
+                        <div className="address-loading-spinner"></div>
                         <p>{t("loading")}</p>
                     </div>
                 </div>
@@ -122,7 +123,15 @@ function AddressesContent() {
 
             <div className="addresses-container">
                 <div className="addresses-header">
-                    <h1>{t("title")}</h1>
+                    <div className="addresses-heading">
+                        <span className="addresses-heading-icon" aria-hidden="true">
+                            <MapPin />
+                        </span>
+                        <div>
+                            <h1>{t("title")}</h1>
+                            <p>{t("pageDescription")}</p>
+                        </div>
+                    </div>
                     <div className="addresses-header-actions">
                         {callbackUrl && addresses.length > 0 && (
                             <button
@@ -130,23 +139,11 @@ function AddressesContent() {
                                 onClick={() => router.push(callbackUrl)}
                             >
                                 {t("continueToCheckout")}
+                                <ArrowRight className="icon" aria-hidden="true" />
                             </button>
                         )}
                         <button className="btn-add-address" onClick={openAddModal}>
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                                stroke="currentColor"
-                                className="icon"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 4.5v15m7.5-7.5h-15"
-                                />
-                            </svg>
+                            <Plus className="icon" aria-hidden="true" />
                             {t("addNewAddress")}
                         </button>
                     </div>
@@ -156,83 +153,69 @@ function AddressesContent() {
 
                 {addresses.length === 0 ? (
                     <div className="empty-state">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="empty-icon"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-                            />
-                        </svg>
+                        <span className="empty-icon-wrap" aria-hidden="true">
+                            <MapPin className="empty-icon" />
+                        </span>
                         <h2>{t("noAddresses")}</h2>
                         <p>{t("noAddressesDesc")}</p>
                         <button className="btn-add-first" onClick={openAddModal}>
+                            <Plus className="icon" aria-hidden="true" />
                             {t("addAddress")}
                         </button>
                     </div>
                 ) : (
                     <div className="addresses-grid">
                         {addresses.map((address) => (
-                            <div key={address.id} className="address-card">
+                            <article key={address.id} className="address-card">
                                 <div className="address-card-header">
-                                    <h3 className="address-title">{address.title}</h3>
+                                    <div className="address-card-identity">
+                                        <span className="address-card-marker" aria-hidden="true">
+                                            <MapPin />
+                                        </span>
+                                        <div className="address-card-title-row">
+                                            <h3 className="address-title">{address.title}</h3>
+                                            <span className="address-card-badge">{t("addressLabel")}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="address-card-body">
-                                    <div className="address-field">
-                                        <span className="field-label">{t("fullName")}</span>
-                                        <span className="field-value">
+                                    <div className="address-summary-row address-summary-name">
+                                        <UserRound aria-hidden="true" />
+                                        <span>
                                             {address.firstName} {address.lastName}
                                         </span>
                                     </div>
-                                    <div className="address-field">
-                                        <span className="field-label">{t("phone")}</span>
-                                        <span className="field-value">
-                                            {maskPhone(address.phone)}
+                                    <div className="address-summary-row address-summary-phone">
+                                        <Phone aria-hidden="true" />
+                                        <span>{maskPhone(address.phone)}</span>
+                                    </div>
+                                    <div className="address-summary-row address-location-line">
+                                        <MapPin aria-hidden="true" />
+                                        <span>
+                                            {address.neighborhood}, {address.district} / {address.city}
                                         </span>
                                     </div>
-                                    <div className="address-field">
-                                        <span className="field-label">{t("city")}</span>
-                                        <span className="field-value">{address.city}</span>
-                                    </div>
-                                    <div className="address-field">
-                                        <span className="field-label">{t("district")}</span>
-                                        <span className="field-value">{address.district}</span>
-                                    </div>
-                                    <div className="address-field">
-                                        <span className="field-label">{t("neighborhood")}</span>
-                                        <span className="field-value">{address.neighborhood}</span>
-                                    </div>
-                                    <div className="address-field full-width">
-                                        <span className="field-label">{t("fullAddress")}</span>
-                                        <span className="field-value">{address.fullAddress}</span>
-                                    </div>
+                                    <address className="address-street">{address.fullAddress}</address>
                                 </div>
-                                <div className="address-card-footer">
+                                <div className="address-card-actions">
                                     <button
+                                        type="button"
                                         className="btn-edit"
                                         onClick={() => openEditModal(address)}
                                     >
+                                        <Pencil className="action-icon" aria-hidden="true" />
                                         {t("editAddress")}
                                     </button>
                                     <button
+                                        type="button"
                                         className="btn-delete"
                                         onClick={() => handleDeleteClick(address.id)}
                                     >
+                                        <Trash2 className="action-icon" aria-hidden="true" />
                                         {t("delete")}
                                     </button>
                                 </div>
-                            </div>
+                            </article>
                         ))}
                     </div>
                 )}

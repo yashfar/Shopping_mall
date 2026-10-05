@@ -1,13 +1,29 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import {
+  ChevronDown,
+  CirclePlus,
+  Coins,
+  Globe2,
+  Heart,
+  ImageIcon,
+  LogOut,
+  MapPin,
+  Package,
+  ShoppingCart,
+  User,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import CurrencySwitcher from "@@/components/CurrencySwitcher";
+import LanguageSwitcher from "@@/components/LanguageSwitcher";
+import SearchBar from "@@/components/SearchBar";
 import { useCart } from "@@/context/CartContext";
 import { useWishlist } from "@@/context/WishlistContext";
-import SearchBar from "./SearchBar";
-import { useTranslations } from "next-intl";
 
 interface NavbarClientProps {
   user: {
@@ -22,30 +38,34 @@ interface NavbarClientProps {
 export default function NavbarClient({ user }: NavbarClientProps) {
   const t = useTranslations("userMenu");
   const { cartCount, isAnimating } = useCart();
-  useWishlist(); // keeps wishlist state alive globally
+  useWishlist();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isDropdownOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
     };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
 
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isDropdownOpen]);
 
@@ -61,326 +81,193 @@ export default function NavbarClient({ user }: NavbarClientProps) {
     }
   };
 
-  // Get user initials for avatar
-  const getInitials = (email: string) => {
-    return email.charAt(0).toUpperCase();
-  };
+  const emailName = user.email.split("@")[0];
+  const displayName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+    emailName.charAt(0).toUpperCase() + emailName.slice(1);
+  const triggerName = user.firstName || displayName;
+  const initials =
+    [user.firstName, user.lastName]
+      .filter(Boolean)
+      .map((part) => part!.charAt(0))
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || user.email.charAt(0).toUpperCase();
 
-  // Get display name from email or user name
-  const getDisplayName = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    if (user.firstName) {
-      return user.firstName;
-    }
-    const name = user.email.split("@")[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  };
+  const avatar = (sizeClass: string) => (
+    <span
+      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#C8102E] text-white`}
+      aria-hidden="true"
+    >
+      {user.avatar && !imageError ? (
+        <Image
+          src={user.avatar}
+          alt=""
+          width={44}
+          height={44}
+          unoptimized
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <span className="text-xs font-bold tracking-wide">{initials}</span>
+      )}
+    </span>
+  );
+
+  const accountLinks = [
+    { href: "/profile", label: t("profile"), icon: User },
+    { href: "/orders", label: t("orders"), icon: Package },
+    { href: "/wishlist", label: t("wishlist"), icon: Heart },
+    { href: "/profile/addresses", label: t("addresses"), icon: MapPin },
+  ];
 
   return (
-    <>
-      <div className="flex items-center gap-2 md:gap-6">
-        {/* Search Bar */}
-        <div className="hidden md:block flex-1 max-w-xl mx-4">
-          <SearchBar />
-        </div>
+    <div className="flex min-w-0 items-center gap-1.5 md:flex-1 md:justify-end md:gap-3 lg:gap-4">
+      <div className="hidden min-w-[210px] max-w-[500px] flex-1 md:block">
+        <SearchBar />
+      </div>
 
-        {/* Wishlist Icon — hidden on mobile (accessible via hamburger menu) */}
-        <Link
-          href="/wishlist"
-          className="hidden md:flex p-2.5 text-[#1A1A1A] no-underline rounded-lg transition-all duration-200 items-center justify-center border border-transparent hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E] hover:border-[rgba(200,16,46,0.1)]"
+      <Link
+        href="/wishlist"
+        aria-label={t("wishlist")}
+        className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#25211d] transition hover:bg-[#f8f1e8] hover:text-[#C8102E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/35 md:flex"
+      >
+        <Heart className="h-[22px] w-[22px]" strokeWidth={1.7} />
+      </Link>
+
+      <Link
+        href="/cart"
+        aria-label={t("cart")}
+        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#25211d] transition hover:bg-[#f8f1e8] hover:text-[#C8102E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/35"
+      >
+        <ShoppingCart className={`h-[22px] w-[22px] ${isAnimating ? "animate-cart-bounce" : ""}`} strokeWidth={1.7} />
+        {cartCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#C8102E] px-1 text-[10px] font-bold leading-none text-white shadow-sm">
+            {cartCount}
+          </span>
+        )}
+      </Link>
+
+      <Link
+        href="/profile"
+        aria-label={t("profile")}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[#f8f1e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/35 md:hidden"
+      >
+        {avatar("h-8 w-8")}
+      </Link>
+
+      <div className="relative hidden md:block" ref={dropdownRef}>
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setIsDropdownOpen((open) => !open)}
+          aria-haspopup="menu"
+          aria-expanded={isDropdownOpen}
+          aria-controls="desktop-account-menu"
+          className="flex h-10 items-center gap-2 rounded-full px-1.5 pr-2 text-[#25211d] transition hover:bg-[#f8f1e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/35"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-            />
-          </svg>
-        </Link>
+          {avatar("h-8 w-8")}
+          <span className="max-w-24 truncate text-sm font-semibold">{triggerName}</span>
+          <ChevronDown className={`h-4 w-4 text-[#8e847a] transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+        </button>
 
-        {/* Cart Icon */}
-        <Link
-          href="/cart"
-          className="relative p-2.5 text-[#1A1A1A] no-underline rounded-lg transition-all duration-200 flex items-center justify-center border border-transparent hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E] hover:border-[rgba(200,16,46,0.1)]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className={`w-6 h-6 ${isAnimating ? "animate-cart-bounce" : ""}`}
+        {isDropdownOpen && (
+          <div
+            id="desktop-account-menu"
+            role="menu"
+            className="dropdown-menu absolute right-0 top-[calc(100%+0.7rem)] z-[1000] w-[304px] overflow-hidden rounded-[18px] border border-[#eadfd3] bg-[#fffdfa] p-2 shadow-[0_18px_50px_rgba(67,49,31,0.16)]"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"
-            />
-          </svg>
-          {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#C8102E] text-white text-[0.7rem] font-bold py-1.5 px-1.5 rounded-full min-w-[20px] h-6 flex items-center justify-center leading-none shadow-[0_2px_4px_rgba(200,16,46,0.2)] border-2 border-white">
-              {cartCount}
-            </span>
-          )}
-        </Link>
-
-        {/* User Avatar & Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            className="flex items-center gap-2 p-1.5 bg-transparent border border-transparent rounded-full cursor-pointer transition-all duration-200 hover:bg-[#FAFAFA]"
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            aria-label="User menu"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#C8102E] flex items-center justify-center overflow-hidden">
-              {user.avatar && !imageError ? (
-                <img
-                  src={user.avatar}
-                  alt={t("profile")}
-                  className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <span className="text-white font-semibold text-[0.95rem]">
-                  {getInitials(user.email)}
-                </span>
-              )}
-            </div>
-            <span className="hidden md:block text-[#1A1A1A] font-medium text-[0.85rem]">
-              {getDisplayName()}
-            </span>
-          </button>
-
-          {/* Dropdown Menu */}
-          {isDropdownOpen && (
-            <div className="dropdown-menu absolute top-[calc(100%+0.75rem)] right-0 min-w-[240px] bg-white border border-[#A9A9A9] rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-2 z-[1000]">
-              <div className="p-4 rounded-lg bg-[#FAFAFA] mb-2">
-                <div className="text-[0.8rem] font-semibold text-[#1A1A1A] mb-1 break-all">
-                  {user.email}
-                </div>
-                <div className="text-[0.7rem] text-[#C8102E] uppercase font-bold tracking-wider">
-                  {user.role}
-                </div>
+            <div className="flex items-center gap-3 px-3 py-3">
+              {avatar("h-11 w-11")}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[#24201d]">{displayName}</p>
+                <p className="mt-0.5 truncate text-xs text-[#847b73]">{user.email}</p>
               </div>
+            </div>
 
-              <div className="h-px bg-[#A9A9A9] my-2 opacity-30" />
-
-              <Link
-                href="/profile"
-                className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
+            <div className="my-1 h-px bg-[#eee5dc]" />
+            <div className="py-1">
+              {accountLinks.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  role="menuitem"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#302b27] transition hover:bg-[#f8f1e8] hover:text-[#C8102E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/25"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-                  />
-                </svg>
-                {t("profile")}
-              </Link>
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                  {label}
+                </Link>
+              ))}
 
-              <Link
-                href="/wishlist"
-                className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-                  />
-                </svg>
-                {t("wishlist")}
-              </Link>
-
-              <Link
-                href="/orders"
-                className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                  />
-                </svg>
-                {t("orders")}
-              </Link>
-
-              <Link
-                href="/profile/addresses"
-                className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-                  />
-                </svg>
-                {t("addresses")}
-              </Link>
-
-              {/* Admin Only - Add Product */}
               {user.role === "ADMIN" && (
                 <>
-                  <Link
-                    href="/admin/products"
-                    className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 4.5v15m7.5-7.5h-15"
-                      />
-                    </svg>
+                  <Link href="/admin/products" role="menuitem" onClick={() => setIsDropdownOpen(false)} className="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#302b27] transition hover:bg-[#f8f1e8] hover:text-[#C8102E]">
+                    <CirclePlus className="h-[18px] w-[18px]" strokeWidth={1.7} />
                     {t("addProduct")}
                   </Link>
-
-                  <Link
-                    href="/admin/banners"
-                    className="flex items-center gap-3 py-3 px-4 text-[#1A1A1A] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer hover:bg-[rgba(200,16,46,0.05)] hover:text-[#C8102E]"
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                      />
-                    </svg>
+                  <Link href="/admin/banners" role="menuitem" onClick={() => setIsDropdownOpen(false)} className="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#302b27] transition hover:bg-[#f8f1e8] hover:text-[#C8102E]">
+                    <ImageIcon className="h-[18px] w-[18px]" strokeWidth={1.7} />
                     {t("banners")}
                   </Link>
                 </>
               )}
-
-              <div className="h-px bg-[#A9A9A9] my-2 opacity-30" />
-
-              <button
-                className="w-full text-left flex items-center gap-3 py-3 px-4 text-[#C8102E] no-underline rounded-lg text-[0.95rem] font-medium transition-all duration-150 cursor-pointer border-none bg-transparent hover:bg-[#FFF5F5] hover:text-[#A90D27] disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
-                {isLoggingOut ? t("loggingOut") : t("logout")}
-              </button>
             </div>
-          )}
-        </div>
+
+            <div className="my-1 h-px bg-[#eee5dc]" />
+            <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a9087]">
+              {t("preferences")}
+            </p>
+            <div className="space-y-1 pb-1">
+              <div className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3">
+                <span className="flex items-center gap-2.5 text-sm font-medium text-[#302b27]">
+                  <Globe2 className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                  {t("language")}
+                </span>
+                <LanguageSwitcher />
+              </div>
+              <div className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3">
+                <span className="flex items-center gap-2.5 text-sm font-medium text-[#302b27]">
+                  <Coins className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                  {t("currency")}
+                </span>
+                <CurrencySwitcher />
+              </div>
+            </div>
+
+            <div className="my-1 h-px bg-[#eee5dc]" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#C8102E] transition hover:bg-[#fff1f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              {isLoggingOut ? t("loggingOut") : t("logout")}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Animations */}
       <style jsx>{`
         @keyframes dropdown-appear {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
-
         @keyframes cart-bounce {
-          0%,
-          100% {
-            transform: scale(1);
-          }
-          25% {
-            transform: scale(1.2);
-          }
-          50% {
-            transform: scale(0.95);
-          }
-          75% {
-            transform: scale(1.1);
-          }
+          0%, 100% { transform: scale(1); }
+          25% { transform: scale(1.2); }
+          50% { transform: scale(0.95); }
+          75% { transform: scale(1.1); }
         }
-
-        .dropdown-menu {
-          animation: dropdown-appear 0.2s ease-out;
-        }
-
+        .dropdown-menu { animation: dropdown-appear 0.18s ease-out; }
         .animate-cart-bounce {
           animation: cart-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           color: #c8102e;
         }
       `}</style>
-    </>
+    </div>
   );
 }

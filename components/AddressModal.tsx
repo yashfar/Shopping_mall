@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { MapPin } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -66,6 +67,7 @@ export default function AddressModal({
     const [neighborhoods, setNeighborhoods] = useState<GeoItem[]>([]);
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
 
     // Select value'ları artık isimler — formData.city/district/neighborhood'dan direkt okunur.
     // ID'ler sadece API çağrıları için ref'te tutulur.
@@ -106,6 +108,25 @@ export default function AddressModal({
             setFormData({ ...emptyForm });
         }
     }, [isOpen, mode, existingAddress]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onClose();
+        };
+
+        document.body.style.overflow = "hidden";
+        window.addEventListener("keydown", handleKeyDown);
+        const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+        return () => {
+            window.cancelAnimationFrame(focusFrame);
+            window.removeEventListener("keydown", handleKeyDown);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isOpen, onClose]);
 
     // Edit modunda seçenek listelerini yükle (formData'yı değiştirmez, sadece options)
     useEffect(() => {
@@ -224,14 +245,29 @@ export default function AddressModal({
 
     return (
         <div className="address-modal-overlay" onClick={handleOverlayClick}>
-            <div className="address-modal-content">
+            <div
+                className="address-modal-content"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="address-modal-title"
+                aria-describedby="address-modal-description"
+            >
                 <div className="address-modal-header">
-                    <h2>{mode === "add" ? t("addNewAddress") : t("editAddress")}</h2>
+                    <div className="address-modal-title">
+                        <span className="address-modal-title-icon" aria-hidden="true">
+                            <MapPin />
+                        </span>
+                        <div>
+                            <h2 id="address-modal-title">{mode === "add" ? t("addNewAddress") : t("editAddress")}</h2>
+                            <p id="address-modal-description">{t("formDescription")}</p>
+                        </div>
+                    </div>
                     <button
+                        ref={closeButtonRef}
                         className="address-modal-close"
                         onClick={onClose}
                         type="button"
-                        aria-label="Close modal"
+                        aria-label={t("close")}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

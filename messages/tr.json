@@ -56,6 +56,10 @@
     "wishlist": "Favoriler",
     "orders": "Siparişler",
     "addresses": "Adresleriniz",
+    "cart": "Sepet",
+    "preferences": "Tercihler",
+    "language": "Dil",
+    "currency": "Para Birimi",
     "addProduct": "Ürün Ekle",
     "banners": "Bannerlar",
     "loggingOut": "Çıkış yapılıyor...",
@@ -72,6 +76,8 @@
     "signIn": "Giriş Yap",
     "createAccount": "Hesap Oluştur",
     "user": "Kullanıcı",
+    "account": "Hesabım",
+    "preferences": "Tercihler",
     "language": "Dil",
     "currency": "Para Birimi"
   },
@@ -528,7 +534,52 @@
     "passwordStrengthWeak": "Zayıf",
     "passwordStrengthFair": "Orta",
     "passwordStrengthGood": "İyi",
-    "passwordStrengthStrong": "Güçlü"
+    "passwordStrengthStrong": "Güçlü",
+    "pageDescription": "Hesap bilgilerinizi görüntüleyin ve yönetin.",
+    "personalInfoDescription": "Hesap bilgilerinizi güncel tutun.",
+    "passwordSecurity": "Şifre ve Güvenlik",
+    "accountPreferences": "Hesap Tercihleri",
+    "accountPreferencesDescription": "Dil ve para birimi tercihlerinizi yönetin.",
+    "language": "Dil",
+    "languageDescription": "Sitede kullanılacak dili seçin.",
+    "currency": "Para Birimi",
+    "currencyDescription": "Ürün fiyatlarında gösterilecek para birimini seçin.",
+    "changeProfilePhoto": "Profil Resmini Değiştir",
+    "profilePictureDescription": "Hesabınız için bir profil resmi seçin ve kırpın.",
+    "closeDialog": "Pencereyi kapat",
+    "cropPhotoDescription": "Kırpmayı uygulamadan önce fotoğrafınızı konumlandırın ve yakınlaştırın.",
+    "accountNavigation": "Hesap menüsü",
+    "accountSettings": "Hesap Ayarları",
+    "breadcrumbLabel": "Sayfa yolu",
+    "home": "Ana Sayfa",
+    "quickLinksLabel": "Hesap kısayolları",
+    "navigation": {
+      "profile": "Profilim",
+      "orders": "Siparişlerim",
+      "wishlist": "Favorilerim",
+      "addresses": "Adreslerim",
+      "security": "Şifre ve Güvenlik",
+      "preferences": "Hesap Tercihleri"
+    },
+    "support": {
+      "title": "Yardıma mı ihtiyacınız var?",
+      "description": "Her zaman buradayız.",
+      "action": "Destek Merkezi"
+    },
+    "quickLinks": {
+      "addresses": {
+        "title": "Adreslerim",
+        "description": "Teslimat adreslerinizi yönetin."
+      },
+      "orders": {
+        "title": "Siparişlerim",
+        "description": "Tüm siparişlerinizi görüntüleyin."
+      },
+      "wishlist": {
+        "title": "Favorilerim",
+        "description": "Kaydettiğiniz ürünleri görüntüleyin."
+      }
+    }
   },
   "productDetail": {
     "new": "Yeni",
@@ -743,6 +794,8 @@
   "address": {
     "addNewAddress": "Yeni Adres Ekle",
     "editAddress": "Adresi Düzenle",
+    "formDescription": "Teslimat bilgilerini aşağıya girin.",
+    "close": "Adres formunu kapat",
     "title": "Başlık",
     "titlePlaceholder": "örn. Ev, İş yeri, vb.",
     "firstName": "Ad",
@@ -1027,6 +1080,8 @@
   },
   "addresses": {
     "title": "Adreslerim",
+    "pageDescription": "Kayıtlı teslimat adreslerinizi yönetin.",
+    "addressLabel": "Kayıtlı adres",
     "addNewAddress": "Yeni Adres Ekle",
     "loading": "Adresler yükleniyor...",
     "failedToLoad": "Adresler yüklenemedi",

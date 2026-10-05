@@ -56,6 +56,10 @@
     "wishlist": "Wishlist",
     "orders": "Orders",
     "addresses": "Your Addresses",
+    "cart": "Cart",
+    "preferences": "Preferences",
+    "language": "Language",
+    "currency": "Currency",
     "addProduct": "Add Product",
     "banners": "Banners",
     "loggingOut": "Logging out...",
@@ -72,6 +76,8 @@
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "user": "User",
+    "account": "My Account",
+    "preferences": "Preferences",
     "language": "Language",
     "currency": "Currency"
   },
@@ -528,7 +534,52 @@
     "passwordStrengthWeak": "Weak",
     "passwordStrengthFair": "Fair",
     "passwordStrengthGood": "Good",
-    "passwordStrengthStrong": "Strong"
+    "passwordStrengthStrong": "Strong",
+    "pageDescription": "View and manage your account information.",
+    "personalInfoDescription": "Keep your account information up to date.",
+    "passwordSecurity": "Password & Security",
+    "accountPreferences": "Account Preferences",
+    "accountPreferencesDescription": "Manage your language and currency preferences.",
+    "language": "Language",
+    "languageDescription": "Choose the language used on the site.",
+    "currency": "Currency",
+    "currencyDescription": "Choose the currency used for product prices.",
+    "changeProfilePhoto": "Change Profile Photo",
+    "profilePictureDescription": "Choose and crop a profile photo for your account.",
+    "closeDialog": "Close dialog",
+    "cropPhotoDescription": "Position and zoom your photo before applying the crop.",
+    "accountNavigation": "Account navigation",
+    "accountSettings": "Account Settings",
+    "breadcrumbLabel": "Breadcrumb",
+    "home": "Home",
+    "quickLinksLabel": "Account shortcuts",
+    "navigation": {
+      "profile": "My Profile",
+      "orders": "My Orders",
+      "wishlist": "My Wishlist",
+      "addresses": "My Addresses",
+      "security": "Password & Security",
+      "preferences": "Account Preferences"
+    },
+    "support": {
+      "title": "Need help?",
+      "description": "We are always here for you.",
+      "action": "Support Center"
+    },
+    "quickLinks": {
+      "addresses": {
+        "title": "My Addresses",
+        "description": "Manage your delivery addresses."
+      },
+      "orders": {
+        "title": "My Orders",
+        "description": "View all your orders."
+      },
+      "wishlist": {
+        "title": "My Wishlist",
+        "description": "View your saved products."
+      }
+    }
   },
   "productDetail": {
     "new": "New",
@@ -743,6 +794,8 @@
   "address": {
     "addNewAddress": "Add New Address",
     "editAddress": "Edit Address",
+    "formDescription": "Enter the delivery details below.",
+    "close": "Close address form",
     "title": "Title",
     "titlePlaceholder": "e.g., Home, Office, etc.",
     "firstName": "First Name",
@@ -1027,6 +1080,8 @@
   },
   "addresses": {
     "title": "Your Addresses",
+    "pageDescription": "Manage your saved delivery addresses.",
+    "addressLabel": "Saved address",
     "addNewAddress": "Add New Address",
     "loading": "Loading addresses...",
     "failedToLoad": "Failed to load addresses",
