@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, DragEvent, ChangeEvent, useCallback } from "react";
+import { ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import NextImage from "next/image";
+import * as Dialog from "@radix-ui/react-dialog";
 import Cropper from "react-easy-crop";
+import { Camera, UploadCloud, X } from "lucide-react";
 import { Button } from "@@/components/ui/button";
 import {
     AlertDialog,
@@ -21,7 +23,6 @@ import { cn } from "@@/lib/utils";
 
 interface AvatarUploadProps {
     currentAvatar: string | null;
-    userId: string;
     onSuccess?: () => void;
 }
 
@@ -32,7 +33,8 @@ interface CropArea {
     height: number;
 }
 
-export default function AvatarUpload({ currentAvatar, userId: _userId, onSuccess }: AvatarUploadProps) {
+export default function AvatarUpload({ currentAvatar, onSuccess }: AvatarUploadProps) {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [preview, setPreview] = useState<string | null>(currentAvatar);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showCropModal, setShowCropModal] = useState(false);
@@ -46,6 +48,11 @@ export default function AvatarUpload({ currentAvatar, userId: _userId, onSuccess
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const t = useTranslations("profile");
+
+    useEffect(() => {
+        setPreview(currentAvatar);
+        setImageError(false);
+    }, [currentAvatar]);
 
     const onCropComplete = useCallback((_: unknown, pixels: CropArea) => {
         setCroppedAreaPixels(pixels);
@@ -62,24 +69,33 @@ export default function AvatarUpload({ currentAvatar, userId: _userId, onSuccess
     const getCroppedImg = async (imageSrc: string, pixelCrop: CropArea): Promise<string> => {
         const image = await createImage(imageSrc);
         const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("No 2d context");
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("No 2d context");
         canvas.width = pixelCrop.width;
         canvas.height = pixelCrop.height;
-        ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+        context.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
         return canvas.toDataURL("image/jpeg", 0.95);
     };
 
-    const handleDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); };
-    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); };
-    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
+    const handleDragOver = (event: DragEvent<HTMLElement>) => {
+        event.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (event: DragEvent<HTMLElement>) => {
+        event.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files?.[0];
+    };
+
+    const handleDrop = (event: DragEvent<HTMLElement>) => {
+        event.preventDefault();
+        setIsDragging(false);
+        const file = event.dataTransfer.files?.[0];
         if (file) handleFile(file);
     };
-    const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+
+    const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
         if (file) handleFile(file);
     };
 
@@ -102,27 +118,25 @@ export default function AvatarUpload({ currentAvatar, userId: _userId, onSuccess
         reader.readAsDataURL(file);
     };
 
+    const resetCrop = () => {
+        setShowCropModal(false);
+        setSelectedImage(null);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
     const handleCropSave = async () => {
         if (!selectedImage || !croppedAreaPixels) return;
         try {
             const cropped = await getCroppedImg(selectedImage, croppedAreaPixels);
             setPreview(cropped);
             setImageError(false);
-            setShowCropModal(false);
-            setSelectedImage(null);
-            setCrop({ x: 0, y: 0 });
-            setZoom(1);
+            resetCrop();
         } catch {
             setMessage({ type: "error", text: t("failedToCrop") });
         }
-    };
-
-    const handleCropCancel = () => {
-        setShowCropModal(false);
-        setSelectedImage(null);
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const handleUpload = async () => {
@@ -177,222 +191,153 @@ export default function AvatarUpload({ currentAvatar, userId: _userId, onSuccess
     const handleCancel = () => {
         setPreview(currentAvatar);
         setMessage(null);
+        setImageError(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const handleDialogOpenChange = (open: boolean) => {
+        if (!open && !isUploading) {
+            handleCancel();
+        }
+        setIsDialogOpen(open);
     };
 
     const hasChanges = preview !== currentAvatar;
 
     return (
-        <>
-            <div className="bg-white border border-gray-100 rounded-3xl shadow-xl shadow-gray-100/50 p-6 sm:p-8">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-5">{t("profilePicture")}</h3>
+        <Dialog.Root open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+            <Dialog.Trigger asChild>
+                <button
+                    type="button"
+                    className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-white/45 bg-white/12 px-4 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto"
+                >
+                    <Camera className="h-4 w-4" strokeWidth={2} />
+                    {t("changeProfilePhoto")}
+                </button>
+            </Dialog.Trigger>
 
-                {message && (
-                    <div className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-2xl mb-4 text-sm font-medium border animate-in fade-in slide-in-from-top-2",
-                        message.type === "success"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                            : "bg-red-50 text-red-600 border-red-100"
-                    )}>
-                        <span className={cn(
-                            "shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black",
-                            message.type === "success" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
-                        )}>
-                            {message.type === "success" ? "✓" : "!"}
-                        </span>
-                        {message.text}
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[22px] border border-[#eee8e2] bg-white shadow-2xl duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+                    <div className="flex items-start justify-between gap-4 border-b border-[#f0ebe6] px-5 py-4 sm:px-6">
+                        <div>
+                            <Dialog.Title className="text-lg font-bold text-slate-950">{t("profilePicture")}</Dialog.Title>
+                            <Dialog.Description className="mt-1 text-sm text-slate-500">{t("profilePictureDescription")}</Dialog.Description>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={t("closeDialog")}>
+                                <X className="h-5 w-5" />
+                            </button>
+                        </Dialog.Close>
                     </div>
-                )}
 
-                {/* Upload Area */}
-                <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-4">
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                        {/* Preview — clickable */}
-                        <div
-                            className="shrink-0 cursor-pointer group relative"
-                            onClick={() => fileInputRef.current?.click()}
-                            title={t("clickToUpload")}
-                        >
-                            {preview && !imageError ? (
-                                <NextImage
-                                    src={preview}
-                                    alt="Avatar"
-                                    width={96}
-                                    height={96}
-                                    unoptimized
-                                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 group-hover:opacity-80 transition-opacity"
-                                    onError={() => setImageError(true)}
-                                />
-                            ) : (
-                                <div className="w-24 h-24 rounded-full bg-linear-to-br from-red-400 to-rose-700 flex items-center justify-center border-2 border-gray-200 group-hover:opacity-80 transition-opacity">
-                                    <span className="text-3xl font-bold text-white drop-shadow">U</span>
-                                </div>
-                            )}
-                            {/* Camera overlay */}
-                            <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
+                    <div className="overflow-y-auto p-5 sm:p-6">
+                        {message && (
+                            <div role="status" className={cn("mb-4 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium", message.type === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-red-100 bg-red-50 text-red-600")}>
+                                <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-black", message.type === "success" ? "bg-emerald-100" : "bg-red-100")}>
+                                    {message.type === "success" ? "✓" : "!"}
+                                </span>
+                                {message.text}
                             </div>
-                        </div>
-
-                        {/* Dropzone — no shadcn equivalent, raw HTML */}
-                        <div
-                            className={cn(
-                                "flex-1 w-full border-2 border-dashed rounded-xl py-5 px-4 text-center cursor-pointer transition-all",
-                                isDragging
-                                    ? "border-primary bg-red-50"
-                                    : "border-gray-200 bg-white hover:border-primary hover:bg-red-50/40"
-                            )}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileSelect}
-                                className="hidden"
-                            />
-                            <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <p className="text-sm text-gray-500">
-                                <span className="font-bold text-primary">{t("clickToUpload")}</span>{" "}
-                                {t("dragAndDrop")}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">{t("uploadHint")}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col-reverse sm:flex-row justify-between gap-2 sm:gap-3">
-                    {/* Remove — always visible, disabled when no avatar */}
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button
-                                variant="outline"
-                                disabled={!currentAvatar || isUploading || hasChanges}
-                                className="w-full sm:w-auto rounded-xl font-bold border-gray-200 text-gray-500 hover:border-destructive hover:text-destructive hover:bg-red-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
-                            >
-                                {t("removeAvatar")}
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>{t("confirmRemoveAvatar")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    {t("confirmRemoveAvatarDesc") ?? "Bu işlem geri alınamaz."}
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={handleRemove}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-                                >
-                                    {t("removeAvatar")}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-
-                    {/* Save / Cancel pending changes */}
-                    <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-                        {hasChanges && (
-                            <>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleCancel}
-                                    disabled={isUploading}
-                                    className="w-full sm:w-auto rounded-xl font-bold border-gray-200 text-gray-600 hover:bg-gray-100 cursor-pointer"
-                                >
-                                    {t("cancel")}
-                                </Button>
-                                <Button
-                                    onClick={handleUpload}
-                                    disabled={isUploading}
-                                    className="w-full sm:w-auto rounded-xl font-bold bg-primary hover:bg-destructive shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:cursor-not-allowed gap-2"
-                                >
-                                    {isUploading ? (
-                                        <>
-                                            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                                            {t("uploading")}
-                                        </>
-                                    ) : (
-                                        t("uploadAvatar")
-                                    )}
-                                </Button>
-                            </>
                         )}
-                    </div>
-                </div>
-            </div>
 
-            {/* Crop Modal — no shadcn Dialog available, raw overlay */}
-            {showCropModal && selectedImage && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-                    <div className="bg-white border border-gray-100 rounded-3xl shadow-xl shadow-gray-100/50 w-full max-w-lg max-h-[90vh] flex flex-col">
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <h3 className="text-base font-semibold text-foreground">{t("cropYourPhoto")}</h3>
+                        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="sr-only" aria-label={t("clickToUpload")} />
+                        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-stretch">
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative shrink-0 self-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" aria-label={t("clickToUpload")}>
+                                {preview && !imageError ? (
+                                    <NextImage src={preview} alt={t("profilePicture")} width={112} height={112} unoptimized className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-lg ring-1 ring-[#e8e2dc] transition group-hover:brightness-90" onError={() => setImageError(true)} />
+                                ) : (
+                                    <span className="flex h-28 w-28 items-center justify-center rounded-full bg-[#9b817d] text-3xl font-semibold text-white shadow-lg ring-4 ring-[#f2ece8]">U</span>
+                                )}
+                                <span className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-primary text-white shadow-md">
+                                    <Camera className="h-4 w-4" />
+                                </span>
+                            </button>
+
                             <button
-                                onClick={handleCropCancel}
-                                className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none p-1"
-                                aria-label="Close"
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={cn(
+                                    "flex min-h-36 w-full flex-1 flex-col items-center justify-center rounded-2xl border border-dashed px-5 py-6 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+                                    isDragging ? "border-primary bg-red-50" : "border-[#dcd3cb] bg-[#fbfaf8] hover:border-primary/60 hover:bg-red-50/40",
+                                )}
                             >
-                                ✕
+                                <UploadCloud className="mb-2 h-7 w-7 text-primary" strokeWidth={1.8} />
+                                <span className="text-sm font-semibold text-slate-800">{t("clickToUpload")}</span>
+                                <span className="mt-1 text-xs text-slate-500">{t("dragAndDrop")}</span>
+                                <span className="mt-2 text-xs text-slate-400">{t("uploadHint")}</span>
                             </button>
                         </div>
+                    </div>
 
-                        {/* Cropper */}
-                        <div className="relative w-full h-64 sm:h-80 bg-black">
-                            <Cropper
-                                image={selectedImage}
-                                crop={crop}
-                                zoom={zoom}
-                                aspect={1}
-                                cropShape="round"
-                                showGrid={false}
-                                onCropChange={setCrop}
-                                onZoomChange={setZoom}
-                                onCropComplete={onCropComplete}
-                            />
-                        </div>
+                    <div className="flex flex-col-reverse gap-2 border-t border-[#f0ebe6] bg-[#fdfcfb] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" disabled={!currentAvatar || isUploading || hasChanges} className="h-11 w-full rounded-xl border-[#e5ded7] font-semibold text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-primary disabled:cursor-not-allowed sm:w-auto">
+                                    {t("removeAvatar")}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-2xl border-[#eee8e2]">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>{t("confirmRemoveAvatar")}</AlertDialogTitle>
+                                    <AlertDialogDescription>{t("confirmRemoveAvatarDesc")}</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("removeAvatar")}</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
 
-                        {/* Zoom */}
-                        <div className="px-5 py-4 border-t border-b border-gray-100">
-                            <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-                                {t("zoom")}
-                                {/* raw input[range] — no shadcn Slider available */}
-                                <input
-                                    type="range"
-                                    min={1}
-                                    max={3}
-                                    step={0.1}
-                                    value={zoom}
-                                    onChange={(e) => setZoom(Number(e.target.value))}
-                                    className="w-full h-1.5 rounded-full appearance-none bg-border accent-primary cursor-pointer"
-                                />
-                            </label>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-5 py-4">
-                            <Button variant="outline" onClick={handleCropCancel} className="w-full sm:w-auto">
-                                {t("cancel")}
-                            </Button>
-                            <Button onClick={handleCropSave} className="w-full sm:w-auto">
-                                {t("applyCrop")}
-                            </Button>
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                            {hasChanges && (
+                                <>
+                                    <Button variant="outline" onClick={handleCancel} disabled={isUploading} className="h-11 w-full rounded-xl border-[#e5ded7] font-semibold text-slate-600 hover:bg-[#f5f1ed] sm:w-auto">{t("cancel")}</Button>
+                                    <Button onClick={handleUpload} disabled={isUploading} className="h-11 w-full gap-2 rounded-xl bg-primary px-5 font-semibold hover:bg-destructive sm:w-auto">
+                                        {isUploading && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
+                                        {isUploading ? t("uploading") : t("uploadAvatar")}
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
-        </>
+                </Dialog.Content>
+            </Dialog.Portal>
+
+            <Dialog.Root open={showCropModal} onOpenChange={(open) => { if (!open) resetCrop(); }}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+                    {selectedImage && (
+                        <Dialog.Content className="fixed left-1/2 top-1/2 z-[71] flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[22px] bg-white shadow-2xl">
+                            <div className="flex items-center justify-between border-b border-[#f0ebe6] px-5 py-4">
+                                <Dialog.Title className="text-base font-bold text-slate-950">{t("cropYourPhoto")}</Dialog.Title>
+                                <Dialog.Close asChild>
+                                    <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={t("closeDialog")}>
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </Dialog.Close>
+                            </div>
+                            <Dialog.Description className="sr-only">{t("cropPhotoDescription")}</Dialog.Description>
+                            <div className="relative h-64 w-full bg-black sm:h-80">
+                                <Cropper image={selectedImage} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={false} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
+                            </div>
+                            <div className="border-y border-[#f0ebe6] px-5 py-4">
+                                <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                                    {t("zoom")}
+                                    <input type="range" min={1} max={3} step={0.1} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-primary" />
+                                </label>
+                            </div>
+                            <div className="flex flex-col-reverse justify-end gap-2 px-5 py-4 sm:flex-row">
+                                <Button variant="outline" onClick={resetCrop} className="h-11 w-full rounded-xl sm:w-auto">{t("cancel")}</Button>
+                                <Button onClick={handleCropSave} className="h-11 w-full rounded-xl bg-primary hover:bg-destructive sm:w-auto">{t("applyCrop")}</Button>
+                            </div>
+                        </Dialog.Content>
+                    )}
+                </Dialog.Portal>
+            </Dialog.Root>
+        </Dialog.Root>
     );
 }

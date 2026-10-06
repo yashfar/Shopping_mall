@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { MapPin } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -38,6 +39,16 @@ interface GeoItem {
     name: string;
 }
 
+async function fetchGeoItems(url: string): Promise<GeoItem[]> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Location lookup failed with ${response.status}`);
+
+    const data: unknown = await response.json();
+    if (!Array.isArray(data)) throw new Error("Location lookup returned invalid data");
+
+    return data as GeoItem[];
+}
+
 const emptyForm = {
     title: "",
     firstName: "",
@@ -66,6 +77,7 @@ export default function AddressModal({
     const [neighborhoods, setNeighborhoods] = useState<GeoItem[]>([]);
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
 
     // Select value'ları artık isimler — formData.city/district/neighborhood'dan direkt okunur.
     // ID'ler sadece API çağrıları için ref'te tutulur.
@@ -73,13 +85,14 @@ export default function AddressModal({
     const districtIdRef = useRef("");
     const cascadeLoadedRef = useRef<string | null>(null); // hangi adres için yüklendi
 
-    // Load provinces once on mount
+    // Load provinces when the modal opens; a later reopen retries a failed lookup.
     useEffect(() => {
-        fetch("/api/address/provinces")
-            .then((r) => r.json())
-            .then((data) => setProvinces(Array.isArray(data) ? data : []))
-            .catch(() => {});
-    }, []);
+        if (!isOpen || provinces.length > 0) return;
+
+        fetchGeoItems("/api/address/provinces")
+            .then(setProvinces)
+            .catch(() => setError(t("locationLoadError")));
+    }, [isOpen, provinces.length, t]);
 
     // Modal açılınca form sıfırla
     useEffect(() => {
@@ -107,6 +120,25 @@ export default function AddressModal({
         }
     }, [isOpen, mode, existingAddress]);
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onClose();
+        };
+
+        document.body.style.overflow = "hidden";
+        window.addEventListener("keydown", handleKeyDown);
+        const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+        return () => {
+            window.cancelAnimationFrame(focusFrame);
+            window.removeEventListener("keydown", handleKeyDown);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isOpen, onClose]);
+
     // Edit modunda seçenek listelerini yükle (formData'yı değiştirmez, sadece options)
     useEffect(() => {
         if (!isOpen || mode !== "edit" || !existingAddress || provinces.length === 0) return;
@@ -120,10 +152,8 @@ export default function AddressModal({
         provinceIdRef.current = province.id.toString();
         setLoadingDistricts(true);
 
-        fetch(`/api/address/districts?provinceId=${province.id}`)
-            .then((r) => r.json())
-            .then((raw) => {
-                const data: GeoItem[] = Array.isArray(raw) ? raw : [];
+        fetchGeoItems(`/api/address/districts?provinceId=${province.id}`)
+            .then((data) => {
                 setDistricts(data);
 
                 const district = data.find((d) => norm(d.name) === norm(existingAddress.district));
@@ -132,13 +162,15 @@ export default function AddressModal({
                 districtIdRef.current = district.id.toString();
                 setLoadingNeighborhoods(true);
 
-                fetch(`/api/address/neighborhoods?districtId=${district.id}`)
-                    .then((r2) => r2.json())
-                    .then((raw2) => setNeighborhoods(Array.isArray(raw2) ? raw2 : []))
-                    .finally(() => setLoadingNeighborhoods(false));
+                return fetchGeoItems(`/api/address/neighborhoods?districtId=${district.id}`)
+                    .then(setNeighborhoods);
             })
-            .finally(() => setLoadingDistricts(false));
-    }, [isOpen, provinces, mode, existingAddress]);
+            .catch(() => setError(t("locationLoadError")))
+            .finally(() => {
+                setLoadingDistricts(false);
+                setLoadingNeighborhoods(false);
+            });
+    }, [isOpen, provinces, mode, existingAddress, t]);
 
     const handleProvinceChange = async (name: string) => {
         const province = provinces.find((p) => p.name === name);
@@ -150,10 +182,12 @@ export default function AddressModal({
         setFormData((prev) => ({ ...prev, city: name, district: "", neighborhood: "" }));
 
         setLoadingDistricts(true);
+        setError("");
         try {
-            const res = await fetch(`/api/address/districts?provinceId=${province.id}`);
-            const data = await res.json();
-            setDistricts(Array.isArray(data) ? data : []);
+            const data = await fetchGeoItems(`/api/address/districts?provinceId=${province.id}`);
+            setDistricts(data);
+        } catch {
+            setError(t("locationLoadError"));
         } finally {
             setLoadingDistricts(false);
         }
@@ -167,10 +201,12 @@ export default function AddressModal({
         setFormData((prev) => ({ ...prev, district: name, neighborhood: "" }));
 
         setLoadingNeighborhoods(true);
+        setError("");
         try {
-            const res = await fetch(`/api/address/neighborhoods?districtId=${district.id}`);
-            const data = await res.json();
-            setNeighborhoods(Array.isArray(data) ? data : []);
+            const data = await fetchGeoItems(`/api/address/neighborhoods?districtId=${district.id}`);
+            setNeighborhoods(data);
+        } catch {
+            setError(t("locationLoadError"));
         } finally {
             setLoadingNeighborhoods(false);
         }
@@ -224,14 +260,29 @@ export default function AddressModal({
 
     return (
         <div className="address-modal-overlay" onClick={handleOverlayClick}>
-            <div className="address-modal-content">
+            <div
+                className="address-modal-content"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="address-modal-title"
+                aria-describedby="address-modal-description"
+            >
                 <div className="address-modal-header">
-                    <h2>{mode === "add" ? t("addNewAddress") : t("editAddress")}</h2>
+                    <div className="address-modal-title">
+                        <span className="address-modal-title-icon" aria-hidden="true">
+                            <MapPin />
+                        </span>
+                        <div>
+                            <h2 id="address-modal-title">{mode === "add" ? t("addNewAddress") : t("editAddress")}</h2>
+                            <p id="address-modal-description">{t("formDescription")}</p>
+                        </div>
+                    </div>
                     <button
+                        ref={closeButtonRef}
                         className="address-modal-close"
                         onClick={onClose}
                         type="button"
-                        aria-label="Close modal"
+                        aria-label={t("close")}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

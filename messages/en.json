@@ -56,6 +56,10 @@
     "wishlist": "Wishlist",
     "orders": "Orders",
     "addresses": "Your Addresses",
+    "cart": "Cart",
+    "preferences": "Preferences",
+    "language": "Language",
+    "currency": "Currency",
     "addProduct": "Add Product",
     "banners": "Banners",
     "loggingOut": "Logging out...",
@@ -72,6 +76,8 @@
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "user": "User",
+    "account": "My Account",
+    "preferences": "Preferences",
     "language": "Language",
     "currency": "Currency"
   },
@@ -110,14 +116,18 @@
     "invalidCredentials": "Invalid email or password",
     "googleError": "Failed to sign in with Google",
     "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "register": {
     "createAccount": "Create Account",
     "subtitle": "Join our community today",
     "email": "Email",
     "password": "Password",
+    "confirmPassword": "Confirm Password",
     "passwordHint": "Must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match.",
     "creatingAccount": "Creating Account...",
     "orContinueWith": "Or continue with",
     "signUpWithGoogle": "Sign up with Google",
@@ -129,7 +139,24 @@
     "unexpectedError": "An unexpected error occurred",
     "googleError": "Failed to sign in with Google",
     "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "privacyConsent": "I have read and accept the <privacy>Privacy Policy</privacy>.",
+    "termsConsent": "I have read and accept the <terms>Terms of Service</terms>.",
+    "privacyConsentLabel": "I accept the Privacy Policy",
+    "termsConsentLabel": "I accept the Terms of Service",
+    "closeLegalDialog": "Close"
+  },
+  "authExperience": {
+    "eyebrow": "CREATIVE AVENTUS",
+    "headline": "A Better\nShopping Experience\nAwaits You",
+    "reliableShopping": "Reliable Shopping",
+    "reliableShoppingBody": "Quality products, thoughtfully delivered.",
+    "securePayment": "Secure Payment",
+    "securePaymentBody": "Your information stays protected.",
+    "hereForYou": "Here for You",
+    "hereForYouBody": "With you at every step."
   },
   "forgotPassword": {
     "title": "Forgot Password?",
@@ -507,7 +534,52 @@
     "passwordStrengthWeak": "Weak",
     "passwordStrengthFair": "Fair",
     "passwordStrengthGood": "Good",
-    "passwordStrengthStrong": "Strong"
+    "passwordStrengthStrong": "Strong",
+    "pageDescription": "View and manage your account information.",
+    "personalInfoDescription": "Keep your account information up to date.",
+    "passwordSecurity": "Password & Security",
+    "accountPreferences": "Account Preferences",
+    "accountPreferencesDescription": "Manage your language and currency preferences.",
+    "language": "Language",
+    "languageDescription": "Choose the language used on the site.",
+    "currency": "Currency",
+    "currencyDescription": "Choose the currency used for product prices.",
+    "changeProfilePhoto": "Change Profile Photo",
+    "profilePictureDescription": "Choose and crop a profile photo for your account.",
+    "closeDialog": "Close dialog",
+    "cropPhotoDescription": "Position and zoom your photo before applying the crop.",
+    "accountNavigation": "Account navigation",
+    "accountSettings": "Account Settings",
+    "breadcrumbLabel": "Breadcrumb",
+    "home": "Home",
+    "quickLinksLabel": "Account shortcuts",
+    "navigation": {
+      "profile": "My Profile",
+      "orders": "My Orders",
+      "wishlist": "My Wishlist",
+      "addresses": "My Addresses",
+      "security": "Password & Security",
+      "preferences": "Account Preferences"
+    },
+    "support": {
+      "title": "Need help?",
+      "description": "We are always here for you.",
+      "action": "Support Center"
+    },
+    "quickLinks": {
+      "addresses": {
+        "title": "My Addresses",
+        "description": "Manage your delivery addresses."
+      },
+      "orders": {
+        "title": "My Orders",
+        "description": "View all your orders."
+      },
+      "wishlist": {
+        "title": "My Wishlist",
+        "description": "View your saved products."
+      }
+    }
   },
   "productDetail": {
     "new": "New",
@@ -548,7 +620,45 @@
     "noReviews": "No reviews yet",
     "noReviewsDescription": "Be the first to share your thoughts on this product. Your feedback matters!",
     "noImageAvailable": "No image available",
-    "noWrittenReview": "No written review"
+    "noWrittenReview": "No written review",
+    "productGallery": "Product gallery",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "openFullscreen": "Open image full screen",
+    "closeImageViewer": "Close image viewer",
+    "imageViewer": "Product image viewer",
+    "selectImage": "Select product image {number}",
+    "breadcrumbLabel": "Breadcrumb",
+    "home": "Home",
+    "products": "Products",
+    "variantStock": "{count} available",
+    "inStock": "In Stock",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "shipping": "Shipping",
+    "shippingDaysShort": "{days} business days",
+    "securePayment": "Secure Payment",
+    "securePaymentShort": "Protected checkout",
+    "returnsInformation": "Returns Information",
+    "customerSupport": "Customer Support",
+    "contactOptions": "Contact options",
+    "viewPolicy": "View policy",
+    "productInformation": "Product information",
+    "productDescription": "Product Description",
+    "productDetails": "Product Details",
+    "shippingAndReturns": "Shipping & Returns",
+    "category": "Category",
+    "availability": "Availability",
+    "availableColors": "Available Colors",
+    "noDescription": "No product description is available.",
+    "shippingInformation": "Shipping Information",
+    "estimatedShippingDays": "Estimated preparation and shipping time: {days} business days",
+    "shippingPolicySummary": "See the current shipping terms for preparation and delivery information.",
+    "returnsPolicySummary": "Review the current returns policy for eligibility and process details.",
+    "viewShippingPolicy": "View shipping policy",
+    "viewReturnsPolicy": "View returns policy",
+    "reviewSubmitSuccess": "Review submitted successfully!",
+    "reviewSubmitFailed": "Failed to submit review"
   },
   "orderDetails": {
     "loading": "Retrieving order details...",
@@ -684,6 +794,8 @@
   "address": {
     "addNewAddress": "Add New Address",
     "editAddress": "Edit Address",
+    "formDescription": "Enter the delivery details below.",
+    "close": "Close address form",
     "title": "Title",
     "titlePlaceholder": "e.g., Home, Office, etc.",
     "firstName": "First Name",
@@ -698,6 +810,7 @@
     "selectNeighborhood": "Select neighborhood",
     "loadingDistricts": "Loading districts...",
     "loadingNeighborhoods": "Loading neighborhoods...",
+    "locationLoadError": "Location options could not be loaded. Please try again.",
     "fullAddress": "Full Address",
     "addressPlaceholder": "Street, building number, apartment, etc.",
     "cancel": "Cancel",
@@ -968,6 +1081,8 @@
   },
   "addresses": {
     "title": "Your Addresses",
+    "pageDescription": "Manage your saved delivery addresses.",
+    "addressLabel": "Saved address",
     "addNewAddress": "Add New Address",
     "loading": "Loading addresses...",
     "failedToLoad": "Failed to load addresses",

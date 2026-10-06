@@ -56,6 +56,10 @@
     "wishlist": "Favoriler",
     "orders": "Siparişler",
     "addresses": "Adresleriniz",
+    "cart": "Sepet",
+    "preferences": "Tercihler",
+    "language": "Dil",
+    "currency": "Para Birimi",
     "addProduct": "Ürün Ekle",
     "banners": "Bannerlar",
     "loggingOut": "Çıkış yapılıyor...",
@@ -72,6 +76,8 @@
     "signIn": "Giriş Yap",
     "createAccount": "Hesap Oluştur",
     "user": "Kullanıcı",
+    "account": "Hesabım",
+    "preferences": "Tercihler",
     "language": "Dil",
     "currency": "Para Birimi"
   },
@@ -110,14 +116,18 @@
     "invalidCredentials": "Geçersiz e-posta veya şifre",
     "googleError": "Google ile giriş yapılamadı",
     "emailPlaceholder": "ornek@email.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle"
   },
   "register": {
     "createAccount": "Hesap Oluştur",
     "subtitle": "Topluluğumuza bugün katılın",
     "email": "E-posta",
     "password": "Şifre",
+    "confirmPassword": "Şifreyi Onayla",
     "passwordHint": "En az 8 karakter olmalıdır",
+    "passwordMismatch": "Şifreler eşleşmiyor.",
     "creatingAccount": "Hesap oluşturuluyor...",
     "orContinueWith": "Veya şununla devam edin",
     "signUpWithGoogle": "Google ile kayıt ol",
@@ -129,7 +139,24 @@
     "unexpectedError": "Beklenmeyen bir hata oluştu",
     "googleError": "Google ile kayıt olunamadı",
     "emailPlaceholder": "ornek@email.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
+    "privacyConsent": "<privacy>Gizlilik Politikası</privacy>'nı okudum ve kabul ediyorum.",
+    "termsConsent": "<terms>Kullanım Koşulları</terms>'nı okudum ve kabul ediyorum.",
+    "privacyConsentLabel": "Gizlilik Politikasını kabul ediyorum",
+    "termsConsentLabel": "Kullanım Koşullarını kabul ediyorum",
+    "closeLegalDialog": "Kapat"
+  },
+  "authExperience": {
+    "eyebrow": "CREATIVE AVENTUS",
+    "headline": "Daha Güzel\nAlışveriş Deneyimi\nSizi Bekliyor",
+    "reliableShopping": "Güvenilir Alışveriş",
+    "reliableShoppingBody": "Kaliteli ürünler, hızlı teslimat.",
+    "securePayment": "Güvenli Ödeme",
+    "securePaymentBody": "Bilgileriniz her zaman güvende.",
+    "hereForYou": "Sizin İçin Buradayız",
+    "hereForYouBody": "Her adımda yanınızdayız."
   },
   "forgotPassword": {
     "title": "Şifrenizi mi Unuttunuz?",
@@ -507,7 +534,52 @@
     "passwordStrengthWeak": "Zayıf",
     "passwordStrengthFair": "Orta",
     "passwordStrengthGood": "İyi",
-    "passwordStrengthStrong": "Güçlü"
+    "passwordStrengthStrong": "Güçlü",
+    "pageDescription": "Hesap bilgilerinizi görüntüleyin ve yönetin.",
+    "personalInfoDescription": "Hesap bilgilerinizi güncel tutun.",
+    "passwordSecurity": "Şifre ve Güvenlik",
+    "accountPreferences": "Hesap Tercihleri",
+    "accountPreferencesDescription": "Dil ve para birimi tercihlerinizi yönetin.",
+    "language": "Dil",
+    "languageDescription": "Sitede kullanılacak dili seçin.",
+    "currency": "Para Birimi",
+    "currencyDescription": "Ürün fiyatlarında gösterilecek para birimini seçin.",
+    "changeProfilePhoto": "Profil Resmini Değiştir",
+    "profilePictureDescription": "Hesabınız için bir profil resmi seçin ve kırpın.",
+    "closeDialog": "Pencereyi kapat",
+    "cropPhotoDescription": "Kırpmayı uygulamadan önce fotoğrafınızı konumlandırın ve yakınlaştırın.",
+    "accountNavigation": "Hesap menüsü",
+    "accountSettings": "Hesap Ayarları",
+    "breadcrumbLabel": "Sayfa yolu",
+    "home": "Ana Sayfa",
+    "quickLinksLabel": "Hesap kısayolları",
+    "navigation": {
+      "profile": "Profilim",
+      "orders": "Siparişlerim",
+      "wishlist": "Favorilerim",
+      "addresses": "Adreslerim",
+      "security": "Şifre ve Güvenlik",
+      "preferences": "Hesap Tercihleri"
+    },
+    "support": {
+      "title": "Yardıma mı ihtiyacınız var?",
+      "description": "Her zaman buradayız.",
+      "action": "Destek Merkezi"
+    },
+    "quickLinks": {
+      "addresses": {
+        "title": "Adreslerim",
+        "description": "Teslimat adreslerinizi yönetin."
+      },
+      "orders": {
+        "title": "Siparişlerim",
+        "description": "Tüm siparişlerinizi görüntüleyin."
+      },
+      "wishlist": {
+        "title": "Favorilerim",
+        "description": "Kaydettiğiniz ürünleri görüntüleyin."
+      }
+    }
   },
   "productDetail": {
     "new": "Yeni",
@@ -548,7 +620,45 @@
     "noReviews": "Henüz değerlendirme yok",
     "noReviewsDescription": "Bu ürün hakkında düşüncelerinizi ilk paylaşan siz olun. Geri bildiriminiz önemli!",
     "noImageAvailable": "Görsel mevcut değil",
-    "noWrittenReview": "Yazılı değerlendirme yok"
+    "noWrittenReview": "Yazılı değerlendirme yok",
+    "productGallery": "Ürün görsel galerisi",
+    "previousImage": "Önceki görsel",
+    "nextImage": "Sonraki görsel",
+    "openFullscreen": "Görseli tam ekranda aç",
+    "closeImageViewer": "Görsel görüntüleyiciyi kapat",
+    "imageViewer": "Ürün görsel görüntüleyicisi",
+    "selectImage": "{number}. ürün görselini seç",
+    "breadcrumbLabel": "Sayfa yolu",
+    "home": "Ana Sayfa",
+    "products": "Ürünler",
+    "variantStock": "{count} adet mevcut",
+    "inStock": "Stokta",
+    "decreaseQuantity": "Adedi azalt",
+    "increaseQuantity": "Adedi artır",
+    "shipping": "Kargo",
+    "shippingDaysShort": "{days} iş günü",
+    "securePayment": "Güvenli Ödeme",
+    "securePaymentShort": "Korumalı ödeme",
+    "returnsInformation": "İade Bilgisi",
+    "customerSupport": "Müşteri Desteği",
+    "contactOptions": "İletişim seçenekleri",
+    "viewPolicy": "Politikayı incele",
+    "productInformation": "Ürün bilgileri",
+    "productDescription": "Ürün Açıklaması",
+    "productDetails": "Ürün Özellikleri",
+    "shippingAndReturns": "Kargo & İade",
+    "category": "Kategori",
+    "availability": "Stok Durumu",
+    "availableColors": "Mevcut Renkler",
+    "noDescription": "Bu ürün için açıklama bulunmuyor.",
+    "shippingInformation": "Kargo Bilgisi",
+    "estimatedShippingDays": "Tahmini hazırlık ve kargo süresi: {days} iş günü",
+    "shippingPolicySummary": "Hazırlık ve teslimat bilgileri için güncel kargo koşullarını inceleyin.",
+    "returnsPolicySummary": "Uygunluk ve süreç bilgileri için güncel iade politikasını inceleyin.",
+    "viewShippingPolicy": "Kargo politikasını incele",
+    "viewReturnsPolicy": "İade politikasını incele",
+    "reviewSubmitSuccess": "Değerlendirme başarıyla gönderildi!",
+    "reviewSubmitFailed": "Değerlendirme gönderilemedi"
   },
   "orderDetails": {
     "loading": "Sipariş detayları getiriliyor...",
@@ -684,6 +794,8 @@
   "address": {
     "addNewAddress": "Yeni Adres Ekle",
     "editAddress": "Adresi Düzenle",
+    "formDescription": "Teslimat bilgilerini aşağıya girin.",
+    "close": "Adres formunu kapat",
     "title": "Başlık",
     "titlePlaceholder": "örn. Ev, İş yeri, vb.",
     "firstName": "Ad",
@@ -698,6 +810,7 @@
     "selectNeighborhood": "Mahalle seçin",
     "loadingDistricts": "İlçeler yükleniyor...",
     "loadingNeighborhoods": "Mahalleler yükleniyor...",
+    "locationLoadError": "Konum seçenekleri yüklenemedi. Lütfen tekrar deneyin.",
     "fullAddress": "Açık Adres",
     "addressPlaceholder": "Sokak, bina numarası, daire, vb.",
     "cancel": "İptal",
@@ -968,6 +1081,8 @@
   },
   "addresses": {
     "title": "Adreslerim",
+    "pageDescription": "Kayıtlı teslimat adreslerinizi yönetin.",
+    "addressLabel": "Kayıtlı adres",
     "addNewAddress": "Yeni Adres Ekle",
     "loading": "Adresler yükleniyor...",
     "failedToLoad": "Adresler yüklenemedi",
