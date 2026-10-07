@@ -1,14 +1,31 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
-import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
-import { toast } from "sonner";
-
-import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronRight,
+  CreditCard,
+  Gift,
+  Landmark,
+  LockKeyhole,
+  MapPin,
+  Package,
+  ReceiptText,
+  ShoppingBag,
+  Tag,
+  Truck,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import AgreementReviewDialog from "@@/components/checkout/AgreementReviewDialog";
+import layoutStyles from "./checkout/checkout-layout.module.css";
+import { useCurrency, type PriceEntry } from "@@/context/CurrencyContext";
+import { calculateTotalsFromPrices } from "@@/lib/payment-utils";
 
 type CartItem = {
   id: string;
@@ -20,6 +37,12 @@ type CartItem = {
     thumbnail: string | null;
     prices?: PriceEntry[];
   };
+  variant?: {
+    id: string;
+    color: string;
+    colorEn: string | null;
+    colorHex: string | null;
+  } | null;
 };
 
 type Cart = {
@@ -44,19 +67,22 @@ type Address = {
   neighborhood: string;
   fullAddress: string;
 };
+
 type AgreementPreview = {
   bundleHash: string;
   documents: { preContract: string; distanceSales: string };
 };
+
+type AgreementDocumentKey = keyof AgreementPreview["documents"];
 type PaymentMethod = "BANK_TRANSFER" | "IYZICO";
 
 export default function CheckoutContent() {
   const router = useRouter();
-  const { formatPrice, currency, resolveProductPrice } = useCurrency();
-
+  const locale = useLocale();
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
-  const locale = useLocale();
+  const { formatPrice, currency, resolveProductPrice } = useCurrency();
+
   const [cart, setCart] = useState<Cart | null>(null);
   const [config, setConfig] = useState<{
     taxPercent: number;
@@ -69,20 +95,30 @@ export default function CheckoutContent() {
   const [creating, setCreating] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [agreementPreview, setAgreementPreview] =
-    useState<AgreementPreview | null>(null);
-  const [agreementsAccepted, setAgreementsAccepted] = useState(false);
-  const [reviewingAgreements, setReviewingAgreements] = useState(false);
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("BANK_TRANSFER");
 
-  // Coupon state
+  const [agreementPreview, setAgreementPreview] =
+    useState<AgreementPreview | null>(null);
+  const [acceptedAgreements, setAcceptedAgreements] = useState<
+    Record<AgreementDocumentKey, boolean>
+  >({ preContract: false, distanceSales: false });
+  const [activeAgreement, setActiveAgreement] =
+    useState<AgreementDocumentKey | null>(null);
+  const [reviewingAgreement, setReviewingAgreement] =
+    useState<AgreementDocumentKey | null>(null);
+
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
-    null,
-  );
+  const [appliedCoupon, setAppliedCoupon] =
+    useState<AppliedCoupon | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+
+  const resetAgreementReview = () => {
+    setAgreementPreview(null);
+    setAcceptedAgreements({ preContract: false, distanceSales: false });
+    setActiveAgreement(null);
+  };
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -93,7 +129,6 @@ export default function CheckoutContent() {
         setCart(data.cart);
         setConfig(data.config);
 
-        // Redirect to cart if empty (only on initial load)
         if (!data.cart || data.cart.items.length === 0) {
           router.push("/cart");
         }
@@ -104,18 +139,17 @@ export default function CheckoutContent() {
       }
     };
 
-    const checkAddresses = async () => {
+    const fetchAddresses = async () => {
       try {
         const response = await fetch("/api/address/list");
-        if (response.ok) {
-          const data = await response.json();
-          const addressesExist = data.addresses && data.addresses.length > 0;
-          setAddresses(data.addresses || []);
+        if (!response.ok) return;
 
-          // Redirect to cart if no addresses
-          if (!addressesExist) {
-            router.push("/cart");
-          }
+        const data = await response.json();
+        const savedAddresses = data.addresses || [];
+        setAddresses(savedAddresses);
+
+        if (savedAddresses.length === 0) {
+          router.push("/cart");
         }
       } catch (error) {
         console.error("Error checking addresses:", error);
@@ -123,12 +157,13 @@ export default function CheckoutContent() {
     };
 
     fetchCart();
-    checkAddresses();
+    fetchAddresses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []);
 
   const computedTotals = useMemo(() => {
     if (!cart || !config) return null;
+
     const effectiveConfig =
       currency === "USD"
         ? {
@@ -141,13 +176,15 @@ export default function CheckoutContent() {
             shippingFee: config.shippingFee,
             freeShippingThreshold: config.freeShippingThreshold,
           };
+
     const itemPrices = cart.items.map((item) => {
-      const r = resolveProductPrice(item.product);
+      const resolved = resolveProductPrice(item.product);
       return {
-        price: r ? (r.salePrice ?? r.price) : 0,
+        price: resolved ? (resolved.salePrice ?? resolved.price) : 0,
         quantity: item.quantity,
       };
     });
+
     return calculateTotalsFromPrices(itemPrices, effectiveConfig);
   }, [cart, config, currency, resolveProductPrice]);
 
@@ -157,7 +194,7 @@ export default function CheckoutContent() {
     setCouponError("");
 
     try {
-      const res = await fetch("/api/coupon/validate", {
+      const response = await fetch("/api/coupon/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -165,14 +202,16 @@ export default function CheckoutContent() {
           subtotal: computedTotals.subtotal,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+
       setAppliedCoupon(data);
-      setAgreementPreview(null);
-      setAgreementsAccepted(false);
+      resetAgreementReview();
       setCouponInput("");
-    } catch (err) {
-      setCouponError(err instanceof Error ? err.message : t("invalidCoupon"));
+    } catch (error) {
+      setCouponError(
+        error instanceof Error ? error.message : t("invalidCoupon"),
+      );
     } finally {
       setCouponLoading(false);
     }
@@ -181,13 +220,18 @@ export default function CheckoutContent() {
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponError("");
-    setAgreementPreview(null);
-    setAgreementsAccepted(false);
+    resetAgreementReview();
   };
 
-  const reviewAgreements = async () => {
+  const reviewAgreement = async (documentKey: AgreementDocumentKey) => {
     if (!selectedAddressId) return;
-    setReviewingAgreements(true);
+
+    if (agreementPreview) {
+      setActiveAgreement(documentKey);
+      return;
+    }
+
+    setReviewingAgreement(documentKey);
     try {
       const response = await fetch("/api/checkout/agreements", {
         method: "POST",
@@ -200,17 +244,29 @@ export default function CheckoutContent() {
         }),
       });
       const data = await response.json();
-      if (!response.ok)
+      if (!response.ok) {
         throw new Error(data.error || t("agreementPreviewFailed"));
+      }
+
       setAgreementPreview(data);
-      setAgreementsAccepted(false);
+      setAcceptedAgreements({ preContract: false, distanceSales: false });
+      setActiveAgreement(documentKey);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("agreementPreviewFailed"),
       );
     } finally {
-      setReviewingAgreements(false);
+      setReviewingAgreement(null);
     }
+  };
+
+  const acceptActiveAgreement = () => {
+    if (!activeAgreement) return;
+    setAcceptedAgreements((current) => ({
+      ...current,
+      [activeAgreement]: true,
+    }));
+    setActiveAgreement(null);
   };
 
   const createOrder = async () => {
@@ -223,7 +279,9 @@ export default function CheckoutContent() {
           couponCode: appliedCoupon?.code ?? null,
           currencyCode: currency,
           addressId: selectedAddressId,
-          acceptedDocuments: agreementsAccepted,
+          acceptedDocuments:
+            acceptedAgreements.preContract &&
+            acceptedAgreements.distanceSales,
           acceptedBundleHash: agreementPreview?.bundleHash,
           paymentMethod,
         }),
@@ -232,8 +290,7 @@ export default function CheckoutContent() {
       if (!response.ok) {
         const data = await response.json();
         if (response.status === 409 && data.error === "AGREEMENT_CHANGED") {
-          setAgreementPreview(null);
-          setAgreementsAccepted(false);
+          resetAgreementReview();
           throw new Error(t("agreementChanged"));
         }
         throw new Error(data.error || t("failedToCreateOrder"));
@@ -250,7 +307,9 @@ export default function CheckoutContent() {
             body: JSON.stringify({ orderId: data.orderId }),
           },
         );
-        const initializeData = await initializeResponse.json().catch(() => ({}));
+        const initializeData = await initializeResponse
+          .json()
+          .catch(() => ({}));
         if (
           initializeResponse.ok &&
           typeof initializeData.paymentPageUrl === "string" &&
@@ -263,473 +322,538 @@ export default function CheckoutContent() {
         return;
       }
 
-      // Redirect to payment page (cart is NOT cleared here anymore —
-      // it's cleared when the customer uploads the payment proof)
       router.push(`/checkout?orderId=${data.orderId}`);
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error(
         error instanceof Error ? error.message : t("failedToCreateOrder"),
       );
-      setCreating(false); // Only reset on error
+      setCreating(false);
     }
-    // Don't reset creating on success - let the redirect happen
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <div className="w-10 h-10 border-4 border-[#C8102E]/20 border-t-[#C8102E] rounded-full animate-spin" />
-        <p className="text-[#A9A9A9] font-semibold">{t("preparingOrder")}</p>
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <div className="size-10 animate-spin rounded-full border-4 border-[#C8102E]/20 border-t-[#C8102E]" />
+        <p className="font-semibold text-[#8d857f]">{t("preparingOrder")}</p>
       </div>
     );
   }
 
-  if (!cart || cart.items.length === 0) {
-    return null; // Will redirect
-  }
+  if (!cart || cart.items.length === 0) return null;
 
   const totals = computedTotals;
-  const discountAmount = appliedCoupon?.discountAmount ?? 0;
-  const finalTotal = totals ? Math.max(0, totals.total - discountAmount) : 0;
-
   if (!totals || !config) return null;
 
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const finalTotal = Math.max(0, totals.total - discountAmount);
+  const agreementsAccepted =
+    acceptedAgreements.preContract && acceptedAgreements.distanceSales;
+  const agreementItems: Array<{
+    key: AgreementDocumentKey;
+    title: string;
+  }> = [
+    { key: "preContract", title: t("preContractInformation") },
+    { key: "distanceSales", title: t("distanceSalesAgreement") },
+  ];
+  const activeAgreementTitle = activeAgreement
+    ? agreementItems.find((item) => item.key === activeAgreement)?.title ?? ""
+    : "";
+  const activeAgreementDescription =
+    activeAgreement === "distanceSales"
+      ? t("distanceSalesModalDescription")
+      : t("preContractModalDescription");
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
-      {/* Left Column: Order Details */}
-      <div className="lg:col-span-2 space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6 md:p-8">
-          <h2 className="text-xl font-extrabold text-[#1A1A1A] mb-6 flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5 text-[#C8102E]"
+    <>
+      <div
+        className={`${layoutStyles.checkoutGrid} items-start gap-4 pb-14 sm:gap-5 lg:gap-7`}
+      >
+        <div
+          className={`${layoutStyles.checkoutColumn} space-y-4 sm:space-y-5`}
+        >
+          <section
+            data-checkout-section="items"
+            className={`${layoutStyles.surfaceCard} overflow-hidden`}
+          >
+            <header
+              className={`${layoutStyles.cardHeader} flex items-center gap-3 px-4 py-4 sm:px-5`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-              />
-            </svg>
-            {t("itemsInOrder")}
-          </h2>
+              <span className="flex size-9 items-center justify-center rounded-xl bg-[#fff0f2] text-[#C8102E]">
+                <ShoppingBag aria-hidden="true" className="size-[18px]" strokeWidth={2} />
+              </span>
+              <h2 className="text-sm font-extrabold text-[#1a1817] sm:text-base">
+                {t("itemsInOrder")} ({cart.items.length})
+              </h2>
+            </header>
 
-          <div className="space-y-6">
-            {cart.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex gap-4 py-4 border-b border-gray-100 last:border-0 last:pb-0"
-              >
-                {/* Thumbnail */}
-                <Link
-                  href={`/product/${item.product.id}`}
-                  className="relative w-16 h-20 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden"
-                >
-                  {item.product.thumbnail ? (
-                    <Image
-                      src={item.product.thumbnail}
-                      alt={item.product.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl">📦</span>
-                  )}
-                </Link>
+            <div className={layoutStyles.productList}>
+              {cart.items.map((item) => {
+                const resolvedPrice = resolveProductPrice(item.product);
+                const unitPrice = resolvedPrice
+                  ? resolvedPrice.salePrice ?? resolvedPrice.price
+                  : null;
+                const variantName = item.variant
+                  ? locale === "en" && item.variant.colorEn
+                    ? item.variant.colorEn
+                    : item.variant.color
+                  : null;
 
-                <div className="flex-1">
-                  <div className="flex justify-between items-start gap-4">
-                    <div>
-                      <Link
-                        href={`/product/${item.product.id}`}
-                        className="font-bold text-[#1A1A1A] leading-snug hover:text-[#C8102E] transition-colors"
-                      >
-                        {item.product.title}
-                      </Link>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {t("quantity", { count: item.quantity })}
+                return (
+                  <article
+                    key={item.id}
+                    className={`${layoutStyles.productRow} flex gap-3 py-4 sm:gap-4 sm:py-5`}
+                  >
+                    <Link
+                      href={`/product/${item.product.id}`}
+                      className={`${layoutStyles.thumbnail} relative size-16 shrink-0 overflow-hidden sm:size-[72px]`}
+                    >
+                      {item.product.thumbnail ? (
+                        <Image
+                          src={item.product.thumbnail}
+                          alt={item.product.title}
+                          fill
+                          sizes="72px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <Package
+                          aria-hidden="true"
+                          className="absolute inset-0 m-auto size-7 text-[#b7afa8]"
+                        />
+                      )}
+                    </Link>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link
+                            href={`/product/${item.product.id}`}
+                            className="line-clamp-2 text-sm font-semibold leading-5 text-[#1a1817] transition-colors hover:text-[#C8102E] sm:text-[15px]"
+                          >
+                            {item.product.title}
+                          </Link>
+                          {variantName ? (
+                            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#77706a] sm:text-xs">
+                              {item.variant?.colorHex ? (
+                                <span
+                                  className="size-2.5 rounded-full border border-black/10"
+                                  style={{ backgroundColor: item.variant.colorHex }}
+                                />
+                              ) : null}
+                              {variantName}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-[11px] text-[#77706a] sm:text-xs">
+                            {t("quantity", { count: item.quantity })}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold text-[#24211f] sm:text-[15px]">
+                          {unitPrice === null ? "—" : formatPrice(unitPrice)}
+                        </p>
+                      </div>
+
+                      <p className="mt-2 text-right text-[11px] font-medium text-[#77706a] sm:text-xs">
+                        {t("subtotal")}{" "}
+                        <span className="font-bold text-[#C8102E]">
+                          {unitPrice === null
+                            ? "—"
+                            : formatPrice(unitPrice * item.quantity)}
+                        </span>
                       </p>
                     </div>
-                    <div className="font-extrabold text-[#1A1A1A]">
-                      {(() => {
-                        const r = resolveProductPrice(item.product);
-                        return r ? formatPrice(r.salePrice ?? r.price) : "—";
-                      })()}
-                    </div>
-                  </div>
-                  <div className="mt-2 text-sm text-[#1A1A1A] font-medium text-right">
-                    {t("subtotal")}{" "}
-                    <span className="text-[#C8102E]">
-                      {(() => {
-                        const r = resolveProductPrice(item.product);
-                        return r
-                          ? formatPrice(
-                              (r.salePrice ?? r.price) * item.quantity,
-                            )
-                          : "—";
-                      })()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex items-start gap-4">
-          <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
-              />
-            </svg>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[#1A1A1A] font-bold">{t("shippingInfo")}</p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {totals.shippingAmount === 0
-                ? t("freeShippingMessage")
-                : t("standardShipping", {
-                    fee: (
-                      (currency === "USD"
-                        ? config.usdShippingFee
-                        : config.shippingFee) / 100
-                    ).toFixed(2),
-                  })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Column: Place Order */}
-      <div className="lg:col-span-1">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 sticky top-24">
-          <h2 className="text-xl font-extrabold text-[#1A1A1A]">
-            {t("orderSummary")}
-          </h2>
-
-          {/* Coupon Input */}
-          {!appliedCoupon ? (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value);
-                    setCouponError("");
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
-                  placeholder={t("couponPlaceholder")}
-                  disabled={couponLoading || creating}
-                  className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-all"
-                />
-                <button
-                  onClick={applyCoupon}
-                  disabled={couponLoading || !couponInput.trim() || creating}
-                  className="px-3 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 transition-colors"
-                >
-                  {couponLoading ? "..." : t("apply")}
-                </button>
-              </div>
-              {couponError && (
-                <p className="text-xs text-red-500 font-medium">
-                  {couponError}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-green-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-sm font-bold text-green-700">
-                  {appliedCoupon.code}
-                </span>
-                <span className="text-xs text-green-600">
-                  {appliedCoupon.type === "PERCENTAGE"
-                    ? `${appliedCoupon.value}% off`
-                    : `${formatPrice(appliedCoupon.value)} off`}
-                </span>
-              </div>
-              <button
-                onClick={removeCoupon}
-                disabled={creating}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-3 pb-6 border-b border-gray-100">
-            <div className="flex justify-between items-center text-gray-500 font-medium">
-              <span className="text-md flex flex-col">
-                {t("subtotalTaxIncluded")}{" "}
-                <span className="text-xs">{t("taxIncluded")}</span>
-              </span>
-              <span className="text-[#1A1A1A] font-bold">
-                {formatPrice(totals.subtotal)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-gray-500 font-medium">
-              <span className="text-md">{t("shipping")}</span>
-              {totals.shippingAmount === 0 ? (
-                <span className="text-emerald-600 font-bold">{tc("free")}</span>
-              ) : (
-                <span className="text-[#1A1A1A] font-bold">
-                  {formatPrice(totals.shippingAmount)}
-                </span>
-              )}
-            </div>
-            <div className="flex justify-between items-center text-gray-400 text-sm">
-              <span>{t("estimatedTaxIncluded")}</span>
-              <span className="font-medium">
-                {formatPrice(totals.taxAmount)}
-              </span>
-            </div>
-            {appliedCoupon && (
-              <div className="flex justify-between items-center text-green-600 font-medium">
-                <span className="text-sm">
-                  {t("discount", { code: appliedCoupon.code })}
-                </span>
-                <span className="font-bold">
-                  -{formatPrice(discountAmount)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-bold text-[#1A1A1A]">
-              {t("total")}
-            </span>
-            <div className="text-right">
-              {appliedCoupon && (
-                <p className="text-sm text-gray-400 line-through">
-                  {formatPrice(totals.total)}
-                </p>
-              )}
-              <span className="text-2xl font-black text-[#C8102E]">
-                {formatPrice(finalTotal)}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-3 border-t border-gray-100 pt-5">
-            <fieldset className="space-y-2">
-              <legend className="block text-sm font-bold text-gray-700">
-                {t("paymentMethod")}
-              </legend>
-              {(["BANK_TRANSFER", "IYZICO"] as const).map((method) => {
-                const unavailable = method === "IYZICO" && currency !== "TRY";
-                return (
-                  <label
-                    key={method}
-                    className={`flex items-start gap-3 rounded-xl border p-3 ${
-                      unavailable
-                        ? "cursor-not-allowed border-gray-100 opacity-50"
-                        : `cursor-pointer ${paymentMethod === method ? "border-[#C8102E] bg-red-50/40" : "border-gray-200"}`
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method}
-                      checked={paymentMethod === method}
-                      onChange={() => {
-                        setPaymentMethod(method);
-                        setAgreementPreview(null);
-                        setAgreementsAccepted(false);
-                      }}
-                      disabled={creating || unavailable}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="block text-sm font-bold text-gray-900">
-                        {t(method === "BANK_TRANSFER" ? "bankTransferOption" : "cardOption")}
-                      </span>
-                      {method === "IYZICO" && (
-                        <span className="block text-xs text-gray-500">
-                          {t("iyzicoSecurePayment")}
-                        </span>
-                      )}
-                    </span>
-                  </label>
+                  </article>
                 );
               })}
-            </fieldset>
-            <label
-              className="block text-sm font-bold text-gray-700"
-              htmlFor="agreement-address"
-            >
-              {t("deliveryAddress")}
-            </label>
-            <select
-              id="agreement-address"
-              value={selectedAddressId}
-              onChange={(event) => {
-                setSelectedAddressId(event.target.value);
-                setAgreementPreview(null);
-                setAgreementsAccepted(false);
-              }}
-              disabled={creating}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
-            >
-              <option value="">{t("selectDeliveryAddress")}</option>
-              {addresses.map((address) => (
-                <option key={address.id} value={address.id}>
-                  {address.title} — {address.firstName} {address.lastName},{" "}
-                  {address.district}/{address.city}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={reviewAgreements}
-              disabled={!selectedAddressId || reviewingAgreements || creating}
-              className="w-full rounded-full border border-[#C8102E] px-4 py-3 text-sm font-bold text-[#C8102E] disabled:opacity-40"
-            >
-              {reviewingAgreements
-                ? t("preparingDocuments")
-                : t("reviewDocuments")}
-            </button>
-          </div>
-
-          {agreementPreview && (
-            <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <details className="rounded-xl bg-white p-3" open>
-                <summary className="cursor-pointer font-bold">
-                  {t("preContractInformation")}
-                </summary>
-                <iframe
-                  title={t("preContractInformation")}
-                  srcDoc={agreementPreview.documents.preContract}
-                  sandbox=""
-                  className="mt-3 h-72 w-full border-t"
-                />
-              </details>
-              <details className="rounded-xl bg-white p-3">
-                <summary className="cursor-pointer font-bold">
-                  {t("distanceSalesAgreement")}
-                </summary>
-                <iframe
-                  title={t("distanceSalesAgreement")}
-                  srcDoc={agreementPreview.documents.distanceSales}
-                  sandbox=""
-                  className="mt-3 h-72 w-full border-t"
-                />
-              </details>
-              <label className="flex items-start gap-3 rounded-xl border border-red-100 bg-white p-4 text-sm">
-                <input
-                  type="checkbox"
-                  checked={agreementsAccepted}
-                  onChange={(event) =>
-                    setAgreementsAccepted(event.target.checked)
-                  }
-                  className="mt-1 h-4 w-4"
-                />
-                <span>{t("acceptDocuments")}</span>
-              </label>
             </div>
-          )}
+          </section>
 
-          <div className="space-y-3 pt-4">
-            <button
-              onClick={createOrder}
-              disabled={creating || !agreementPreview || !agreementsAccepted}
-              className={`w-full py-4 px-4 rounded-full text-white font-black text-lg transition-all shadow-[0_4px_14px_0_rgba(200,16,46,0.39)] hover:shadow-[0_6px_20px_rgba(200,16,46,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${creating ? "bg-gray-400" : "bg-gradient-to-r from-[#C8102E] to-[#b91c1c]"}`}
+          <section
+            data-checkout-section="shipping"
+            className={`${layoutStyles.shippingCard} flex items-start gap-3 p-4 sm:gap-4 sm:p-5`}
+          >
+            <span
+              className={`${layoutStyles.shippingIcon} flex size-10 shrink-0 items-center justify-center rounded-xl`}
             >
-              {/* Shine effect */}
-              {!creating && (
-                <div className="absolute top-0 -left-[120%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:left-[120%] transition-all duration-1000 ease-in-out" />
-              )}
-
-              <span className="relative z-10 flex items-center justify-center gap-2 text-lg md:text-sm">
-                {creating ? t("processing") : t("confirmPayment")}
-                {!creating && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm4.28 10.28a.75.75 0 0 0 0-1.06l-3-3a.75.75 0 1 0-1.06 1.06l1.72 1.72H8.25a.75.75 0 0 0 0 1.5h5.69l-1.72 1.72a.75.75 0 1 0 1.06 1.06l3-3Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
+              <Truck aria-hidden="true" className="size-5" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-extrabold text-[#1a1817] sm:text-[15px]">
+                {t("shippingInfo")}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-[#617087] sm:text-sm">
+                {totals.shippingAmount === 0
+                  ? t("freeShippingMessage")
+                  : t("standardShipping", {
+                      fee: (
+                        (currency === "USD"
+                          ? config.usdShippingFee
+                          : config.shippingFee) / 100
+                      ).toFixed(2),
+                    })}
+              </p>
+            </div>
+            {totals.shippingAmount === 0 ? (
+              <span className={layoutStyles.shippingBadge}>
+                <Gift aria-hidden="true" className="size-3.5" />
+                {t("freeShippingBadge")}
               </span>
-            </button>
-
-            <button
-              onClick={() => router.push("/cart")}
-              disabled={creating}
-              className="w-full py-3 px-6 text-sm font-bold text-gray-500 hover:text-[#C8102E] transition-colors"
-            >
-              {t("backToCart")}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium pt-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-3 h-3"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
-              />
-            </svg>
-            {t("secureCheckout")}
-          </div>
+            ) : null}
+          </section>
         </div>
+
+        <aside
+          className={`${layoutStyles.checkoutColumn} lg:sticky lg:top-24`}
+        >
+          <section
+            data-checkout-section="summary"
+            className={`${layoutStyles.surfaceCard} ${layoutStyles.summaryCard} space-y-5`}
+          >
+            <h2
+              className={`${layoutStyles.summaryTitle} text-lg font-extrabold tracking-tight text-[#1a1817] sm:text-xl`}
+            >
+              <span className={layoutStyles.summaryTitleIcon}>
+                <ReceiptText aria-hidden="true" className="size-[18px]" />
+              </span>
+              <span>{t("orderSummary")}</span>
+            </h2>
+
+            {!appliedCoupon ? (
+              <div className="space-y-2">
+                <div className={layoutStyles.couponRow}>
+                  <div className={layoutStyles.couponField}>
+                    <Tag aria-hidden="true" className={layoutStyles.couponIcon} />
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(event) => {
+                        setCouponInput(event.target.value);
+                        setCouponError("");
+                      }}
+                      onKeyDown={(event) =>
+                        event.key === "Enter" && applyCoupon()
+                      }
+                      placeholder={t("couponPlaceholder")}
+                      disabled={couponLoading || creating}
+                      className={`${layoutStyles.control} ${layoutStyles.couponInput} text-sm placeholder:text-[#aaa29a]`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponInput.trim() || creating}
+                    className={`${layoutStyles.couponButton} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/25 disabled:opacity-40`}
+                  >
+                    {couponLoading ? "..." : t("apply")}
+                  </button>
+                </div>
+                {couponError ? (
+                  <p className="text-xs font-medium text-red-600">
+                    {couponError}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-xl border border-emerald-600/15 bg-emerald-50 px-3 py-2.5">
+                <div className="min-w-0">
+                  <span className="text-sm font-bold text-emerald-800">
+                    {appliedCoupon.code}
+                  </span>
+                  <span className="ml-2 text-xs text-emerald-700">
+                    {appliedCoupon.type === "PERCENTAGE"
+                      ? `${appliedCoupon.value}%`
+                      : formatPrice(appliedCoupon.value)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  disabled={creating}
+                  aria-label={tc("remove")}
+                  className="rounded-lg px-2 py-1 text-xs font-bold text-emerald-800 transition-colors hover:bg-emerald-100"
+                >
+                  {tc("remove")}
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-3 border-b border-black/[0.07] pb-5 text-sm">
+              <div className="flex items-start justify-between gap-4 text-[#77706a]">
+                <span className="flex flex-col">
+                  {t("subtotalTaxIncluded")}
+                  <span className="text-[10px] text-[#aaa29a]">
+                    {t("taxIncluded")}
+                  </span>
+                </span>
+                <span className="font-bold text-[#24211f]">
+                  {formatPrice(totals.subtotal)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4 text-[#77706a]">
+                <span>{t("shipping")}</span>
+                {totals.shippingAmount === 0 ? (
+                  <span className="text-xs font-extrabold text-emerald-700">
+                    {tc("free")}
+                  </span>
+                ) : (
+                  <span className="font-bold text-[#24211f]">
+                    {formatPrice(totals.shippingAmount)}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-4 text-xs text-[#aaa29a]">
+                <span>{t("estimatedTaxIncluded")}</span>
+                <span className="font-medium">
+                  {formatPrice(totals.taxAmount)}
+                </span>
+              </div>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between gap-4 text-sm text-emerald-700">
+                  <span>{t("discount", { code: appliedCoupon.code })}</span>
+                  <span className="font-bold">
+                    -{formatPrice(discountAmount)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-end justify-between gap-4">
+              <span className="text-base font-extrabold text-[#1a1817]">
+                {t("total")}
+              </span>
+              <div className="text-right">
+                {appliedCoupon ? (
+                  <p className="text-xs text-[#aaa29a] line-through">
+                    {formatPrice(totals.total)}
+                  </p>
+                ) : null}
+                <span className={layoutStyles.totalValue}>
+                  {formatPrice(finalTotal)}
+                </span>
+              </div>
+            </div>
+
+            <div
+              className={`${layoutStyles.totalsSection} space-y-4 pt-5`}
+            >
+              <fieldset className="space-y-2">
+                <legend className="mb-2 block text-sm font-extrabold text-[#3b3734]">
+                  {t("paymentMethod")}
+                </legend>
+                <div className={layoutStyles.paymentOptions}>
+                  {(["BANK_TRANSFER", "IYZICO"] as const).map((method) => {
+                    const unavailable =
+                      method === "IYZICO" && currency !== "TRY";
+                    const selected = paymentMethod === method;
+                    const MethodIcon =
+                      method === "BANK_TRANSFER" ? Landmark : CreditCard;
+
+                    return (
+                      <label
+                        key={method}
+                        data-selected={selected ? "true" : "false"}
+                        data-unavailable={unavailable ? "true" : "false"}
+                        className={layoutStyles.paymentOption}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value={method}
+                          checked={selected}
+                          onChange={() => {
+                            setPaymentMethod(method);
+                            resetAgreementReview();
+                          }}
+                          disabled={creating || unavailable}
+                          className={layoutStyles.paymentRadio}
+                        />
+                        <MethodIcon
+                          aria-hidden="true"
+                          className={layoutStyles.paymentIcon}
+                          strokeWidth={1.9}
+                        />
+                        <span className={layoutStyles.paymentCopy}>
+                          <span className={layoutStyles.paymentTitle}>
+                            {t(
+                              method === "BANK_TRANSFER"
+                                ? "bankTransferOption"
+                                : "cardOption",
+                            )}
+                          </span>
+                          {method === "IYZICO" ? (
+                            <span className={layoutStyles.paymentHelper}>
+                              {t("iyzicoSecurePayment")}
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <div className="space-y-2">
+                <label
+                  className="block text-sm font-extrabold text-[#3b3734]"
+                  htmlFor="agreement-address"
+                >
+                  {t("deliveryAddress")}
+                </label>
+                <div className={layoutStyles.addressField}>
+                  <MapPin
+                    aria-hidden="true"
+                    className={layoutStyles.addressIcon}
+                  />
+                  <select
+                    id="agreement-address"
+                    value={selectedAddressId}
+                    onChange={(event) => {
+                      setSelectedAddressId(event.target.value);
+                      resetAgreementReview();
+                    }}
+                    disabled={creating}
+                    className={`${layoutStyles.control} ${layoutStyles.addressSelect} text-sm text-[#3b3734]`}
+                  >
+                    <option value="">{t("selectDeliveryAddress")}</option>
+                    {addresses.map((address) => (
+                      <option key={address.id} value={address.id}>
+                        {address.title} — {address.firstName} {address.lastName},{" "}
+                        {address.district}/{address.city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {agreementItems.map((document) => {
+                  const accepted = acceptedAgreements[document.key];
+                  const isLoading = reviewingAgreement === document.key;
+                  const disabled =
+                    !selectedAddressId ||
+                    reviewingAgreement !== null ||
+                    creating;
+
+                  return (
+                    <div
+                      key={document.key}
+                      data-agreement-key={document.key}
+                      data-accepted={accepted ? "true" : "false"}
+                      aria-busy={isLoading}
+                      aria-disabled={disabled ? "true" : "false"}
+                      role="button"
+                      tabIndex={disabled ? -1 : 0}
+                      onClick={() => {
+                        if (!disabled) reviewAgreement(document.key);
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          !disabled &&
+                          event.target === event.currentTarget &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          reviewAgreement(document.key);
+                        }
+                      }}
+                      className={layoutStyles.consentRow}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={accepted}
+                        readOnly
+                        disabled={disabled}
+                        aria-label={document.title}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!disabled) reviewAgreement(document.key);
+                        }}
+                        className="size-4 shrink-0 cursor-pointer rounded border-black/20 accent-[#C8102E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 disabled:cursor-not-allowed"
+                      />
+                      <ReceiptText
+                        aria-hidden="true"
+                        className="size-[17px] shrink-0 text-[#6f6862]"
+                        strokeWidth={1.9}
+                      />
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block text-xs font-extrabold leading-4 text-[#292522] sm:text-sm">
+                          {document.title}
+                        </span>
+                        <span
+                          className={`mt-0.5 block text-[10px] font-medium sm:text-[11px] ${accepted ? "text-emerald-700" : "text-[#8d857f]"}`}
+                        >
+                          {isLoading
+                            ? t("preparingDocuments")
+                            : accepted
+                              ? t("documentAccepted")
+                              : t("reviewAndAccept")}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-[#9a928b]"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={createOrder}
+                disabled={
+                  creating ||
+                  !selectedAddressId ||
+                  !agreementPreview ||
+                  !agreementsAccepted
+                }
+                className={`${layoutStyles.primaryCta} flex items-center justify-center gap-2 px-4 text-sm font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/35 focus-visible:ring-offset-2`}
+              >
+                {creating ? t("processing") : t("confirmPayment")}
+                {!creating ? (
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push("/cart")}
+                disabled={creating}
+                className={`${layoutStyles.secondaryAction} flex items-center justify-center gap-2 text-sm font-bold text-[#77706a] transition-colors hover:text-[#C8102E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/25`}
+              >
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                {t("backToCart")}
+              </button>
+            </div>
+
+            <div
+              className={`${layoutStyles.secureNote} flex items-center justify-center gap-2 pt-4 text-[11px] font-medium text-[#aaa29a]`}
+            >
+              <LockKeyhole aria-hidden="true" className="size-3.5" />
+              {t("secureCheckout")}
+            </div>
+          </section>
+        </aside>
       </div>
-    </div>
+
+      {agreementPreview && activeAgreement ? (
+        <AgreementReviewDialog
+          open
+          title={activeAgreementTitle}
+          description={activeAgreementDescription}
+          documentHtml={agreementPreview.documents[activeAgreement]}
+          cancelLabel={t("cancelDocument")}
+          acceptLabel={t("acceptDocument")}
+          onOpenChange={(open) => {
+            if (!open) setActiveAgreement(null);
+          }}
+          onAccept={acceptActiveAgreement}
+        />
+      ) : null}
+    </>
   );
 }

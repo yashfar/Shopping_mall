@@ -13,8 +13,8 @@ export default async function CartPage() {
     const t = await getTranslations("cart");
 
     return (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 my-8 md:my-12">
-            <h1 className="text-3xl font-black text-[#1A1A1A] mb-6 md:mb-8">{t("title")}</h1>
+        <div className="mx-auto my-6 max-w-6xl px-4 md:my-12 md:px-6">
+            <h1 className="mb-5 text-[28px] font-black tracking-tight text-[#1A1A1A] md:mb-8 md:text-3xl">{t("title")}</h1>
             <CartContent />
         </div>
     );

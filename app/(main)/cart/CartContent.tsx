@@ -215,7 +215,7 @@ export default function CartContent() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
             <ConfirmDialog
                 open={confirmRemove.open}
                 onOpenChange={(open) => setConfirmRemove(prev => ({ ...prev, open }))}
@@ -227,20 +227,20 @@ export default function CartContent() {
             />
 
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
+            <div className="space-y-3.5 md:hidden">
                 {cart.items.map((item) => (
                     <div
                         key={item.id}
-                        className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 transition-all duration-300 ${updating === item.id ? "opacity-50 pointer-events-none" : ""}`}
+                        className={`rounded-2xl border border-black/[0.07] bg-white p-4 shadow-[0_10px_28px_-24px_rgba(35,28,23,0.42)] transition-all duration-300 ${updating === item.id ? "opacity-50 pointer-events-none" : ""}`}
                     >
-                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3.5">
                             {/* Product Info */}
                             {/* Product Info with Image */}
                             <div className="flex gap-4">
                                 {/* Thumbnail */}
                                 <Link
                                     href={`/product/${item.product.id}`}
-                                    className="relative w-24 h-24 shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100"
+                                    className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-gray-50"
                                 >
                                     {item.product.thumbnail ? (
                                         <Image
@@ -259,7 +259,7 @@ export default function CartContent() {
                                 <div>
                                     <Link
                                         href={`/product/${item.product.id}`}
-                                        className="font-bold text-[#1A1A1A] text-lg mb-1 hover:text-[#C8102E] transition-colors line-clamp-2"
+                                        className="mb-1 line-clamp-2 text-[15px] font-bold leading-5 text-[#1A1A1A] transition-colors hover:text-[#C8102E]"
                                     >
                                         {item.product.title}
                                     </Link>
@@ -284,7 +284,7 @@ export default function CartContent() {
                             {/* Price */}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("price")}</span>
-                                <span className="text-lg font-bold text-[#1A1A1A]">
+                                <span className="text-base font-bold text-[#1A1A1A]">
                                     {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice(r.salePrice ?? r.price) : "—"; })()}
                                 </span>
                             </div>
@@ -296,17 +296,17 @@ export default function CartContent() {
                                     <button
                                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                         disabled={updating === item.id || item.quantity <= 1}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
+                                        className="flex size-9 items-center justify-center rounded-lg border border-black/10 text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
                                     >
                                         −
                                     </button>
-                                    <span className="w-10 text-center font-extrabold text-[#1A1A1A] text-lg">
+                                    <span className="w-8 text-center text-base font-extrabold text-[#1A1A1A]">
                                         {item.quantity}
                                     </span>
                                     <button
                                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                         disabled={updating === item.id || item.quantity >= (item.variant ? item.variant.stock : item.product.stock)}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-[#A9A9A9] text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
+                                        className="flex size-9 items-center justify-center rounded-lg border border-black/10 text-[#1A1A1A] font-bold transition-all hover:bg-gray-100 disabled:opacity-30 active:scale-95"
                                     >
                                         +
                                     </button>
@@ -316,7 +316,7 @@ export default function CartContent() {
                             {/* Subtotal */}
                             <div className="flex items-center justify-between pt-3 border-t border-[#A9A9A9]/20">
                                 <span className="text-sm font-semibold text-[#A9A9A9]">{tc("subtotal")}</span>
-                                <span className="text-xl font-extrabold text-[#C8102E]">
+                                <span className="text-lg font-extrabold text-[#C8102E]">
                                     {(() => { const r = resolveProductPrice(item.product); return r ? formatPrice((r.salePrice ?? r.price) * item.quantity) : "—"; })()}
                                 </span>
                             </div>
@@ -325,7 +325,7 @@ export default function CartContent() {
                             <button
                                 onClick={() => openRemoveConfirm(item.id)}
                                 disabled={updating === item.id}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-[#C8102E] rounded-xl font-bold text-sm transition-all hover:bg-[#C8102E] hover:text-white active:scale-95"
+                                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 text-sm font-bold text-[#C8102E] transition-all hover:bg-[#C8102E] hover:text-white active:scale-95"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -452,8 +452,8 @@ export default function CartContent() {
                     {/* Add more cart functionality if needed */}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 h-fit space-y-8 sticky top-24">
-                    <h2 className="text-2xl font-black text-[#1A1A1A]">
+                <div className="sticky top-24 h-fit space-y-5 rounded-2xl border border-black/[0.07] bg-white p-4 shadow-[0_14px_34px_-28px_rgba(35,28,23,0.42)] sm:space-y-6 sm:p-6 lg:space-y-8 lg:p-8">
+                    <h2 className="text-xl font-black text-[#1A1A1A] sm:text-2xl">
                         {t("orderSummary")}
                     </h2>
 
@@ -515,7 +515,7 @@ export default function CartContent() {
                         ) : (
                             <button
                                 onClick={() => router.push("/cart/checkout")}
-                                className="w-full py-4 bg-[#C8102E] text-white rounded-full font-black text-lg transition-all hover:bg-[#A90D27] hover:shadow-[0_8px_30px_rgba(200,16,46,0.25)] active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden"
+                                className="group relative flex min-h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-[#C8102E] px-4 text-base font-black text-white transition-all hover:bg-[#A90D27] hover:shadow-[0_8px_30px_rgba(200,16,46,0.25)] active:scale-95"
                             >
                                 <span className="relative z-10 flex items-center gap-2">
                                     {t("proceedToCheckout")}
